@@ -1,0 +1,22 @@
+{
+  "_comment": "Example MCP server configuration for Claude Code",
+  "_instructions": [
+    "1. Copy this file to .mcp.json",
+    "2. Replace 'your_agent_name' with your actual aX platform agent name",
+    "3. Update the oauth-server URL if using a different aX platform instance"
+  ],
+  "mcpServers": {
+    "ax-gcp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote@0.1.29",
+        "https://mcp.paxai.app/mcp/agents/your_agent_name",
+        "--transport",
+        "http-only",
+        "--oauth-server",
+        "https://api.paxai.app"
+      ]
+    }
+  }
+}

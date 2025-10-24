@@ -1,0 +1,198 @@
+# LLM Provider Configuration
+# Defines available providers and their models
+
+providers:
+  ollama:
+    name: "Ollama (Local)"
+    description: "Local LLM server"
+    package: "openai"
+    class: "OpenAI"
+    env_var: null
+    requires_api_key: false
+    base_url_env: "OLLAMA_BASE_URL"
+    default_base_url: "http://localhost:11434/v1"
+    models:
+      - id: "gpt-oss:latest"
+        name: "GPT OSS Latest"
+        description: "Latest GPT OSS model"
+      - id: "gpt-oss:20b"
+        name: "GPT OSS 20B"
+        description: "GPT OSS 20 billion parameter model"
+      - id: "llama3.2"
+        name: "Llama 3.2"
+        description: "Meta Llama 3.2"
+      - id: "qwen2.5"
+        name: "Qwen 2.5"
+        description: "Alibaba Qwen 2.5"
+
+  gemini:
+    name: "Google Gemini"
+    description: "Google's Gemini AI models"
+    package: "langchain-google-genai"
+    class: "ChatGoogleGenerativeAI"
+    env_var: "GOOGLE_API_KEY"
+    requires_api_key: true
+    default_model: "gemini-2.5-flash"
+    models:
+      # Stable Production Models (Recommended)
+      - id: "gemini-2.5-flash"
+        name: "Gemini 2.5 Flash ⚡"
+        description: "Stable - best balance of speed + capability"
+        recommended: true
+      - id: "gemini-2.5-flash-lite"
+        name: "Gemini 2.5 Flash Lite"
+        description: "Stable - fastest, lowest cost"
+        recommended: true
+      - id: "gemini-2.5-pro"
+        name: "Gemini 2.5 Pro"
+        description: "Stable - most capable, 1M context window"
+      # Preview/Experimental Models
+      - id: "gemini-2.5-flash-preview-09-2025"
+        name: "Gemini 2.5 Flash Preview (Sep 2025)"
+        description: "Preview - better tool use, 5% gain on SWE-Bench"
+      - id: "gemini-2.5-flash-lite-preview-09-2025"
+        name: "Gemini 2.5 Flash Lite Preview (Sep 2025)"
+        description: "Preview - fastest proprietary model"
+      # Legacy Models
+      - id: "gemini-2.0-flash"
+        name: "Gemini 2.0 Flash (Legacy)"
+        description: "Previous generation stable"
+      - id: "gemini-2.0-flash-lite"
+        name: "Gemini 2.0 Flash Lite (Legacy)"
+        description: "Previous generation fast variant"
+
+  anthropic:
+    name: "Anthropic Claude"
+    description: "Claude AI models from Anthropic (Direct API)"
+    package: "langchain-anthropic"
+    class: "ChatAnthropic"
+    env_var: "ANTHROPIC_API_KEY"
+    requires_api_key: true
+    default_model: "claude-haiku-4-5"
+    models:
+      - id: "claude-haiku-4-5"
+        name: "Claude Haiku 4.5 ⚡"
+        description: "Latest fast model - $1/M in, $5/M out"
+        recommended: true
+      - id: "claude-sonnet-4-5"
+        name: "Claude Sonnet 4.5"
+        description: "Most capable Claude model"
+        recommended: true
+      - id: "claude-3-5-haiku-latest"
+        name: "Claude 3.5 Haiku (Legacy)"
+        description: "Previous generation Haiku"
+      - id: "claude-3-5-sonnet-latest"
+        name: "Claude 3.5 Sonnet (Legacy)"
+        description: "Previous generation Sonnet"
+      - id: "claude-3-opus-latest"
+        name: "Claude 3 Opus (Legacy)"
+        description: "Previous generation Opus"
+
+  openai:
+    name: "OpenAI"
+    description: "OpenAI GPT models"
+    package: "langchain-openai"
+    class: "ChatOpenAI"
+    env_var: "OPENAI_API_KEY"
+    requires_api_key: true
+    default_model: "gpt-5-mini"
+    models:
+      # GPT-5 Family (October 2025)
+      - id: "gpt-5"
+        name: "GPT-5 🚀"
+        description: "Full multimodal flagship with strong reasoning & agentic capabilities"
+        recommended: true
+      - id: "gpt-5-mini"
+        name: "GPT-5 Mini ⚡"
+        description: "Fast, lower-cost variant optimized for interactive agents & tool calls"
+        recommended: true
+      - id: "gpt-5-nano"
+        name: "GPT-5 Nano"
+        description: "Lightweight for minimal reasoning & high-volume endpoints"
+      # GPT-4o Series (Still in Production)
+      - id: "gpt-4o"
+        name: "GPT-4o"
+        description: "General-purpose multimodal - balances reasoning, text & image"
+      - id: "gpt-4o-mini"
+        name: "GPT-4o Mini"
+        description: "Low-cost ultra-fast small model - excellent for chat/structured responses"
+      # Reasoning Models
+      - id: "o3-mini-2025-01-31"
+        name: "o3-mini (Latest)"
+        description: "Newest reasoning model - supports function calling"
+        recommended: true
+      - id: "o1"
+        name: "o1"
+        description: "Full reasoning model (tier 5 API only)"
+      - id: "o1-mini"
+        name: "o1-mini"
+        description: "Efficient reasoning for coding/math"
+      # Legacy Models
+      - id: "gpt-4-turbo"
+        name: "GPT-4 Turbo (Legacy)"
+        description: "Previous generation - use GPT-5 instead"
+      - id: "gpt-4"
+        name: "GPT-4 (Legacy)"
+        description: "Original GPT-4 - very expensive"
+
+  bedrock:
+    name: "AWS Bedrock"
+    description: "AWS managed AI models"
+    package: "langchain-aws"
+    class: "ChatBedrockConverse"
+    env_var: null
+    requires_api_key: false
+    uses_aws_credentials: true
+    default_model: "us.anthropic.claude-haiku-4-5-20251001-v1:0"
+    models:
+      - id: "us.anthropic.claude-haiku-4-5-20251001-v1:0"
+        name: "Claude Haiku 4.5 ⚡"
+        description: "Latest fast Claude - best for agents (US inference profile)"
+        recommended: true
+      - id: "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
+        name: "Claude Sonnet 4.5"
+        description: "Most capable Claude (US inference profile)"
+        recommended: true
+      - id: "us.amazon.nova-lite-v1:0"
+        name: "Amazon Nova Lite"
+        description: "Fast, cost-effective AWS model for agents"
+        recommended: true
+      - id: "us.amazon.nova-micro-v1:0"
+        name: "Amazon Nova Micro"
+        description: "Lowest latency AWS model"
+      - id: "us.amazon.nova-pro-v1:0"
+        name: "Amazon Nova Pro"
+        description: "Amazon's multimodal foundation model"
+      - id: "anthropic.claude-3-5-sonnet-20241022-v2:0"
+        name: "Claude 3.5 Sonnet (Legacy)"
+        description: "Previous generation - direct model ID"
+      - id: "anthropic.claude-3-5-haiku-20241022-v1:0"
+        name: "Claude 3.5 Haiku (Legacy)"
+        description: "Previous generation - direct model ID"
+      - id: "openai.gpt-oss-120b-1:0"
+        name: "GPT-OSS 120B"
+        description: "Open-weights foundation model"
+      - id: "openai.gpt-oss-20b-1:0"
+        name: "GPT-OSS 20B"
+        description: "Compact open-weights for low-cost tasks"
+      - id: "deepseek.v3-v1:0"
+        name: "DeepSeek V3.1"
+        description: "Cost-effective reasoning model"
+        recommended: true
+      - id: "qwen.qwen3-coder-480b-a35b-v1:0"
+        name: "Qwen3 Coder 480B"
+        description: "Alibaba coding specialist (480B params)"
+      - id: "qwen.qwen3-coder-30b-a3b-v1:0"
+        name: "Qwen3 Coder 30B"
+        description: "Compact coding model (30B params)"
+      - id: "mistral.mistral-7b-instruct-v0:2"
+        name: "Mistral 7B Instruct"
+        description: "Very low latency - direct model ID"
+      - id: "meta.llama3-2-90b-instruct-v1:0"
+        name: "Llama 3.2 90B"
+        description: "Meta Llama 3.2 90B - direct model ID"
+
+# Default selections
+defaults:
+  provider: "gemini"
+  model: "gemini-2.5-flash"

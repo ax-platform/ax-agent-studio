@@ -1,0 +1,16 @@
+# Example Prompt Template
+# Copy this file to create new prompts
+# File name should be lowercase with underscores (e.g., my_custom_prompt.yaml)
+
+name: Example Prompt Name
+description: Brief description shown in UI dropdown
+prompt: |
+  Your system prompt goes here.
+
+  You can use multiple lines and paragraphs.
+
+  Define the agent's:
+  - Personality and tone
+  - Areas of expertise
+  - Behavioral guidelines
+  - Response style

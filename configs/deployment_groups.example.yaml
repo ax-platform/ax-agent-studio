@@ -1,0 +1,92 @@
+# Deployment Groups Configuration (Example)
+#
+# This file defines pre-configured agent groups for batch deployment.
+# Copy this file to deployment_groups.yaml and customize for your needs.
+#
+# Quick start:
+#   cp configs/deployment_groups.example.yaml configs/deployment_groups.yaml
+#   # Replace YOUR_AGENT_NAME_X with your actual agent IDs
+#
+# Each group can specify:
+# - defaults: Default settings for all agents in the group
+# - agents: List of agents with model/provider overrides
+# - tags: Categories for filtering groups
+# - environment: Target environment (any/local/production)
+#
+# 💡 TIP: If you only have 1-2 agents, just duplicate the same agent ID
+#         across all slots - the system will handle it gracefully!
+#
+# Example with one agent:
+#   agents:
+#     - id: "my_agent"
+#       model: "gemini-2.5-flash-lite"
+#     - id: "my_agent"
+#       model: "gpt-5-nano"
+#     - id: "my_agent"
+#       model: "claude-haiku-4-5"
+#
+# This will start 3 instances of "my_agent" with different models!
+
+deployment_groups:
+  # Example 1: Simple group with placeholder agent names
+  # IMPORTANT: Replace "YOUR_AGENT_NAME" with actual agent IDs from configs/agents/
+  example_tiny_group:
+    name: "Tiny Group Example ⚡"
+    description: "Ultra-fast lightweight agents - lowest cost, highest speed."
+    defaults:
+      monitor: "langgraph"
+      start_delay_ms: 300
+    agents:
+      - id: "YOUR_AGENT_NAME_1"     # ← REPLACE with your agent ID
+        provider: "gemini"
+        model: "gemini-2.5-flash-lite"
+      - id: "YOUR_AGENT_NAME_2"     # ← REPLACE with your agent ID
+        provider: "openai"
+        model: "gpt-5-nano"
+      - id: "YOUR_AGENT_NAME_3"     # ← REPLACE with your agent ID
+        provider: "anthropic"
+        model: "claude-haiku-4-5"
+    tags: ["tiny", "example"]
+    environment: "any"
+
+  # Example 2: Balanced production-ready group
+  # IMPORTANT: Replace agent IDs before using!
+  example_small_group:
+    name: "Small Group Example"
+    description: "Balanced speed & capability - production-ready agents."
+    defaults:
+      monitor: "langgraph"
+      start_delay_ms: 400
+    agents:
+      - id: "YOUR_AGENT_NAME_1"     # ← REPLACE with your agent ID
+        provider: "gemini"
+        model: "gemini-2.5-flash"
+      - id: "YOUR_AGENT_NAME_2"     # ← REPLACE with your agent ID
+        provider: "openai"
+        model: "gpt-5-mini"
+      - id: "YOUR_AGENT_NAME_3"     # ← REPLACE with your agent ID
+        provider: "anthropic"
+        model: "claude-haiku-4-5"
+    tags: ["small", "balanced", "example"]
+    environment: "any"
+
+  # Example 3: Flagship models for complex workflows
+  # IMPORTANT: Replace agent IDs before using!
+  example_large_group:
+    name: "Large Group Example 🚀"
+    description: "Flagship models - maximum capability for complex reasoning."
+    defaults:
+      monitor: "langgraph"
+      start_delay_ms: 600
+    agents:
+      - id: "YOUR_AGENT_NAME_1"     # ← REPLACE with your agent ID
+        provider: "anthropic"
+        model: "claude-sonnet-4-5"
+      - id: "YOUR_AGENT_NAME_2"     # ← REPLACE with your agent ID
+        provider: "openai"
+        model: "gpt-5"
+      - id: "YOUR_AGENT_NAME_3"     # ← REPLACE with your agent ID
+        provider: "gemini"
+        model: "gemini-2.5-pro"
+    tags: ["large", "flagship", "example"]
+    environment: "any"

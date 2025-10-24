@@ -1,0 +1,95 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# uv
+.uv/
+uv.lock
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+logs/
+*.log
+
+# Environment variables
+.env
+.env.local
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Dashboard-specific
+monitor-dashboard/logs/
+
+# Temporary files
+*.tmp
+*.temp
+tmp/
+temp/
+
+# Agent configs (personal/private)
+configs/agents/*.json
+!configs/agents/_example_agent.json
+
+# Deployment groups (personal/private)
+configs/deployment_groups.yaml
+
+# Old config structure (deprecated)
+configs/local/
+configs/production/
+
+# Personal Claude Code settings
+.claude/
+.mcp.json
+
+# Agent workspace (filesystem MCP server)
+agent_files/
+!agent_files/README.md
+AGENTS.md
+
+# Internal development docs (session notes, handoffs, etc.)
+docs/
+HANDOFF_SUMMARY.md
+*_HANDOFF.md
+
+# SQLite databases (generated at runtime)
+data/
+*.db
+*.db-journal

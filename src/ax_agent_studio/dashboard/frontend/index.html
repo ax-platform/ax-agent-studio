@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Factory | aX Monitor Studio</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏭</text></svg>">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏭 Agent Factory</h1>
+            <div class="header-actions">
+                <div id="kill-switch-status" style="display: none; margin-right: 1rem; padding: 0.5rem 1rem; background: #fef3c7; color: #92400e; border-radius: 4px; font-weight: 600;">
+                    🛑 Kill Switch Active
+                </div>
+                <button id="pause-all-btn" class="btn btn-danger" title="Pause all running agents">🛑 Pause All</button>
+                <button id="reset-all-btn" class="btn btn-warning" title="Reset backlog for all agents in this environment">🔄 Reset</button>
+                <button id="kill-btn" class="btn btn-danger" title="Nuclear option: Force kill ALL monitor processes (kills money burning!)">☠️ Kill</button>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <!-- Left Panel: Monitor Control -->
+            <div class="left-panel">
+                <section class="card">
+                    <h2 style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="toggleRunningAgents()">
+                        <span>🤖 Running Agents</span>
+                        <span id="agents-toggle" style="font-size: 1.2rem;">▼</span>
+                    </h2>
+                    <div id="monitors-list" class="monitors-list">
+                        <p class="empty-state">No agents running</p>
+                    </div>
+                </section>
+
+                <section class="card">
+                    <h2 style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="toggleDeployForm()">
+                        <span>⚡ Deploy New Agent</span>
+                        <span id="deploy-toggle" style="font-size: 1.2rem;">▼</span>
+                    </h2>
+                    <form id="start-monitor-form">
+                        <div class="form-group">
+                            <label for="environment-select">Environment:</label>
+                            <select id="environment-select" required>
+                                <option value="">Loading...</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="agent-select">Agent:</label>
+                            <select id="agent-select" required>
+                                <option value="">Select environment first...</option>
+                            </select>
+                            <small class="form-help" id="agent-help"></small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="monitor-type-select">Agent Type:</label>
+                            <select id="monitor-type-select" required>
+                                <option value="echo">🔊 Echo (Simple)</option>
+                                <option value="ollama">🤖 Ollama (AI)</option>
+                                <option value="langgraph" selected>🧠 LangGraph (Tools)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group" id="provider-group" style="display: none;">
+                            <label for="provider-select">Provider:</label>
+                            <select id="provider-select" required>
+                                <option value="">Loading...</option>
+                            </select>
+                            <small class="form-help" id="provider-help"></small>
+                        </div>
+
+                        <div class="form-group" id="model-group" style="display: none;">
+                            <label for="model-select">Model:</label>
+                            <select id="model-select">
+                                <option value="">Loading...</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group" id="system-prompt-group" style="display: none;">
+                            <label for="system-prompt-select">System Prompt (optional):</label>
+                            <select id="system-prompt-select">
+                                <option value="">None (use model defaults)</option>
+                            </select>
+                            <small class="form-help" id="prompt-help">Choose a personality template</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="process-backlog-checkbox" checked>
+                                Resume existing backlog on start
+                            </label>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">▶️ Deploy Agent</button>
+                    </form>
+                </section>
+
+                <section class="card">
+                    <h2>📦 Deployment Groups</h2>
+                    <div id="deployment-groups-list" class="deployment-groups-list">
+                        <p class="empty-state">Loading deployment groups...</p>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Right Panel: Logs -->
+            <div class="right-panel">
+                <section class="card logs-card">
+                    <h2 style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="toggleLiveLogs()">
+                        <span>📜 Live Logs</span>
+                        <span id="logs-toggle" style="font-size: 1.2rem;">▼</span>
+                    </h2>
+                    <div id="logs-section">
+                    <div class="logs-controls">
+                        <select id="log-filter">
+                            <option value="all">All Agents</option>
+                        </select>
+                        <button id="refresh-logs-btn" class="btn btn-secondary btn-sm">🔄 Refresh</button>
+                        <button id="copy-logs-btn" class="btn btn-secondary btn-sm">📋 Copy</button>
+                        <button id="clear-logs-btn" class="btn btn-secondary btn-sm">🗑️ Clear</button>
+                        <div class="checkbox-stack">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="auto-scroll" checked>
+                                Auto-scroll
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="verbose-mode" checked>
+                                Verbose
+                            </label>
+                        </div>
+                    </div>
+                    <div id="logs-container" class="logs-container">
+                        <p class="empty-state">Waiting for logs...</p>
+                    </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

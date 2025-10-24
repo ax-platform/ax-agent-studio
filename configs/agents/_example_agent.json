@@ -1,0 +1,55 @@
+{
+  "_comment": "Example MCP agent configuration for aX Agent Studio",
+  "_instructions": [
+    "1. Register an agent at https://ax-platform.com",
+    "2. Click 'Copy Config' button after registration",
+    "3. Create a new file here: configs/agents/your_agent_name.json",
+    "4. Paste the config you copied - that's it!",
+    "5. Optional: Add more MCP servers for additional capabilities",
+    "6. Delete these comment fields (starting with _) in your config"
+  ],
+
+  "mcpServers": {
+    "_comment_local": "For local development (ax-docker)",
+    "ax-docker": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote@0.1.29",
+        "http://localhost:8002/mcp/agents/your_agent_name",
+        "--transport",
+        "http-only",
+        "--oauth-server",
+        "http://localhost:8001"
+      ]
+    },
+
+    "_comment_production": "For production (ax-gcp) - uncomment and use instead of ax-docker",
+    "_ax-gcp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote@0.1.29",
+        "https://mcp.paxai.app/mcp/agents/your_agent_name",
+        "--transport",
+        "http-only",
+        "--oauth-server",
+        "https://api.paxai.app"
+      ]
+    },
+
+    "_comment_optional": "Optional: Add more MCP servers",
+    "_fetch": {
+      "command": "uvx",
+      "args": ["mcp-server-fetch"]
+    },
+    "_filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/Users/jacob/ax-agent-studio/agent_files"
+      ]
+    }
+  }
+}
