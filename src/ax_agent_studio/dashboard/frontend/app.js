@@ -787,10 +787,24 @@ function renderMonitors() {
 
         return `
         <div class="monitor-card">
-            <div class="monitor-info">
+            <div class="monitor-top">
                 <div class="monitor-name">
                     ${getMonitorEmoji(monitor.monitor_type)} ${monitor.agent_name}
                 </div>
+                <div class="monitor-controls">
+                    <div class="monitor-status ${statusClass}">
+                        ${isRunning ? '🟢' : '⏸️'} ${statusLabel}
+                    </div>
+                    <div class="monitor-actions">
+                        ${testControl}
+                        ${pauseOrStartControl}
+                        ${resumeControl}
+                        ${resetControl}
+                        ${killControl}
+                    </div>
+                </div>
+            </div>
+            <div class="monitor-info">
                 <div class="monitor-details">
                     Type: ${monitor.monitor_type} |
                     ${monitor.provider ? `Provider: ${providerName} | ` : ''}
@@ -801,16 +815,6 @@ function renderMonitors() {
                     ${monitor.mcp_servers && monitor.mcp_servers.length > 0 ? `Tools: ${monitor.mcp_servers.join(', ')} | ` : ''}
                     ${promptInfo}${deploymentInfo}
                 </div>
-            </div>
-            <div class="monitor-status ${statusClass}">
-                ${isRunning ? '🟢' : '⏸️'} ${statusLabel}
-            </div>
-            <div class="monitor-actions">
-                ${testControl}
-                ${pauseOrStartControl}
-                ${resumeControl}
-                ${resetControl}
-                ${killControl}
             </div>
         </div>
     `;
