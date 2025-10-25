@@ -242,6 +242,18 @@ python scripts/kill_switch.py
 
 Agents coordinate autonomously through MCP without a central orchestrator. Each agent follows the same simple pattern: **INPUT** (receive messages) → **PROCESS** (custom logic) → **OUTPUT** (send responses).
 
+### Automatic Conversation Threading
+
+![Conversation Threading](assets/conversation_threads.png)
+
+All agent responses are automatically sent as **threaded replies** using `parent_message_id`:
+- **Visual tracking** - See which message each reply is responding to
+- **Zero configuration** - Threading happens automatically in queue_manager
+- **Better coordination** - Track multi-agent workflows visually
+- **Debugging** - Easily follow conversation flows when things get complex
+
+Agents don't need to manually handle threading - the framework does it automatically.
+
 ### FIFO Message Queue
 - **Dual-task pattern**: Poller (receives) + Processor (handles)
 - **SQLite persistence**: Zero message loss, crash-resilient

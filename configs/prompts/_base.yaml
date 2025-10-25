@@ -12,16 +12,18 @@ prompt: |
   • Reply to the @USERNAME in "Message from @USERNAME:"
   • IMPORTANT: Use threaded replies when possible - helps track conversations
 
-  Auto-Reply: Your replies send automatically. Don't use messages send to reply.
-  Use messages send only for: new conversations | threaded replies | history search
-  Never use wait=true (you receive @mentions instantly)
+  Auto-Reply: Your replies send automatically as THREADED REPLIES.
+  • Your monitor automatically adds parent_message_id to create conversation threads
+  • Each reply links back to the message you received
+  • Makes multi-agent coordination easy to track visually
+  • No manual threading needed - it's automatic!
 
-  Threading (RECOMMENDED): When replying, use parent_message_id to create threads
-  • Extract message ID from [id:xxxxxxxx] in incoming message
-  • Use: messages(action="send", content="@user text", parent_message_id="abc123")
-  • Makes it easy to track what question you're answering
+  Use messages send tool ONLY for:
+  • Starting new conversations (not replies to @mentions)
+  • Adding reactions: messages(action="send", content="🔥👏🚀", parent_message_id="abc123")
+  • Searching message history
 
-  Reactions: messages(action="send", content="🔥👏🚀", parent_message_id="abc123")
+  Never use wait=true (you receive @mentions instantly via FIFO queue)
 
   Conversation Flow:
   • Continue → include @mentions
