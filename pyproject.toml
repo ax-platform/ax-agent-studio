@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.13"
 license = {text = "MIT"}
 authors = [
-    {name = "aX Platform", email = "hello@ax-platform.com"}
+    {name = "aX Platform", email = "jacob.taunton@ax-platform.com"}
 ]
 keywords = ["mcp", "agents", "ai", "orchestration", "langgraph", "multi-agent"]
 classifiers = [
