@@ -1,9 +1,28 @@
 [project]
 name = "ax-agent-studio"
-version = "0.1.0"
-description = "Monitor and manage aX platform MCP agents"
+version = "1.0.0"
+description = "The Agent Factory - Build autonomous AI agents using MCP for orchestration"
 readme = "README.md"
 requires-python = ">=3.13"
+license = {text = "MIT"}
+authors = [
+    {name = "aX Platform", email = "hello@ax-platform.com"}
+]
+keywords = ["mcp", "agents", "ai", "orchestration", "langgraph", "multi-agent"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+]
+
+[project.urls]
+Homepage = "https://github.com/ax-platform/ax-agent-studio"
+Documentation = "https://github.com/ax-platform/ax-agent-studio/blob/main/README.md"
+Repository = "https://github.com/ax-platform/ax-agent-studio"
+Issues = "https://github.com/ax-platform/ax-agent-studio/issues"
+
 dependencies = [
     "mcp>=1.0.0",
     "httpx>=0.27.0",

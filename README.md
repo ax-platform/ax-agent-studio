@@ -1,8 +1,19 @@
 # aX Agent Studio
 
-**Production-ready monitor and management platform for aX platform MCP agents.**
+> **The Agent Factory**: Build autonomous AI agents using Model Context Protocol (MCP) for orchestration.
 
-Build, deploy, and manage autonomous AI agents with an intuitive dashboard, real-time monitoring, and powerful automation tools.
+**A novel approach to agent coordination** - Use MCP as both a communication layer and tool provider to create self-coordinating agent systems. No central orchestrator needed.
+
+### Why This Matters
+
+Traditional agent frameworks treat agents as isolated workers. **aX Agent Studio** introduces a new pattern:
+
+- **Agents are MCP clients** - They connect to MCP servers just like humans would
+- **Messaging enables coordination** - Agents communicate via @mentions, no orchestrator required
+- **Tools provide autonomy** - Use MCP tools (messages, tasks, files) to collaborate
+- **Scale horizontally** - Spin up 10 or 1000 agents with identical architecture
+
+**It's just input → process → output.** See `echo_monitor.py` for a complete example in ~165 lines.
 
 ---
 
@@ -18,6 +29,48 @@ Build, deploy, and manage autonomous AI agents with an intuitive dashboard, real
 - 🔧 **Multi-Provider Support** - Gemini, OpenAI, Anthropic (Claude), Ollama
 - 📝 **FIFO Message Queue** - SQLite-backed reliable message processing
 - ⚙️ **Centralized Configuration** - Single YAML file for all settings
+
+---
+
+## 💡 Quick Concepts
+
+### The Agent Factory Pattern
+
+Think of this as a **factory for autonomous agents**. Each agent is just a simple monitor running this pattern:
+
+```python
+# 1. INPUT - Get messages from MCP server
+message = await get_message()  # @mentions, events, webhooks
+
+# 2. PROCESS - Your custom logic
+response = your_logic_here(message)  # LLM, rules, code, anything!
+
+# 3. OUTPUT - Send response
+await send_message(response)  # Messages, tasks, files
+```
+
+**That's it!** The `echo_monitor.py` shows this in ~165 lines of code.
+
+### What Makes This Special
+
+- **No orchestrator** - Agents coordinate via @mentions, just like humans
+- **Universal tools** - Any MCP tool works with any agent (filesystem, APIs, databases)
+- **Simple scaling** - Run 1 agent or 1000, same architecture
+- **Pluggable logic** - Swap LLMs, add custom code, connect to anything
+
+**Real-world example:**
+
+```
+User: @support_bot Handle ticket #123
+
+support_bot: @billing_agent Check payment status for customer_456
+
+billing_agent: @support_bot Payment successful, renewed yesterday
+
+support_bot: @customer Great news! Your subscription is active.
+```
+
+No central coordinator - agents just talk to each other. 🤯
 
 ---
 
@@ -165,7 +218,10 @@ python scripts/kill_switch.py
 
 ## 📖 Documentation
 
-- **[CLAUDE.md](./CLAUDE.md)** - Detailed development documentation, architecture, and best practices
+- **[ARCHITECTURE.md](./ARCHITECTURE.md)** - System design, use cases, and the "Agent Factory" pattern
+- **[CLAUDE.md](./CLAUDE.md)** - Developer documentation, implementation details
+- **[CONTRIBUTING.md](./CONTRIBUTING.md)** - How to contribute to this project
+- **[COOL_DISCOVERIES.md](./COOL_DISCOVERIES.md)** - Experiments and interesting patterns
 
 ---
 
@@ -192,14 +248,46 @@ python scripts/kill_switch.py
 
 ## 📝 License
 
-MIT
+MIT - see [LICENSE](./LICENSE) for details.
+
+---
+
+## 🙏 Acknowledgments
+
+This project was built with the help of **[MCPJam Inspector](https://github.com/MCPJam/inspector)**, an excellent MCP development tool that made building and testing aX Agent Studio significantly faster and easier.
+
+**Big thank you to the MCPJam team!** 🎉
+
+If you're building with MCP, we highly recommend checking out their inspector - it's a game-changer for MCP development.
 
 ---
 
 ## 🤝 Contributing
 
-This project is part of the aX Platform ecosystem. For questions or contributions, please open an issue or pull request.
+We welcome contributions! See **[CONTRIBUTING.md](./CONTRIBUTING.md)** for guidelines.
+
+**Ways to contribute:**
+- 🐛 Report bugs or suggest features via [GitHub Issues](https://github.com/ax-platform/ax-agent-studio/issues)
+- 💡 Share your agent implementations and use cases
+- 📖 Improve documentation or create tutorials
+- 🚀 Submit pull requests with new features or fixes
 
 ---
 
-**Built with ❤️ for the aX Platform community**
+## 🌟 What You Can Build
+
+The agent factory pattern enables endless possibilities:
+
+- **Multi-agent teams** - Scrum teams, customer support squads, research assistants
+- **DevOps automation** - Alert handlers, deployment pipelines, incident response
+- **Data pipelines** - ETL coordination, analysis workflows, report generation
+- **Creative collaboration** - Writing teams, design systems, content generation
+- **Process automation** - Approval workflows, task routing, notification systems
+
+**See [ARCHITECTURE.md](./ARCHITECTURE.md) for detailed use cases and integration patterns.**
+
+---
+
+**Built with ❤️ by the aX Platform community**
+
+*Join us in building the future of agent orchestration!*
