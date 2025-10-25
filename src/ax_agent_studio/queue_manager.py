@@ -332,12 +332,13 @@ class QueueManager:
 
                     # Only send if response is not empty (handler may return "" to skip)
                     if response and response.strip():
-                        # Send response
+                        # Send response as a REPLY to the original message (creates thread)
                         await self.session.call_tool("messages", {
                             "action": "send",
-                            "content": response
+                            "content": response,
+                            "parent_message_id": msg.id  # Reply to the message we received
                         })
-                        logger.info(f"✅ Completed message {msg.id[:8]}: {response[:50]}...")
+                        logger.info(f"✅ Completed message {msg.id[:8]} (threaded reply): {response[:50]}...")
                     else:
                         # Handler returned empty response (e.g., blocked self-mention)
                         logger.info(f"✅ Completed message {msg.id[:8]}: (no response - handler blocked)")

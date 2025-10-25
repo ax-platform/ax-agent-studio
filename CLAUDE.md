@@ -583,6 +583,27 @@ python start_dashboard.py
 # Or use test scripts above
 ```
 
+**Testing with MCP messages tool (RECOMMENDED)**:
+```python
+# Always use wait=true to verify agent responses immediately
+# This blocks until agent responds, perfect for testing
+mcp__ax-docker__messages(
+    action="send",
+    content="@agent_name Test message",
+    wait=true,  # ← CRITICAL: Wait for agent response
+    timeout=60  # Optional: seconds to wait
+)
+
+# wait=true returns the agent's response directly
+# Avoids race conditions and verifies threading works correctly
+```
+
+**Why wait=true?**
+- ✅ Immediate verification - see agent response instantly
+- ✅ No race conditions - guarantees response is captured
+- ✅ Validates threading - confirms auto-reply works
+- ✅ Detects duplicates - multiple responses show up immediately
+
 ## File Naming Conventions
 
 - Monitors: `{type}_monitor.py` (e.g., `echo_monitor.py`)
