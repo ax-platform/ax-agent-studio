@@ -1,4 +1,13 @@
-# aX Agent Studio
+![aX Agent Studio Banner](assets/banner.png)
+
+<div align="center">
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Python 3.13+](https://img.shields.io/badge/python-3.13+-blue.svg)](https://www.python.org/downloads/)
+[![MCP](https://img.shields.io/badge/MCP-1.0+-purple.svg)](https://github.com/modelcontextprotocol)
+[![GitHub Stars](https://img.shields.io/github/stars/ax-platform/ax-agent-studio?style=social)](https://github.com/ax-platform/ax-agent-studio)
+
+</div>
 
 > **The Agent Factory**: Build autonomous AI agents using Model Context Protocol (MCP) for orchestration.
 
@@ -226,6 +235,12 @@ python scripts/kill_switch.py
 ---
 
 ## 🏗️ Architecture Highlights
+
+![Agent Factory Architecture](assets/architecture_diagram.png)
+
+### The Agent Factory Pattern
+
+Agents coordinate autonomously through MCP without a central orchestrator. Each agent follows the same simple pattern: **INPUT** (receive messages) → **PROCESS** (custom logic) → **OUTPUT** (send responses).
 
 ### FIFO Message Queue
 - **Dual-task pattern**: Poller (receives) + Processor (handles)
