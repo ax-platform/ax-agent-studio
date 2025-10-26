@@ -307,12 +307,16 @@ class ProcessManager:
                 self.delete_monitor(monitor_id)
 
         if not process_backlog:
-            reset_summary = await self.clear_agent_backlog(agent_name, config_path)
-            print(
-                f"🧹 Cleared backlog for {agent_name}: "
-                f"{reset_summary.get('remote_cleared', 0)} remote / "
-                f"{reset_summary.get('local_cleared', 0)} local"
-            )
+            try:
+                reset_summary = await self.clear_agent_backlog(agent_name, config_path)
+                print(
+                    f"🧹 Cleared backlog for {agent_name}: "
+                    f"{reset_summary.get('remote_cleared', 0)} remote / "
+                    f"{reset_summary.get('local_cleared', 0)} local"
+                )
+            except Exception as e:
+                print(f"⚠️  Warning: Failed to clear backlog for {agent_name}: {e}")
+                print("   Continuing with agent startup anyway...")
 
         # CRITICAL: Also kill any orphaned system processes for this agent
         # This prevents the "competing monitors" problem
