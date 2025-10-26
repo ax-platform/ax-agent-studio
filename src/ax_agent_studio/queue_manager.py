@@ -183,7 +183,10 @@ class QueueManager:
         last_id = None
 
         try:
-            while True:
+            max_iterations = 200  # Safety limit to prevent infinite loops
+            iteration = 0
+
+            while iteration < max_iterations:
                 # Stop if we've reached the limit
                 if self.startup_sweep_limit > 0 and fetched >= self.startup_sweep_limit:
                     logger.info(f"✅ Sweep limit reached ({fetched} messages)")
@@ -221,6 +224,15 @@ class QueueManager:
                     fetched += 1
                     last_id = msg_id
                     logger.info(f"📥 Sweep [{fetched}]: {msg_id[:8]} from {sender}")
+
+                iteration += 1
+
+                # CRITICAL: Rate limit protection - wait between requests
+                # MCP server rate limit: ~100 req/min, so 0.7s = ~85 req/min (safe)
+                await asyncio.sleep(0.7)
+
+            if iteration >= max_iterations:
+                logger.warning(f"⚠️  Hit max iterations ({max_iterations}) during sweep")
 
         except Exception as e:
             logger.error(f"❌ Startup sweep error: {e}")

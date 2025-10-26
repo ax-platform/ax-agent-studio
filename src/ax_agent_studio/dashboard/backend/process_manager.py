@@ -495,16 +495,28 @@ class ProcessManager:
             async with MCPServerManager(agent_name) as manager:
                 primary_session = manager.get_primary_session()
 
-                while True:
+                max_iterations = 200  # Safety limit to prevent infinite loops
+                iteration = 0
+
+                while iteration < max_iterations:
                     result = await primary_session.call_tool("messages", {
                         "action": "check",
                         "wait": False,
-                        "mark_read": True
+                        "mark_read": True,
+                        "limit": 10  # Batch process up to 10 at a time
                     })
                     mention_count = self._count_mentions(result)
                     if mention_count == 0:
                         break
                     summary["remote_cleared"] += mention_count
+                    iteration += 1
+
+                    # CRITICAL: Rate limit protection - wait between requests
+                    # MCP server rate limit: ~100 req/min, so 0.7s = ~85 req/min (safe)
+                    await asyncio.sleep(0.7)
+
+                if iteration >= max_iterations:
+                    summary["errors"].append(f"Hit max iterations ({max_iterations}) - backlog may not be fully cleared")
         except Exception as e:
             summary["errors"].append(f"remote: {e}")
 
