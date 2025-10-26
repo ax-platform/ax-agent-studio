@@ -373,8 +373,6 @@ async function startMonitor() {
             await loadMonitors();
             await loadDeploymentGroups(selectedEnvironment);
 
-            document.getElementById('process-backlog-checkbox').checked = true;
-
             // Expand Running Agents section if collapsed
             const monitorsList = document.getElementById('monitors-list');
             const toggle = document.getElementById('agents-toggle');
@@ -743,6 +741,89 @@ function renderDeploymentGroups() {
     }).join('');
 }
 
+// Helper function to get capability badge color based on skill category
+function getCapabilityBadgeClass(skill) {
+    const languageSkills = ['python', 'javascript', 'typescript', 'react'];
+    const cloudSkills = ['devops', 'cloud_ops', 'gcp', 'aws', 'azure'];
+    const testingSkills = ['testing', 'debugging'];
+    const reviewSkills = ['code_review', 'documentation', 'ux_design'];
+
+    if (languageSkills.includes(skill)) return 'capability-language';
+    if (cloudSkills.includes(skill)) return 'capability-cloud';
+    if (testingSkills.includes(skill)) return 'capability-testing';
+    if (reviewSkills.includes(skill)) return 'capability-review';
+    return 'capability-other';
+}
+
+// Helper function to get emoji for skill
+function getSkillEmoji(skill) {
+    const emojiMap = {
+        'python': '🐍',
+        'javascript': '⚡',
+        'typescript': '📘',
+        'react': '⚛️',
+        'code_review': '👁️',
+        'testing': '🧪',
+        'debugging': '🔧',
+        'devops': '⚙️',
+        'cloud_ops': '☁️',
+        'gcp': '🌩️',
+        'aws': '🔶',
+        'azure': '🔷',
+        'api_development': '🔌',
+        'database': '🗄️',
+        'documentation': '📚',
+        'ux_design': '🎨',
+        'security': '🔒',
+        'ml_engineering': '🤖',
+        'data_analysis': '📊'
+    };
+    return emojiMap[skill] || '⭐';
+}
+
+// Render capability badges for an agent
+function renderCapabilities(coreCapabilities, additionalCapabilities) {
+    if (!coreCapabilities && !additionalCapabilities) {
+        return '';
+    }
+
+    let badgesHTML = '';
+
+    // Render core capabilities with levels
+    if (coreCapabilities && coreCapabilities.length > 0) {
+        const coreBadges = coreCapabilities.map(cap => {
+            const emoji = getSkillEmoji(cap.skill);
+            const badgeClass = getCapabilityBadgeClass(cap.skill);
+            const levelText = cap.level ? ` (${cap.level})` : '';
+            return `<span class="capability-badge ${badgeClass}" title="${cap.skill}${levelText}">
+                ${emoji} ${cap.skill}${levelText}
+            </span>`;
+        }).join('');
+        badgesHTML += coreBadges;
+    }
+
+    // Render additional capabilities (no levels)
+    if (additionalCapabilities && additionalCapabilities.length > 0) {
+        const additionalBadges = additionalCapabilities.map(skill => {
+            return `<span class="capability-badge capability-additional" title="${skill}">
+                ⭐ ${skill}
+            </span>`;
+        }).join('');
+        badgesHTML += additionalBadges;
+    }
+
+    if (!badgesHTML) {
+        return '';
+    }
+
+    return `<div class="capabilities-section">
+        <div class="capabilities-label">Capabilities:</div>
+        <div class="capabilities-badges">
+            ${badgesHTML}
+        </div>
+    </div>`;
+}
+
 function renderMonitors() {
     const container = document.getElementById('monitors-list');
 
@@ -785,6 +866,9 @@ function renderMonitors() {
         const deploymentInfo = monitor.deployment_group ? ` | Group: ${monitor.deployment_group}` : '';
         const promptInfo = monitor.system_prompt_name ? `System Prompt: ${monitor.system_prompt_name}` : 'System Prompt: None';
 
+        // Render capability badges
+        const capabilitiesHTML = renderCapabilities(monitor.core_capabilities, monitor.additional_capabilities);
+
         return `
         <div class="monitor-card">
             <div class="monitor-top">
@@ -815,6 +899,7 @@ function renderMonitors() {
                     ${monitor.mcp_servers && monitor.mcp_servers.length > 0 ? `Tools: ${monitor.mcp_servers.join(', ')} | ` : ''}
                     ${promptInfo}${deploymentInfo}
                 </div>
+                ${capabilitiesHTML}
             </div>
         </div>
     `;
