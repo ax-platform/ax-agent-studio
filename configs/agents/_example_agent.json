@@ -9,11 +9,9 @@
     "6. Delete these comment fields (starting with _) in your config"
   ],
 
+{
   "mcpServers": {
-
-
-    "_comment_production": "For production (ax-gcp) - uncomment and use instead of ax-docker",
-    "_ax-gcp": {
+    "ax-gcp": {
       "command": "npx",
       "args": [
         "-y",
@@ -24,30 +22,6 @@
         "--oauth-server",
         "https://api.paxai.app"
       ]
-    },
-
-    "_comment_optional": "Optional: Add more MCP servers",
-    "_fetch": {
-      "command": "uvx",
-      "args": ["mcp-server-fetch"]
-    },
-    "_filesystem": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-filesystem",
-        "/Users/jacob/ax-agent-studio/agent_files"
-      ]
-    },
-    "_memory": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-memory"
-      ],
-      "env": {
-        "MEMORY_FILE_PATH": "/Users/user/ax-agent-studio/agent_memory/your_agent_name/memory.jsonl"
-      }
     }
   }
 }
