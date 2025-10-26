@@ -52,7 +52,6 @@ class MonitorConfig(BaseModel):
     provider: Optional[str] = None
     system_prompt: Optional[str] = None
     system_prompt_name: Optional[str] = None
-    process_backlog: Optional[bool] = True
 
 class MonitorStatus(BaseModel):
     id: str
@@ -391,8 +390,7 @@ async def start_monitor(request: StartMonitorRequest):
             model=request.config.model,
             provider=request.config.provider,
             system_prompt=combined_prompt,
-            system_prompt_name=request.config.system_prompt_name,
-            process_backlog=bool(request.config.process_backlog)
+            system_prompt_name=request.config.system_prompt_name
         )
         return {
             "success": True,
