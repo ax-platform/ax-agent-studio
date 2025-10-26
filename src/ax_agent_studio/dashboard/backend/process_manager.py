@@ -292,7 +292,8 @@ class ProcessManager:
         model: Optional[str] = None,
         provider: Optional[str] = None,
         system_prompt: Optional[str] = None,
-        system_prompt_name: Optional[str] = None
+        system_prompt_name: Optional[str] = None,
+        history_limit: Optional[int] = 25
     ) -> str:
         """Start a monitor process"""
         # Sanitize agent_name to prevent shell injection and path traversal
@@ -383,12 +384,16 @@ class ProcessManager:
             cmd = [str(venv_python), "-u", "-m", "ax_agent_studio.monitors.ollama_monitor", agent_name, "--config", config_path]
             if model:
                 cmd.extend(["--model", model])
+            if history_limit is not None:
+                cmd.extend(["--history-limit", str(history_limit)])
         elif monitor_type == "langgraph":
             cmd = [str(venv_python), "-u", "-m", "ax_agent_studio.monitors.langgraph_monitor", agent_name, "--config", config_path]
             if model:
                 cmd.extend(["--model", model])
             if provider:
                 cmd.extend(["--provider", provider])
+            if history_limit is not None:
+                cmd.extend(["--history-limit", str(history_limit)])
         else:
             raise ValueError(f"Unknown monitor type: {monitor_type}")
 

@@ -42,6 +42,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('provider-group').style.display = 'block';
     document.getElementById('model-group').style.display = 'block';
     document.getElementById('system-prompt-group').style.display = 'block';
+    // history-limit-group disabled - needs server-side support
 
     // Refresh monitors and kill switch state every 5 seconds
     setInterval(async () => {
@@ -329,6 +330,8 @@ async function startMonitor() {
     const provider = document.getElementById('provider-select').value;
     const model = document.getElementById('model-select').value;
     const promptFile = document.getElementById('system-prompt-select').value;
+    // History limit disabled - needs server-side support
+    const historyLimit = 25; // Default value
 
     const config = configs.find(c => c.path === configPath);
     if (!config) {
@@ -359,7 +362,8 @@ async function startMonitor() {
                     provider: monitorType !== 'echo' ? provider : null,
                     model: monitorType !== 'echo' ? model : null,
                     system_prompt: systemPromptContent,
-                    system_prompt_name: systemPromptName
+                    system_prompt_name: systemPromptName,
+                    history_limit: monitorType !== 'echo' ? historyLimit : null
                 }
             })
         });

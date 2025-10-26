@@ -20,7 +20,8 @@ async def ollama_monitor(
     agent_name: str,
     server_url: str,
     model: str = "gpt-oss:latest",
-    ollama_url: str = "http://localhost:11434/v1"
+    ollama_url: str = "http://localhost:11434/v1",
+    history_limit: int = 25
 ):
     """Monitor for mentions and respond with Ollama AI using FIFO queue"""
 
@@ -103,7 +104,7 @@ Example:
                 context_messages = await fetch_conversation_context(
                     session=session,
                     agent_name=agent_name,
-                    limit=25
+                    limit=history_limit
                 )
 
                 # Log conversation context
@@ -181,6 +182,8 @@ if __name__ == "__main__":
     parser.add_argument("--model", default=ollama_config.get("default_model", "gpt-oss:latest"), help="Ollama model to use")
     parser.add_argument("--server", help="MCP server URL (overrides config file)")
     parser.add_argument("--ollama-url", default=ollama_config.get("base_url", "http://localhost:11434/v1"), help="Ollama API URL")
+    parser.add_argument("--history-limit", type=int, default=25,
+                       help="Number of recent messages to remember (default: 25)")
 
     args = parser.parse_args()
 
@@ -223,6 +226,6 @@ if __name__ == "__main__":
         server_url = f"{mcp_config.get('server_url', 'http://localhost:8002')}/mcp/agents/{args.agent_name}"
 
     try:
-        asyncio.run(ollama_monitor(args.agent_name, server_url, args.model, args.ollama_url))
+        asyncio.run(ollama_monitor(args.agent_name, server_url, args.model, args.ollama_url, args.history_limit))
     except KeyboardInterrupt:
         print("\n\n👋 AI Monitor stopped")

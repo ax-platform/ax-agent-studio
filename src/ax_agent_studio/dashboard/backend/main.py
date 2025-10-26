@@ -52,6 +52,7 @@ class MonitorConfig(BaseModel):
     provider: Optional[str] = None
     system_prompt: Optional[str] = None
     system_prompt_name: Optional[str] = None
+    history_limit: Optional[int] = 25  # Default to 25 messages
 
 class MonitorStatus(BaseModel):
     id: str
@@ -390,7 +391,8 @@ async def start_monitor(request: StartMonitorRequest):
             model=request.config.model,
             provider=request.config.provider,
             system_prompt=combined_prompt,
-            system_prompt_name=request.config.system_prompt_name
+            system_prompt_name=request.config.system_prompt_name,
+            history_limit=request.config.history_limit
         )
         return {
             "success": True,

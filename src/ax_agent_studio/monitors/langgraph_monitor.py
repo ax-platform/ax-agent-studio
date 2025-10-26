@@ -752,7 +752,7 @@ def load_base_prompt() -> str:
         return ""
 
 
-async def langgraph_mcp_monitor(agent_name: str, model: str = "gpt-oss:latest", provider: str = "ollama"):
+async def langgraph_mcp_monitor(agent_name: str, model: str = "gpt-oss:latest", provider: str = "ollama", history_limit: int = 25):
     """
     LangGraph monitor with multi-server MCP support and FIFO queue
     Loads agent config and connects to all defined MCP servers
@@ -761,6 +761,7 @@ async def langgraph_mcp_monitor(agent_name: str, model: str = "gpt-oss:latest", 
         agent_name: Name of the agent
         model: Model ID to use
         provider: LLM provider (ollama, gemini, anthropic, openai, bedrock)
+        history_limit: Number of recent messages to remember (default: 25)
     """
 
     print(f"🤖 LangGraph MCP Monitor starting")
@@ -804,6 +805,7 @@ async def langgraph_mcp_monitor(agent_name: str, model: str = "gpt-oss:latest", 
                 tools=tools,
                 model=model,
                 system_prompt=base_prompt if base_prompt else None,
+                max_history=history_limit,
                 llm=llm,
                 agent_name=agent_name,
                 provider=provider
@@ -880,6 +882,8 @@ if __name__ == "__main__":
                        help="LLM provider (ollama, gemini, anthropic, openai, bedrock)")
     parser.add_argument("--system-prompt", default=None,
                        help="Custom system prompt to use (overrides default)")
+    parser.add_argument("--history-limit", type=int, default=25,
+                       help="Number of recent messages to remember (default: 25)")
 
     args = parser.parse_args()
 
@@ -899,4 +903,4 @@ if __name__ == "__main__":
             print(f"   Error: {e}")
             sys.exit(1)
 
-    asyncio.run(langgraph_mcp_monitor(args.agent_name, args.model, args.provider))
+    asyncio.run(langgraph_mcp_monitor(args.agent_name, args.model, args.provider, args.history_limit))
