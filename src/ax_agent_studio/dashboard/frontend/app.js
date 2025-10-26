@@ -347,8 +347,6 @@ async function startMonitor() {
         }
     }
 
-    const processBacklog = document.getElementById('process-backlog-checkbox').checked;
-
     try {
         const response = await fetch(`${API_BASE}/api/monitors/start`, {
             method: 'POST',
@@ -361,8 +359,7 @@ async function startMonitor() {
                     provider: monitorType !== 'echo' ? provider : null,
                     model: monitorType !== 'echo' ? model : null,
                     system_prompt: systemPromptContent,
-                    system_prompt_name: systemPromptName,
-                    process_backlog: processBacklog
+                    system_prompt_name: systemPromptName
                 }
             })
         });
@@ -470,23 +467,23 @@ async function pauseMonitor(monitorId) {
     }
 }
 
-async function startMonitorFromStatus(monitorId, processBacklog = false) {
+async function startMonitorFromStatus(monitorId) {
     try {
-        const response = await fetch(`${API_BASE}/api/monitors/restart/${monitorId}?process_backlog=${processBacklog}`, {
+        const response = await fetch(`${API_BASE}/api/monitors/restart/${monitorId}`, {
             method: 'POST'
         });
 
         const data = await response.json();
         if (data.success) {
-            showNotification(processBacklog ? 'Monitor resumed backlog' : 'Monitor started fresh', 'success');
+            showNotification('Monitor started', 'success');
             await loadMonitors();
             await loadDeploymentGroups(selectedEnvironment);
         } else {
-            showNotification(processBacklog ? 'Failed to resume monitor' : 'Failed to start monitor', 'error');
+            showNotification('Failed to start monitor', 'error');
         }
     } catch (error) {
         console.error('Error starting monitor:', error);
-        showNotification(processBacklog ? 'Failed to resume monitor' : 'Failed to start monitor', 'error');
+        showNotification('Failed to start monitor', 'error');
     }
 }
 
@@ -846,12 +843,8 @@ function renderMonitors() {
 
         const pauseOrStartControl = hasMonitorId
             ? (isRunning
-                ? `<button class="btn btn-secondary btn-sm" title="Pause agent (keeps backlog)" onclick="pauseMonitor('${escapeAttr(monitor.id)}')">⏸ Pause</button>`
-                : `<button class="btn btn-primary btn-sm" title="Start fresh (ignore backlog)" onclick="startMonitorFromStatus('${escapeAttr(monitor.id)}', false)">▶️ Start</button>`)
-            : '';
-
-        const resumeControl = !isRunning && hasMonitorId
-            ? `<button class="btn btn-secondary btn-sm" title="Resume backlog" onclick="startMonitorFromStatus('${escapeAttr(monitor.id)}', true)">⏯ Resume</button>`
+                ? `<button class="btn btn-secondary btn-sm" title="Pause agent" onclick="pauseMonitor('${escapeAttr(monitor.id)}')">⏸ Pause</button>`
+                : `<button class="btn btn-primary btn-sm" title="Start agent" onclick="startMonitorFromStatus('${escapeAttr(monitor.id)}')">▶️ Start</button>`)
             : '';
 
         const resetControl = monitor.agent_name
@@ -882,7 +875,6 @@ function renderMonitors() {
                     <div class="monitor-actions">
                         ${testControl}
                         ${pauseOrStartControl}
-                        ${resumeControl}
                         ${resetControl}
                         ${killControl}
                     </div>

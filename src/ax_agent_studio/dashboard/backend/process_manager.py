@@ -292,8 +292,7 @@ class ProcessManager:
         model: Optional[str] = None,
         provider: Optional[str] = None,
         system_prompt: Optional[str] = None,
-        system_prompt_name: Optional[str] = None,
-        process_backlog: bool = True
+        system_prompt_name: Optional[str] = None
     ) -> str:
         """Start a monitor process"""
         # Sanitize agent_name to prevent shell injection and path traversal
