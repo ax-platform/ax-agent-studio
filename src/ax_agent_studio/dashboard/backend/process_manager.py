@@ -307,12 +307,13 @@ class ProcessManager:
                 self.delete_monitor(monitor_id)
 
         if not process_backlog:
-            # When starting fresh, only clear LOCAL queue - ignore remote messages
-            # The monitor will naturally only see NEW @mentions going forward
-            print(f"🧹 Starting {agent_name} fresh - clearing local queue only (ignoring old messages)")
+            # When starting fresh: only clear LOCAL queue, ignore remote backlog completely
+            # Agent will only see NEW @mentions going forward (using mode='latest' not 'unread')
+            print(f"🧹 Starting {agent_name} fresh - ignoring old messages, will only see NEW messages")
             try:
                 local_cleared = self.message_store.clear_agent(agent_name)
-                print(f"   Cleared {local_cleared} local messages from SQLite queue")
+                if local_cleared > 0:
+                    print(f"   Cleared {local_cleared} local messages from SQLite queue")
             except Exception as e:
                 print(f"⚠️  Warning: Failed to clear local queue: {e}")
 
