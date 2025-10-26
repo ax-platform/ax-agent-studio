@@ -11,6 +11,38 @@ The current attempt to implement "Memory Boost" (configurable conversation histo
 3. **Separate Fetch Required**: Agents must make a separate API call to fetch conversation history
 4. **Timing Issue**: Can't guarantee the history fetch happens at the right time relative to new messages
 
+## ⚠️ CRITICAL: Duplication Risk
+
+**DANGER**: Improper implementation could cause exponential message duplication and massive cost overruns!
+
+### The Problem
+
+If agents fetch conversation history on EVERY message:
+```
+Message 1: Fetch 0 historical messages
+Message 2: Fetch 1 historical message (message 1)
+Message 3: Fetch 2 historical messages (1, 2)
+Message 4: Fetch 3 historical messages (1, 2, 3)
+...
+Message 100: Fetch 99 historical messages
+```
+
+**Result**: O(n²) growth! 100 messages = 4,950 fetched messages = 50x cost!
+
+### Safeguards Required
+
+1. **Server-Side Deduplication**: Server must track what context was already sent
+2. **Client-Side Intelligence**: Agent should only fetch context ONCE per conversation start
+3. **Rate Limiting**: Limit context fetches to prevent abuse
+4. **Caching**: Don't re-fetch messages already in agent's context window
+5. **Monitoring**: Alert on unusual fetch patterns
+
+### Current Mitigation
+
+- Base prompt updated to instruct: "Only check messages ONCE per conversation"
+- Agents taught to use memory tool for long-term storage
+- Clear guidance: "be efficient - tools cost money"
+
 ## Current Workaround
 
 - Ollama monitor manually calls `fetch_conversation_context(limit=25)` separately
@@ -43,7 +75,13 @@ messages(
     {"id": "xyz789", "sender": "bob", "content": "Hi @alice"},
     {"id": "def456", "sender": "alice", "content": "@bob How are you?"},
     // ... up to context_limit messages
-  ]
+  ],
+  "context_metadata": {
+    "total_messages": 3,
+    "oldest_id": "xyz789",
+    "newest_id": "def456",
+    "truncated": false
+  }
 }
 ```
 
@@ -53,6 +91,37 @@ messages(
 2. **No Race Conditions**: Server guarantees consistency
 3. **Efficient**: Single network round-trip
 4. **Configurable**: UI can control context_limit (10, 25, 50, 100)
+5. **Deduplication Built-In**: Context only sent once per wait cycle
+
+### Duplication Prevention Strategy
+
+**Server-Side Tracking**:
+```python
+# Server maintains state per agent session
+session_state = {
+    "last_context_sent_at": timestamp,
+    "last_context_newest_id": "abc123",
+    "context_limit": 50
+}
+
+# Only send context if:
+# 1. This is first wait call in session, OR
+# 2. include_context=true explicitly requested, OR
+# 3. X minutes elapsed since last context send
+
+if should_send_context(session_state, request):
+    context = fetch_recent_messages(agent, limit=context_limit)
+    session_state["last_context_sent_at"] = now()
+    session_state["last_context_newest_id"] = context[0]["id"]
+else:
+    context = []  # Don't re-send same context
+```
+
+**Client-Side Intelligence**:
+- Agents maintain their own context window in memory
+- Only request fresh context when needed (conversation start, topic change)
+- Use memory tool for long-term facts
+- Base prompt instructs: "check messages ONCE per conversation"
 
 ### Implementation Steps
 
