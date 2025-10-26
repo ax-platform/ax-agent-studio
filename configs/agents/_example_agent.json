@@ -10,19 +10,7 @@
   ],
 
   "mcpServers": {
-    "_comment_local": "For local development (ax-docker)",
-    "ax-docker": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "mcp-remote@0.1.29",
-        "http://localhost:8002/mcp/agents/your_agent_name",
-        "--transport",
-        "http-only",
-        "--oauth-server",
-        "http://localhost:8001"
-      ]
-    },
+
 
     "_comment_production": "For production (ax-gcp) - uncomment and use instead of ax-docker",
     "_ax-gcp": {
@@ -50,6 +38,16 @@
         "@modelcontextprotocol/server-filesystem",
         "/Users/jacob/ax-agent-studio/agent_files"
       ]
+    },
+    "_memory": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-memory"
+      ],
+      "env": {
+        "MEMORY_FILE_PATH": "/Users/user/ax-agent-studio/agent_memory/your_agent_name/memory.jsonl"
+      }
     }
   }
 }
