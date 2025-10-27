@@ -52,7 +52,7 @@ class MonitorConfig(BaseModel):
     provider: Optional[str] = None
     system_prompt: Optional[str] = None
     system_prompt_name: Optional[str] = None
-    process_backlog: Optional[bool] = True
+    process_backlog: Optional[bool] = False  # Always start fresh, don't process old messages
 
 class MonitorStatus(BaseModel):
     id: str
@@ -418,8 +418,8 @@ async def stop_monitor(request: StopMonitorRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/monitors/restart/{monitor_id}")
-async def restart_monitor(monitor_id: str, process_backlog: bool = True):
-    """Restart a monitor"""
+async def restart_monitor(monitor_id: str, process_backlog: bool = False):
+    """Restart a monitor (always starts fresh, no backlog processing)"""
     try:
         success = await process_manager.restart_monitor(monitor_id, process_backlog)
         if success:

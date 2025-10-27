@@ -347,8 +347,6 @@ async function startMonitor() {
         }
     }
 
-    const processBacklog = document.getElementById('process-backlog-checkbox').checked;
-
     try {
         const response = await fetch(`${API_BASE}/api/monitors/start`, {
             method: 'POST',
@@ -361,8 +359,7 @@ async function startMonitor() {
                     provider: monitorType !== 'echo' ? provider : null,
                     model: monitorType !== 'echo' ? model : null,
                     system_prompt: systemPromptContent,
-                    system_prompt_name: systemPromptName,
-                    process_backlog: processBacklog
+                    system_prompt_name: systemPromptName
                 }
             })
         });
@@ -372,8 +369,6 @@ async function startMonitor() {
             showNotification(`Agent deployed: ${config.agent_name}`, 'success');
             await loadMonitors();
             await loadDeploymentGroups(selectedEnvironment);
-
-            document.getElementById('process-backlog-checkbox').checked = true;
 
             // Expand Running Agents section if collapsed
             const monitorsList = document.getElementById('monitors-list');
@@ -472,23 +467,23 @@ async function pauseMonitor(monitorId) {
     }
 }
 
-async function startMonitorFromStatus(monitorId, processBacklog = false) {
+async function startMonitorFromStatus(monitorId) {
     try {
-        const response = await fetch(`${API_BASE}/api/monitors/restart/${monitorId}?process_backlog=${processBacklog}`, {
+        const response = await fetch(`${API_BASE}/api/monitors/restart/${monitorId}`, {
             method: 'POST'
         });
 
         const data = await response.json();
         if (data.success) {
-            showNotification(processBacklog ? 'Monitor resumed backlog' : 'Monitor started fresh', 'success');
+            showNotification('Monitor started', 'success');
             await loadMonitors();
             await loadDeploymentGroups(selectedEnvironment);
         } else {
-            showNotification(processBacklog ? 'Failed to resume monitor' : 'Failed to start monitor', 'error');
+            showNotification('Failed to start monitor', 'error');
         }
     } catch (error) {
         console.error('Error starting monitor:', error);
-        showNotification(processBacklog ? 'Failed to resume monitor' : 'Failed to start monitor', 'error');
+        showNotification('Failed to start monitor', 'error');
     }
 }
 

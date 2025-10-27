@@ -293,9 +293,9 @@ class ProcessManager:
         provider: Optional[str] = None,
         system_prompt: Optional[str] = None,
         system_prompt_name: Optional[str] = None,
-        process_backlog: bool = True
+        process_backlog: bool = False  # Always start fresh
     ) -> str:
-        """Start a monitor process"""
+        """Start a monitor process (always starts fresh, no backlog processing)"""
         # Sanitize agent_name to prevent shell injection and path traversal
         safe_agent_name = sanitize_agent_name(agent_name)
 
@@ -306,13 +306,16 @@ class ProcessManager:
                 await self.stop_monitor(monitor_id)
                 self.delete_monitor(monitor_id)
 
+        # Don't clear backlog - just start fresh and let config.yaml startup_sweep setting handle it
+        # Clearing backlog causes 100+ API calls which hits rate limits!
         if not process_backlog:
-            reset_summary = await self.clear_agent_backlog(agent_name, config_path)
-            print(
-                f"🧹 Cleared backlog for {agent_name}: "
-                f"{reset_summary.get('remote_cleared', 0)} remote / "
-                f"{reset_summary.get('local_cleared', 0)} local"
-            )
+            # Only clear local SQLite queue (doesn't make API calls)
+            try:
+                local_cleared = self.message_store.clear_agent(agent_name)
+                if local_cleared > 0:
+                    print(f"🧹 Cleared {local_cleared} messages from local queue for {agent_name}")
+            except Exception as e:
+                print(f"⚠️  Warning: Could not clear local queue for {agent_name}: {e}")
 
         # CRITICAL: Also kill any orphaned system processes for this agent
         # This prevents the "competing monitors" problem
@@ -630,7 +633,7 @@ class ProcessManager:
             process_backlog_flag = (
                 agent.process_backlog
                 if agent.process_backlog is not None
-                else defaults.get("process_backlog", True)
+                else defaults.get("process_backlog", False)  # Always start fresh
             )
 
             if monitor_type not in {"echo", "ollama", "langgraph"}:
@@ -821,8 +824,8 @@ class ProcessManager:
             print(f"Error stopping monitor {monitor_id}: {e}")
             return False
 
-    async def restart_monitor(self, monitor_id: str, process_backlog: bool = True) -> bool:
-        """Restart a monitor with same configuration"""
+    async def restart_monitor(self, monitor_id: str, process_backlog: bool = False) -> bool:
+        """Restart a monitor with same configuration (always starts fresh)"""
         if monitor_id not in self.monitors:
             return False
 
