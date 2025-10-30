@@ -20,7 +20,8 @@ async def ollama_monitor(
     agent_name: str,
     server_url: str,
     model: str = "gpt-oss:latest",
-    ollama_url: str = "http://localhost:11434/v1"
+    ollama_url: str = "http://localhost:11434/v1",
+    history_limit: int = 25
 ):
     """Monitor for mentions and respond with Ollama AI using FIFO queue"""
 
@@ -57,10 +58,6 @@ Example:
 - WRONG: "@{agent_name} The weather is optimal!" (Don't mention yourself!)
 """
 
-    conversation_history = [
-        {"role": "system", "content": system_prompt}
-    ]
-
     # MCP connection setup
     server_params = StdioServerParameters(
         command="npx",
@@ -82,31 +79,56 @@ Example:
             await session.initialize()
             print("✅ Connected!\n")
 
+            # Import conversation memory utilities
+            from ax_agent_studio.conversation_memory import (
+                fetch_conversation_context,
+                format_conversation_for_llm,
+                get_conversation_summary
+            )
+
             # Define message handler (pluggable function for QueueManager)
             async def handle_message(msg: dict) -> str:
-                """Process message with Ollama AI"""
-                import re
+                """
+                Process message with Ollama AI using stateless conversation memory.
 
+                Always fetches last 25 messages for context, ensuring agent has
+                up-to-date conversation awareness without stale in-memory history.
+                """
                 sender = msg.get("sender", "unknown")
                 content = msg.get("content", "")
                 msg_id = msg.get("id", "")
 
-                # Extract actual message content (after the @mention)
-                message_match = re.search(r'@\S+\s+(.+)', content)
-                message_content = message_match.group(1) if message_match else content
-
                 print(f"🤖 AI: Processing message from @{sender}...")
 
-                # Add user message to conversation with message ID
-                msg_id_short = msg_id[:8] if len(msg_id) > 8 else msg_id
-                user_message = f"@{sender} [id:{msg_id_short}] says: {message_content}"
-                conversation_history.append({"role": "user", "content": user_message})
+                # Fetch last 25 messages for conversation context (chirpy-style!)
+                context_messages = await fetch_conversation_context(
+                    session=session,
+                    agent_name=agent_name,
+                    limit=history_limit
+                )
+
+                # Log conversation context
+                summary = get_conversation_summary(context_messages)
+                print(f"📚 Context: {summary}")
+
+                # Format conversation for LLM (includes context + current message)
+                current_message = {
+                    "sender": sender,
+                    "content": content,
+                    "id": msg_id
+                }
+                conversation = format_conversation_for_llm(
+                    messages=context_messages,
+                    current_message=current_message,
+                    agent_name=agent_name,
+                    system_prompt=system_prompt
+                )
 
                 try:
-                    # Get AI response from Ollama
+                    # Get AI response from Ollama with full conversation context
                     response = ollama.chat.completions.create(
                         model=model,
-                        messages=conversation_history,
+                        messages=conversation,
                         timeout=45,
                     )
 
@@ -117,19 +139,11 @@ Example:
                         ai_reply = f"@{sender} {ai_reply}"
 
                     # SAFETY: Strip @ from self-mentions to prevent loops
-                    # Agent can say its name, but without @ it won't trigger the queue
+                    # Agent can say its name, but without @ it won't trigger
                     if f"@{agent_name}" in ai_reply:
                         ai_reply = ai_reply.replace(f"@{agent_name}", agent_name)
                         print(f"   ✅ Stripped @ from self-mention: @{agent_name} → {agent_name}")
 
-                    # Add to conversation history
-                    conversation_history.append({"role": "assistant", "content": ai_reply})
-
-                    # Keep history manageable (last 10 exchanges)
-                    if len(conversation_history) > 21:  # system + 10 exchanges
-                        conversation_history[1:] = conversation_history[-20:]
-
-                    # Log the full response (VERBOSE)
                     print(f"💬 RESPONSE:\n{ai_reply}")
 
                     return ai_reply
@@ -148,7 +162,8 @@ Example:
                 message_handler=handle_message,
                 mark_read=monitor_config.get("mark_read", False),
                 startup_sweep=monitor_config.get("startup_sweep", True),
-                startup_sweep_limit=monitor_config.get("startup_sweep_limit", 10)
+                startup_sweep_limit=monitor_config.get("startup_sweep_limit", 10),
+                heartbeat_interval=monitor_config.get("heartbeat_interval", 240)
             )
 
             print("🚀 Starting FIFO queue manager...\n")
@@ -168,6 +183,8 @@ if __name__ == "__main__":
     parser.add_argument("--model", default=ollama_config.get("default_model", "gpt-oss:latest"), help="Ollama model to use")
     parser.add_argument("--server", help="MCP server URL (overrides config file)")
     parser.add_argument("--ollama-url", default=ollama_config.get("base_url", "http://localhost:11434/v1"), help="Ollama API URL")
+    parser.add_argument("--history-limit", type=int, default=25,
+                       help="Number of recent messages to remember (default: 25)")
 
     args = parser.parse_args()
 
@@ -210,6 +227,6 @@ if __name__ == "__main__":
         server_url = f"{mcp_config.get('server_url', 'http://localhost:8002')}/mcp/agents/{args.agent_name}"
 
     try:
-        asyncio.run(ollama_monitor(args.agent_name, server_url, args.model, args.ollama_url))
+        asyncio.run(ollama_monitor(args.agent_name, server_url, args.model, args.ollama_url, args.history_limit))
     except KeyboardInterrupt:
         print("\n\n👋 AI Monitor stopped")

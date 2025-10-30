@@ -42,6 +42,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('provider-group').style.display = 'block';
     document.getElementById('model-group').style.display = 'block';
     document.getElementById('system-prompt-group').style.display = 'block';
+    // history-limit-group disabled - needs server-side support
 
     // Refresh monitors and kill switch state every 5 seconds
     setInterval(async () => {
@@ -74,19 +75,33 @@ function setupEventListeners() {
         await loadDeploymentGroups(selectedEnvironment);
     });
 
-    document.getElementById('monitor-type-select').addEventListener('change', (e) => {
+    document.getElementById('monitor-type-select').addEventListener('change', async (e) => {
         const providerGroup = document.getElementById('provider-group');
         const modelGroup = document.getElementById('model-group');
         const systemPromptGroup = document.getElementById('system-prompt-group');
 
+        // Only Echo monitor doesn't need any configuration
+        // - Ollama needs: model selection (uses Ollama provider implicitly)
+        // - LangGraph needs: provider, model, and optional system prompt
         if (e.target.value === 'echo') {
+            // Echo: simple pass-through, no AI configuration needed
             providerGroup.style.display = 'none';
             modelGroup.style.display = 'none';
             systemPromptGroup.style.display = 'none';
+        } else if (e.target.value === 'ollama') {
+            // Ollama: needs model, but provider is implicit (always Ollama)
+            providerGroup.style.display = 'none';
+            modelGroup.style.display = 'block';
+            systemPromptGroup.style.display = 'block';
+            // Load Ollama models when Ollama monitor is selected
+            await loadModelsForProvider('ollama');
         } else {
+            // LangGraph: needs all options (provider, model, system prompt)
             providerGroup.style.display = 'block';
             modelGroup.style.display = 'block';
             systemPromptGroup.style.display = 'block';
+            // Load models for currently selected provider
+            await loadModelsForProvider(selectedProvider);
         }
     });
 
@@ -329,6 +344,8 @@ async function startMonitor() {
     const provider = document.getElementById('provider-select').value;
     const model = document.getElementById('model-select').value;
     const promptFile = document.getElementById('system-prompt-select').value;
+    // History limit disabled - needs server-side support
+    const historyLimit = 25; // Default value
 
     const config = configs.find(c => c.path === configPath);
     if (!config) {
@@ -359,7 +376,8 @@ async function startMonitor() {
                     provider: monitorType !== 'echo' ? provider : null,
                     model: monitorType !== 'echo' ? model : null,
                     system_prompt: systemPromptContent,
-                    system_prompt_name: systemPromptName
+                    system_prompt_name: systemPromptName,
+                    history_limit: monitorType !== 'echo' ? historyLimit : null
                 }
             })
         });
@@ -738,6 +756,89 @@ function renderDeploymentGroups() {
     }).join('');
 }
 
+// Helper function to get capability badge color based on skill category
+function getCapabilityBadgeClass(skill) {
+    const languageSkills = ['python', 'javascript', 'typescript', 'react'];
+    const cloudSkills = ['devops', 'cloud_ops', 'gcp', 'aws', 'azure'];
+    const testingSkills = ['testing', 'debugging'];
+    const reviewSkills = ['code_review', 'documentation', 'ux_design'];
+
+    if (languageSkills.includes(skill)) return 'capability-language';
+    if (cloudSkills.includes(skill)) return 'capability-cloud';
+    if (testingSkills.includes(skill)) return 'capability-testing';
+    if (reviewSkills.includes(skill)) return 'capability-review';
+    return 'capability-other';
+}
+
+// Helper function to get emoji for skill
+function getSkillEmoji(skill) {
+    const emojiMap = {
+        'python': '🐍',
+        'javascript': '⚡',
+        'typescript': '📘',
+        'react': '⚛️',
+        'code_review': '👁️',
+        'testing': '🧪',
+        'debugging': '🔧',
+        'devops': '⚙️',
+        'cloud_ops': '☁️',
+        'gcp': '🌩️',
+        'aws': '🔶',
+        'azure': '🔷',
+        'api_development': '🔌',
+        'database': '🗄️',
+        'documentation': '📚',
+        'ux_design': '🎨',
+        'security': '🔒',
+        'ml_engineering': '🤖',
+        'data_analysis': '📊'
+    };
+    return emojiMap[skill] || '⭐';
+}
+
+// Render capability badges for an agent
+function renderCapabilities(coreCapabilities, additionalCapabilities) {
+    if (!coreCapabilities && !additionalCapabilities) {
+        return '';
+    }
+
+    let badgesHTML = '';
+
+    // Render core capabilities with levels
+    if (coreCapabilities && coreCapabilities.length > 0) {
+        const coreBadges = coreCapabilities.map(cap => {
+            const emoji = getSkillEmoji(cap.skill);
+            const badgeClass = getCapabilityBadgeClass(cap.skill);
+            const levelText = cap.level ? ` (${cap.level})` : '';
+            return `<span class="capability-badge ${badgeClass}" title="${cap.skill}${levelText}">
+                ${emoji} ${cap.skill}${levelText}
+            </span>`;
+        }).join('');
+        badgesHTML += coreBadges;
+    }
+
+    // Render additional capabilities (no levels)
+    if (additionalCapabilities && additionalCapabilities.length > 0) {
+        const additionalBadges = additionalCapabilities.map(skill => {
+            return `<span class="capability-badge capability-additional" title="${skill}">
+                ⭐ ${skill}
+            </span>`;
+        }).join('');
+        badgesHTML += additionalBadges;
+    }
+
+    if (!badgesHTML) {
+        return '';
+    }
+
+    return `<div class="capabilities-section">
+        <div class="capabilities-label">Capabilities:</div>
+        <div class="capabilities-badges">
+            ${badgesHTML}
+        </div>
+    </div>`;
+}
+
 function renderMonitors() {
     const container = document.getElementById('monitors-list');
 
@@ -760,12 +861,8 @@ function renderMonitors() {
 
         const pauseOrStartControl = hasMonitorId
             ? (isRunning
-                ? `<button class="btn btn-secondary btn-sm" title="Pause agent (keeps backlog)" onclick="pauseMonitor('${escapeAttr(monitor.id)}')">⏸ Pause</button>`
-                : `<button class="btn btn-primary btn-sm" title="Start fresh (ignore backlog)" onclick="startMonitorFromStatus('${escapeAttr(monitor.id)}', false)">▶️ Start</button>`)
-            : '';
-
-        const resumeControl = !isRunning && hasMonitorId
-            ? `<button class="btn btn-secondary btn-sm" title="Resume backlog" onclick="startMonitorFromStatus('${escapeAttr(monitor.id)}', true)">⏯ Resume</button>`
+                ? `<button class="btn btn-secondary btn-sm" title="Pause agent" onclick="pauseMonitor('${escapeAttr(monitor.id)}')">⏸ Pause</button>`
+                : `<button class="btn btn-primary btn-sm" title="Start agent" onclick="startMonitorFromStatus('${escapeAttr(monitor.id)}')">▶️ Start</button>`)
             : '';
 
         const resetControl = monitor.agent_name
@@ -780,6 +877,9 @@ function renderMonitors() {
         const deploymentInfo = monitor.deployment_group ? ` | Group: ${monitor.deployment_group}` : '';
         const promptInfo = monitor.system_prompt_name ? `System Prompt: ${monitor.system_prompt_name}` : 'System Prompt: None';
 
+        // Render capability badges
+        const capabilitiesHTML = renderCapabilities(monitor.core_capabilities, monitor.additional_capabilities);
+
         return `
         <div class="monitor-card">
             <div class="monitor-top">
@@ -793,7 +893,6 @@ function renderMonitors() {
                     <div class="monitor-actions">
                         ${testControl}
                         ${pauseOrStartControl}
-                        ${resumeControl}
                         ${resetControl}
                         ${killControl}
                     </div>
@@ -810,6 +909,7 @@ function renderMonitors() {
                     ${monitor.mcp_servers && monitor.mcp_servers.length > 0 ? `Tools: ${monitor.mcp_servers.join(', ')} | ` : ''}
                     ${promptInfo}${deploymentInfo}
                 </div>
+                ${capabilitiesHTML}
             </div>
         </div>
     `;

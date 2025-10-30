@@ -293,9 +293,9 @@ class ProcessManager:
         provider: Optional[str] = None,
         system_prompt: Optional[str] = None,
         system_prompt_name: Optional[str] = None,
-        process_backlog: bool = False  # Always start fresh
+        history_limit: Optional[int] = 25
     ) -> str:
-        """Start a monitor process (always starts fresh, no backlog processing)"""
+        """Start a monitor process"""
         # Sanitize agent_name to prevent shell injection and path traversal
         safe_agent_name = sanitize_agent_name(agent_name)
 
@@ -306,16 +306,15 @@ class ProcessManager:
                 await self.stop_monitor(monitor_id)
                 self.delete_monitor(monitor_id)
 
-        # Don't clear backlog - just start fresh and let config.yaml startup_sweep setting handle it
-        # Clearing backlog causes 100+ API calls which hits rate limits!
-        if not process_backlog:
-            # Only clear local SQLite queue (doesn't make API calls)
-            try:
-                local_cleared = self.message_store.clear_agent(agent_name)
-                if local_cleared > 0:
-                    print(f"🧹 Cleared {local_cleared} messages from local queue for {agent_name}")
-            except Exception as e:
-                print(f"⚠️  Warning: Could not clear local queue for {agent_name}: {e}")
+        # Always clear local SQLite queue on startup
+        # Queue is just a trigger - agent fetches last 25 messages for context each time
+        print(f"🧹 Starting {agent_name} - clearing local queue")
+        try:
+            local_cleared = self.message_store.clear_agent(agent_name)
+            if local_cleared > 0:
+                print(f"   Cleared {local_cleared} local messages from SQLite queue")
+        except Exception as e:
+            print(f"⚠️  Warning: Failed to clear local queue: {e}")
 
         # CRITICAL: Also kill any orphaned system processes for this agent
         # This prevents the "competing monitors" problem
@@ -385,12 +384,16 @@ class ProcessManager:
             cmd = [str(venv_python), "-u", "-m", "ax_agent_studio.monitors.ollama_monitor", agent_name, "--config", config_path]
             if model:
                 cmd.extend(["--model", model])
+            if history_limit is not None:
+                cmd.extend(["--history-limit", str(history_limit)])
         elif monitor_type == "langgraph":
             cmd = [str(venv_python), "-u", "-m", "ax_agent_studio.monitors.langgraph_monitor", agent_name, "--config", config_path]
             if model:
                 cmd.extend(["--model", model])
             if provider:
                 cmd.extend(["--provider", provider])
+            if history_limit is not None:
+                cmd.extend(["--history-limit", str(history_limit)])
         else:
             raise ValueError(f"Unknown monitor type: {monitor_type}")
 
@@ -494,16 +497,28 @@ class ProcessManager:
             async with MCPServerManager(agent_name) as manager:
                 primary_session = manager.get_primary_session()
 
-                while True:
+                max_iterations = 200  # Safety limit to prevent infinite loops
+                iteration = 0
+
+                while iteration < max_iterations:
                     result = await primary_session.call_tool("messages", {
                         "action": "check",
                         "wait": False,
-                        "mark_read": True
+                        "mark_read": True,
+                        "limit": 10  # Batch process up to 10 at a time
                     })
                     mention_count = self._count_mentions(result)
                     if mention_count == 0:
                         break
                     summary["remote_cleared"] += mention_count
+                    iteration += 1
+
+                    # CRITICAL: Rate limit protection - wait between requests
+                    # MCP server rate limit: ~100 req/min, so 0.7s = ~85 req/min (safe)
+                    await asyncio.sleep(0.7)
+
+                if iteration >= max_iterations:
+                    summary["errors"].append(f"Hit max iterations ({max_iterations}) - backlog may not be fully cleared")
         except Exception as e:
             summary["errors"].append(f"remote: {e}")
 
@@ -630,11 +645,6 @@ class ProcessManager:
             prompt_ref = agent.system_prompt or defaults.get("system_prompt")
             system_prompt, system_prompt_name = self._resolve_system_prompt(prompt_ref)
             start_delay_ms = agent.start_delay_ms or defaults.get("start_delay_ms", 0)
-            process_backlog_flag = (
-                agent.process_backlog
-                if agent.process_backlog is not None
-                else defaults.get("process_backlog", False)  # Always start fresh
-            )
 
             if monitor_type not in {"echo", "ollama", "langgraph"}:
                 raise ValueError(f"Unsupported monitor type '{monitor_type}' in group '{group_id}'")
@@ -648,7 +658,6 @@ class ProcessManager:
                 provider=provider,
                 system_prompt=system_prompt,
                 system_prompt_name=system_prompt_name,
-                process_backlog=bool(process_backlog_flag),
             )
 
             started_monitor_ids.append(monitor_id)
@@ -721,9 +730,6 @@ class ProcessManager:
                         "model": agent.model,
                         "system_prompt": agent.system_prompt,
                         "start_delay_ms": agent.start_delay_ms,
-                        "process_backlog": agent.process_backlog
-                        if agent.process_backlog is not None
-                        else group.defaults.get("process_backlog"),
                     }
                     for agent in group.agents
                 ],
@@ -824,8 +830,8 @@ class ProcessManager:
             print(f"Error stopping monitor {monitor_id}: {e}")
             return False
 
-    async def restart_monitor(self, monitor_id: str, process_backlog: bool = False) -> bool:
-        """Restart a monitor with same configuration (always starts fresh)"""
+    async def restart_monitor(self, monitor_id: str) -> bool:
+        """Restart a monitor with same configuration"""
         if monitor_id not in self.monitors:
             return False
 
@@ -843,7 +849,6 @@ class ProcessManager:
             provider=info.get("provider"),
             system_prompt=info.get("system_prompt"),
             system_prompt_name=info.get("system_prompt_name"),
-            process_backlog=process_backlog
         )
 
         # Remove old monitor entry

@@ -52,7 +52,7 @@ class MonitorConfig(BaseModel):
     provider: Optional[str] = None
     system_prompt: Optional[str] = None
     system_prompt_name: Optional[str] = None
-    process_backlog: Optional[bool] = False  # Always start fresh, don't process old messages
+    history_limit: Optional[int] = 25  # Default to 25 messages
 
 class MonitorStatus(BaseModel):
     id: str
@@ -248,8 +248,12 @@ async def list_providers():
 
 @app.get("/api/providers/{provider_id}/models")
 async def list_provider_models(provider_id: str):
-    """Get available models for a specific provider"""
-    models = get_models_for_provider(provider_id)
+    """Get available models for a specific provider
+
+    For Ollama: Dynamically queries `ollama list` for available models
+    For others: Returns static models from providers.yaml
+    """
+    models = await get_models_for_provider(provider_id)
     if not models:
         raise HTTPException(status_code=404, detail=f"Provider '{provider_id}' not found or has no models")
     return {"models": models}
@@ -392,7 +396,7 @@ async def start_monitor(request: StartMonitorRequest):
             provider=request.config.provider,
             system_prompt=combined_prompt,
             system_prompt_name=request.config.system_prompt_name,
-            process_backlog=bool(request.config.process_backlog)
+            history_limit=request.config.history_limit
         )
         return {
             "success": True,
@@ -418,10 +422,10 @@ async def stop_monitor(request: StopMonitorRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/monitors/restart/{monitor_id}")
-async def restart_monitor(monitor_id: str, process_backlog: bool = False):
-    """Restart a monitor (always starts fresh, no backlog processing)"""
+async def restart_monitor(monitor_id: str):
+    """Restart a monitor (always starts fresh)"""
     try:
-        success = await process_manager.restart_monitor(monitor_id, process_backlog)
+        success = await process_manager.restart_monitor(monitor_id)
         if success:
             return {
                 "success": True,

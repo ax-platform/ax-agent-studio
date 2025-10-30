@@ -82,6 +82,10 @@ configs/production/
 # Agent workspace (filesystem MCP server)
 agent_files/
 !agent_files/README.md
+
+# Agent memory storage
+agent_memory/
+
 AGENTS.md
 
 # Internal development docs (session notes, handoffs, etc.)
@@ -93,3 +97,6 @@ HANDOFF_SUMMARY.md
 data/
 *.db
 *.db-journal
+
+# Local documentation (internal)
+docs/

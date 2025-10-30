@@ -2,17 +2,19 @@
 Modular FIFO Queue Manager for MCP Monitors
 
 This module provides a reusable queue abstraction that any monitor can plug into.
-It handles the dual-task pattern (poller + processor) and uses SQLite for persistence.
+It handles the triple-task pattern (poller + processor + heartbeat) and uses SQLite for persistence.
 
 Architecture:
 - Poller Task: Continuously receives messages via MCP, stores in SQLite
 - Processor Task: Pulls messages from FIFO queue, processes, sends responses
-- Both tasks run concurrently via asyncio.gather()
+- Heartbeat Task: Keeps MCP connection alive with periodic pings (every 4 minutes)
+- All tasks run concurrently via asyncio.gather()
 
 Benefits:
 - Zero message loss (SQLite buffer)
 - FIFO guaranteed (ORDER BY timestamp ASC)
 - Crash resilient (persistent storage)
+- Connection resilient (heartbeat prevents 5-minute timeout)
 - Modular (any monitor can use it)
 - Pluggable handlers (monitors implement simple async function)
 """
@@ -23,6 +25,7 @@ import re
 from typing import Callable, Awaitable, Optional
 from mcp import ClientSession
 from ax_agent_studio.message_store import MessageStore
+from ax_agent_studio.mcp_heartbeat import keep_alive
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +52,8 @@ class QueueManager:
         mark_read: bool = False,
         poll_interval: float = 1.0,
         startup_sweep: bool = True,
-        startup_sweep_limit: int = 10
+        startup_sweep_limit: int = 10,
+        heartbeat_interval: int = 240  # 4 minutes default
     ):
         """
         Initialize QueueManager.
@@ -63,6 +67,7 @@ class QueueManager:
             poll_interval: Seconds to wait between queue checks if empty (default: 1.0)
             startup_sweep: Whether to fetch unread messages on startup (default: True)
             startup_sweep_limit: Max unread messages to fetch on startup, 0=unlimited (default: 10)
+            heartbeat_interval: Seconds between heartbeat pings (default: 240 = 4 minutes, 0=disabled)
         """
         self.agent_name = agent_name
         self.session = session
@@ -72,12 +77,14 @@ class QueueManager:
         self.poll_interval = poll_interval
         self.startup_sweep = startup_sweep
         self.startup_sweep_limit = startup_sweep_limit
+        self.heartbeat_interval = heartbeat_interval
         self._running = False
 
         logger.info(f"🔧 QueueManager initialized for @{agent_name}")
         logger.info(f"   Storage: {self.store.db_path}")
         logger.info(f"   Mark read: {self.mark_read}")
         logger.info(f"   Startup sweep: {self.startup_sweep} (limit: {self.startup_sweep_limit})")
+        logger.info(f"   Heartbeat: {'enabled' if self.heartbeat_interval > 0 else 'disabled'} (interval: {self.heartbeat_interval}s)")
 
     def _parse_message(self, result) -> Optional[tuple[str, str, str]]:
         """
@@ -183,7 +190,10 @@ class QueueManager:
         last_id = None
 
         try:
-            while True:
+            max_iterations = 200  # Safety limit to prevent infinite loops
+            iteration = 0
+
+            while iteration < max_iterations:
                 # Stop if we've reached the limit
                 if self.startup_sweep_limit > 0 and fetched >= self.startup_sweep_limit:
                     logger.info(f"✅ Sweep limit reached ({fetched} messages)")
@@ -221,6 +231,15 @@ class QueueManager:
                     fetched += 1
                     last_id = msg_id
                     logger.info(f"📥 Sweep [{fetched}]: {msg_id[:8]} from {sender}")
+
+                iteration += 1
+
+                # CRITICAL: Rate limit protection - wait between requests
+                # MCP server rate limit: ~100 req/min, so 0.7s = ~85 req/min (safe)
+                await asyncio.sleep(0.7)
+
+            if iteration >= max_iterations:
+                logger.warning(f"⚠️  Hit max iterations ({max_iterations}) during sweep")
 
         except Exception as e:
             logger.error(f"❌ Startup sweep error: {e}")
@@ -361,11 +380,25 @@ class QueueManager:
                 logger.error(f"❌ Processor error: {e}")
                 await asyncio.sleep(5)  # Brief pause on error
 
+    async def heartbeat(self):
+        """
+        Heartbeat Task: Keep MCP connection alive with periodic pings.
+
+        Uses the reusable keep_alive() utility from mcp_heartbeat module.
+        This ensures DRY - all MCP connections use the same heartbeat logic.
+        """
+        # Use the centralized heartbeat utility
+        await keep_alive(
+            self.session,
+            interval=self.heartbeat_interval,
+            name=self.agent_name
+        )
+
     async def run(self):
         """
-        Run both tasks concurrently (poller + processor).
+        Run all tasks concurrently (poller + processor + heartbeat).
 
-        This is the main entry point for monitors. It starts both tasks
+        This is the main entry point for monitors. It starts all tasks
         and runs until interrupted (Ctrl+C).
         """
         self._running = True
@@ -378,11 +411,17 @@ class QueueManager:
             # Do startup sweep to catch up on missed messages
             await self._startup_sweep()
 
-            # Run both tasks concurrently
-            await asyncio.gather(
+            # Run all tasks concurrently (poller + processor + heartbeat)
+            tasks = [
                 self.poll_and_store(),
-                self.process_queue()
-            )
+                self.process_queue(),
+            ]
+
+            # Add heartbeat if enabled
+            if self.heartbeat_interval > 0:
+                tasks.append(self.heartbeat())
+
+            await asyncio.gather(*tasks)
         except KeyboardInterrupt:
             logger.info("🛑 QueueManager stopped by user")
         except Exception as e:
@@ -394,6 +433,7 @@ class QueueManager:
             stats = self.store.get_stats(self.agent_name)
             logger.info(f"📊 Final stats: {stats['pending']} pending, {stats['completed']} completed")
             logger.info(f"   Avg processing time: {stats['avg_processing_time']:.2f}s")
+            # Note: Heartbeat stats are logged by keep_alive() utility
 
     async def cleanup_old_messages(self, days: int = 7) -> int:
         """
