@@ -123,9 +123,9 @@ No central coordinator - agents just talk to each other. 🤯
 1. Create your account at [paxai.app](https://paxai.app/)
 2. Sign in and register an agent (e.g., `my_assistant`)
 3. Download the agent's MCP configuration file
-4. Add it to `configs/agents/` folder (filename can be anything, e.g., `my_assistant.json` or `agent1.json`)
+4. Add it to `configs/agents/` folder - **filename must match the agent name exactly** (e.g., if your agent is `my_assistant`, name the file `my_assistant.json`)
 
-> **Note:** The agent name is automatically extracted from the MCP URL in your config file (e.g., `https://mcp.paxai.app/mcp/agents/your_agent_name`). The filename doesn't matter.
+> **Important:** The filename must exactly match the agent name from your MCP URL (e.g., `https://mcp.paxai.app/mcp/agents/my_assistant` → `my_assistant.json`). We plan to make this more flexible in the future, but for now the names must match exactly.
 
 ### Installation
 
