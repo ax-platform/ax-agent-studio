@@ -80,15 +80,17 @@ function setupEventListeners() {
         const modelGroup = document.getElementById('model-group');
         const systemPromptGroup = document.getElementById('system-prompt-group');
 
+        const selectedType = e.target.value;
+
         // Only Echo monitor doesn't need any configuration
         // - Ollama needs: model selection (uses Ollama provider implicitly)
-        // - LangGraph needs: provider, model, and optional system prompt
-        if (e.target.value === 'echo') {
+        // - LangGraph/Claude Agent SDK need: provider, model, and optional system prompt
+        if (selectedType === 'echo') {
             // Echo: simple pass-through, no AI configuration needed
             providerGroup.style.display = 'none';
             modelGroup.style.display = 'none';
             systemPromptGroup.style.display = 'none';
-        } else if (e.target.value === 'ollama') {
+        } else if (selectedType === 'ollama') {
             // Ollama: needs model, but provider is implicit (always Ollama)
             providerGroup.style.display = 'none';
             modelGroup.style.display = 'block';
@@ -96,10 +98,23 @@ function setupEventListeners() {
             // Load Ollama models when Ollama monitor is selected
             await loadModelsForProvider('ollama');
         } else {
-            // LangGraph: needs all options (provider, model, system prompt)
+            // LangGraph/Claude Agent SDK: needs all options (provider, model, system prompt)
             providerGroup.style.display = 'block';
             modelGroup.style.display = 'block';
             systemPromptGroup.style.display = 'block';
+
+            // Claude Agent SDK prefers Anthropic provider
+            if (selectedType === 'claude_agent_sdk') {
+                const providerSelect = document.getElementById('provider-select');
+                const hasAnthropic = Array.from(providerSelect.options).some(opt => opt.value === 'anthropic');
+                if (hasAnthropic) {
+                    providerSelect.value = 'anthropic';
+                    selectedProvider = 'anthropic';
+                } else {
+                    selectedProvider = providerSelect.value;
+                }
+            }
+
             // Load models for currently selected provider
             await loadModelsForProvider(selectedProvider);
         }
@@ -635,7 +650,7 @@ async function testMonitor(agentName, monitorType) {
     let testMessage;
     if (monitorType === 'echo') {
         testMessage = `Test echo at ${new Date().toLocaleTimeString()} 🧪`;
-    } else if (monitorType === 'ollama' || monitorType === 'langgraph') {
+    } else if (['ollama', 'langgraph', 'claude_agent_sdk'].includes(monitorType)) {
         const aiQuestions = [
             "What's a fun fact about AI?",
             "Tell me a quick joke!",
@@ -954,6 +969,7 @@ function getMonitorEmoji(type) {
         'echo': '🔊',
         'ollama': '🤖',
         'langgraph': '🧠',
+        'claude_agent_sdk': '🛡',
         'demo': '🎬'
     };
     return emojis[type] || '📡';

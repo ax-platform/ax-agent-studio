@@ -1,0 +1,45 @@
+{
+  "_comment": "Example Claude Agent SDK configuration with security permissions",
+  "_instructions": [
+    "This example shows advanced security controls for the Claude Agent SDK monitor.",
+    "For simple configs, see _example_agent.json",
+    "Delete these comment fields (starting with _) in your config"
+  ],
+
+  "permissions": {
+    "_comment": "Security settings for Claude Code SDK monitor (optional)",
+    "allowedTools": ["WebFetch", "WebSearch"],
+    "permissionMode": "default",
+    "workingDir": "/tmp/agent_workspace",
+    "_allowed_tools_options": [
+      "WebFetch - Fetch content from URLs",
+      "WebSearch - Search the web",
+      "Read - Read files (restricted by workingDir)",
+      "Write - Write files (restricted by workingDir)",
+      "Edit - Edit files (restricted by workingDir)",
+      "Bash - Execute shell commands (use with caution!)",
+      "Glob - Find files by pattern",
+      "Grep - Search file contents"
+    ],
+    "_permission_modes": [
+      "default - Prompt for risky actions (recommended)",
+      "acceptEdits - Auto-approve file edits",
+      "bypassPermissions - Allow all without prompts (dangerous!)"
+    ]
+  },
+
+  "mcpServers": {
+    "ax-gcp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote@0.1.29",
+        "https://mcp.paxai.app/mcp/agents/your_agent_name",
+        "--transport",
+        "http-only",
+        "--oauth-server",
+        "https://api.paxai.app"
+      ]
+    }
+  }
+}

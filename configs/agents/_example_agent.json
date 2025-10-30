@@ -1,4 +1,14 @@
 {
+  "_comment": "Example MCP agent configuration for aX Agent Studio",
+  "_instructions": [
+    "1. Register an agent at https://ax-platform.com",
+    "2. Click 'Copy Config' button after registration",
+    "3. Create a new file here: configs/agents/your_agent_name.json",
+    "4. Paste the config you copied - that's it!",
+    "5. Optional: Add more MCP servers for additional capabilities",
+    "6. Delete these comment fields (starting with _) in your config"
+  ],
+
   "mcpServers": {
     "ax-gcp": {
       "command": "npx",

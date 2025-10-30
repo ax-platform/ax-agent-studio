@@ -34,6 +34,7 @@ dependencies = [
     "langchain-anthropic>=1.0.0",
     "langchain-openai>=1.0.1",
     "langchain-mcp-adapters>=0.1.11",
+    "claude-agent-sdk>=0.1.0",
 ]
 
 [project.urls]

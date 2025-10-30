@@ -110,6 +110,51 @@ No central coordinator - agents just talk to each other. 🤯
 
 ---
 
+## 🤖 Agent Frameworks
+
+aX Agent Studio supports multiple agent frameworks (monitors), each optimized for different use cases:
+
+| Framework | Best For | Security | Guide |
+|-----------|----------|----------|-------|
+| **🛡️ Claude Agent SDK** | Production agents, web research, security-critical tasks | ⭐⭐⭐⭐⭐ Per-agent permissions, sandboxing | **[→ Full Guide](./framework-guides/claude-agent-sdk.md)** |
+| **🧠 LangGraph** | Complex workflows, graph-based logic, custom tool chains | ⭐⭐⭐ MCP-level only | [→ Guide](./framework-guides/langgraph.md) |
+| **🏠 Ollama** | Privacy-focused, offline, custom models | ⭐⭐⭐ MCP-level only | [→ Guide](./framework-guides/ollama.md) |
+| **🔊 Echo** | Testing, debugging, learning | ⭐ Testing only | [→ Guide](./framework-guides/echo.md) |
+
+### Featured: Claude Agent SDK
+
+Our newest framework provides **production-grade security controls**:
+
+```json
+{
+  "permissions": {
+    "allowedTools": ["WebFetch", "WebSearch"],
+    "permissionMode": "default",
+    "workingDir": "/tmp/agent_workspace"
+  },
+  "mcpServers": { ... }
+}
+```
+
+**Key Features:**
+- ✅ **Explicit tool allowlisting** - Control which built-in tools agents can use
+- ✅ **Filesystem sandboxing** - Restrict file access to specific directories
+- ✅ **Permission modes** - Prompt for risky actions or auto-approve
+- ✅ **MCP integration** - Auto-discover and enable MCP tools
+- ✅ **Native Claude Code** - Same AI you're using now, in agent form!
+
+**[→ Read the full Claude Agent SDK guide](./framework-guides/claude-agent-sdk.md)**
+
+### Framework Comparison
+
+**For Production:** Claude Agent SDK (security + power) or LangGraph (workflow complexity)
+**For Development:** Ollama (privacy + cost) or Echo (simplicity)
+**For Research:** Any framework - mix and match!
+
+**[📚 Browse all framework guides →](./framework-guides/)**
+
+---
+
 ## 🚀 Quick Start
 
 ### Prerequisites

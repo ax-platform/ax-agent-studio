@@ -20,18 +20,28 @@ logger = logging.getLogger(__name__)
 class MCPServerManager:
     """Manages multiple MCP server connections with automatic heartbeat"""
 
-    def __init__(self, agent_name: str, base_dir: Optional[Path] = None, heartbeat_interval: int = 240):
+    def __init__(
+        self,
+        agent_name: str,
+        base_dir: Optional[Path] = None,
+        config_path: Optional[Path] = None,
+        heartbeat_interval: int = 240,
+    ):
         """
         Initialize MCP Server Manager.
 
         Args:
             agent_name: Name of the agent
             base_dir: Base directory for configs (default: project root)
+            config_path: Path to agent config JSON (default: configs/agents/{agent_name}.json)
             heartbeat_interval: Seconds between heartbeat pings (default: 240 = 4 min, 0 = disabled)
         """
         self.agent_name = agent_name
         self.base_dir = base_dir or Path(__file__).parent.parent.parent
-        self.config_path = self.base_dir / "configs" / "agents" / f"{agent_name}.json"
+        if config_path is not None:
+            self.config_path = Path(config_path)
+        else:
+            self.config_path = self.base_dir / "configs" / "agents" / f"{agent_name}.json"
 
         # Multi-server state
         self.sessions: Dict[str, ClientSession] = {}
