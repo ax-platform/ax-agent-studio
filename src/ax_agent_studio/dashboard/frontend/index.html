@@ -61,6 +61,7 @@
                                 <option value="echo">🔊 Echo (Simple)</option>
                                 <option value="ollama">🤖 Ollama (AI)</option>
                                 <option value="langgraph" selected>🧠 LangGraph (Tools)</option>
+                                <option value="frameworks">🧩 Frameworks (Docs)</option>
                             </select>
                         </div>
 
@@ -85,6 +86,103 @@
                                 <option value="">None (use model defaults)</option>
                             </select>
                             <small class="form-help" id="prompt-help">Choose a personality template</small>
+                        </div>
+
+                        <div class="form-group" id="frameworks-info" style="display: none;">
+                            <div class="frameworks-info-card">
+                                <h3>🧩 Framework Spotlight: OpenAI Agents SDK</h3>
+                                <p>
+                                    Combine <strong>openai-agents</strong> with the <strong>openai-agents-mcp</strong> extension to register
+                                    remote MCP tools alongside local utilities.
+                                </p>
+
+                                <div class="frameworks-section">
+                                    <h4>Installation</h4>
+                                    <pre><code>pip install openai-agents
+pip install openai-agents-mcp</code></pre>
+                                </div>
+
+                                <div class="frameworks-section">
+                                    <h4>Architecture Pattern</h4>
+                                    <p>Composable agents wire tasks, tools, and message routing together. The MCP registry discovers remote tool schemas and exposes them as native agent actions.</p>
+                                </div>
+
+                                <div class="frameworks-section">
+                                    <h4>Key Components</h4>
+                                    <ul>
+                                        <li><strong>Agent</strong> – Orchestrates task flow and tool execution.</li>
+                                        <li><strong>Tool</strong> – Sync or async tool contracts.</li>
+                                        <li><strong>McpToolRegistry</strong> – Discovers MCP servers and registers their tools.</li>
+                                        <li><code>.add_tool()</code> – Attach MCP or local tools to the active agent.</li>
+                                    </ul>
+                                </div>
+
+                                <div class="frameworks-section">
+                                    <h4>MCP Integration</h4>
+                                    <pre><code>from openai_agents import Agent
+from openai_agents_mcp import McpToolRegistry
+
+mcp_registry = McpToolRegistry(
+    mcp_server_urls=[
+        "http://localhost:8000",
+        "http://mcp-prod.company.com",
+    ]
+)
+
+agent = Agent(name="data-analyst", tools=[])
+agent.add_tool(mcp_registry.get_tool("run_sql"))
+agent.add_tool(mcp_registry.get_tool("summarize"))
+
+response = agent.run(
+    input="Summarize Q3 revenue and run a SQL report."
+)
+print(response)</code></pre>
+                                </div>
+
+                                <div class="frameworks-section">
+                                    <h4>Custom Local Tool</h4>
+                                    <pre><code>from openai_agents import Tool
+
+class AddTool(Tool):
+    def call(self, x, y):
+        return x + y
+
+agent.add_tool(AddTool("add"))</code></pre>
+                                </div>
+
+                                <div class="frameworks-section">
+                                    <h4>MCP Patterns</h4>
+                                    <ul>
+                                        <li>Register MCP servers via HTTP or stdio endpoints.</li>
+                                        <li>Auto-discover OpenAPI or JSON schemas for validation.</li>
+                                        <li>Blend MCP tools with local utilities seamlessly.</li>
+                                        <li>Supports streaming, function-call, and synchronous workflows.</li>
+                                    </ul>
+                                </div>
+
+                                <div class="frameworks-section">
+                                    <h4>Design Highlights</h4>
+                                    <ul>
+                                        <li><strong>Composable</strong> – Mix MCP and non-MCP tools per workflow.</li>
+                                        <li><strong>Schema-driven</strong> – Enforces JSON schema types from MCP definitions.</li>
+                                        <li><strong>Flexible transport</strong> – HTTP or stdio transport options.</li>
+                                        <li><strong>Type-safe outputs</strong> – Structured responses aligned with tool schemas.</li>
+                                    </ul>
+                                </div>
+
+                                <div class="frameworks-section">
+                                    <h4>Best For</h4>
+                                    <p>Rapidly prototyping agent workflows that blend remote MCP services with OpenAI-style function calling.</p>
+                                </div>
+
+                                <div class="frameworks-section sources">
+                                    <h4>Sources</h4>
+                                    <ul>
+                                        <li><a href="https://github.com/lastmile-ai/openai-agents-mcp" target="_blank" rel="noopener noreferrer">OpenAI Agents MCP Extension</a></li>
+                                        <li><a href="https://composio.dev/blog/building-mcp-agents-with-openai-agents-sdk" target="_blank" rel="noopener noreferrer">Building MCP agents with OpenAI Agents SDK</a></li>
+                                    </ul>
+                                </div>
+                            </div>
                         </div>
 
                         <button type="submit" class="btn btn-primary">▶️ Deploy Agent</button>

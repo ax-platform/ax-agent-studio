@@ -37,11 +37,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await updateKillSwitchButton(); // Check initial kill switch state
     initializeWebSocket();
     setupEventListeners();
-
-    // Show provider/model groups by default (LangGraph is default)
-    document.getElementById('provider-group').style.display = 'block';
-    document.getElementById('model-group').style.display = 'block';
-    document.getElementById('system-prompt-group').style.display = 'block';
+    updateMonitorTypeUI(document.getElementById('monitor-type-select').value);
 
     // Refresh monitors and kill switch state every 5 seconds
     setInterval(async () => {
@@ -52,6 +48,33 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 // Event Listeners
+function updateMonitorTypeUI(monitorType) {
+    const providerGroup = document.getElementById('provider-group');
+    const modelGroup = document.getElementById('model-group');
+    const systemPromptGroup = document.getElementById('system-prompt-group');
+    const frameworksInfo = document.getElementById('frameworks-info');
+    const startButton = document.querySelector('#start-monitor-form button[type="submit"]');
+
+    const hideAdvancedGroups = ['echo', 'frameworks'].includes(monitorType);
+    if (providerGroup) providerGroup.style.display = hideAdvancedGroups ? 'none' : 'block';
+    if (modelGroup) modelGroup.style.display = hideAdvancedGroups ? 'none' : 'block';
+    if (systemPromptGroup) systemPromptGroup.style.display = hideAdvancedGroups ? 'none' : 'block';
+
+    if (frameworksInfo) {
+        frameworksInfo.style.display = monitorType === 'frameworks' ? 'block' : 'none';
+    }
+
+    if (startButton) {
+        if (monitorType === 'frameworks') {
+            startButton.disabled = true;
+            startButton.textContent = '📚 Explore Framework';
+        } else {
+            startButton.disabled = false;
+            startButton.textContent = '▶️ Deploy Agent';
+        }
+    }
+}
+
 function setupEventListeners() {
     document.getElementById('pause-all-btn').addEventListener('click', async () => {
         await pauseAllMonitors();
@@ -75,19 +98,7 @@ function setupEventListeners() {
     });
 
     document.getElementById('monitor-type-select').addEventListener('change', (e) => {
-        const providerGroup = document.getElementById('provider-group');
-        const modelGroup = document.getElementById('model-group');
-        const systemPromptGroup = document.getElementById('system-prompt-group');
-
-        if (e.target.value === 'echo') {
-            providerGroup.style.display = 'none';
-            modelGroup.style.display = 'none';
-            systemPromptGroup.style.display = 'none';
-        } else {
-            providerGroup.style.display = 'block';
-            modelGroup.style.display = 'block';
-            systemPromptGroup.style.display = 'block';
-        }
+        updateMonitorTypeUI(e.target.value);
     });
 
     document.getElementById('provider-select').addEventListener('change', async (e) => {
@@ -330,6 +341,11 @@ async function startMonitor() {
     const model = document.getElementById('model-select').value;
     const promptFile = document.getElementById('system-prompt-select').value;
 
+    if (monitorType === 'frameworks') {
+        showNotification('Frameworks is an informational section. Explore the quick-start guide below.', 'info');
+        return;
+    }
+
     const config = configs.find(c => c.path === configPath);
     if (!config) {
         showNotification('Please select an agent', 'error');
@@ -356,8 +372,8 @@ async function startMonitor() {
                     agent_name: config.agent_name,
                     config_path: configPath,
                     monitor_type: monitorType,
-                    provider: monitorType !== 'echo' ? provider : null,
-                    model: monitorType !== 'echo' ? model : null,
+                    provider: ['echo', 'frameworks'].includes(monitorType) ? null : provider,
+                    model: ['echo', 'frameworks'].includes(monitorType) ? null : model,
                     system_prompt: systemPromptContent,
                     system_prompt_name: systemPromptName
                 }
@@ -854,6 +870,7 @@ function getMonitorEmoji(type) {
         'echo': '🔊',
         'ollama': '🤖',
         'langgraph': '🧠',
+        'frameworks': '🧩',
         'demo': '🎬'
     };
     return emojis[type] || '📡';
