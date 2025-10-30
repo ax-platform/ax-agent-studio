@@ -645,11 +645,6 @@ class ProcessManager:
             prompt_ref = agent.system_prompt or defaults.get("system_prompt")
             system_prompt, system_prompt_name = self._resolve_system_prompt(prompt_ref)
             start_delay_ms = agent.start_delay_ms or defaults.get("start_delay_ms", 0)
-            process_backlog_flag = (
-                agent.process_backlog
-                if agent.process_backlog is not None
-                else defaults.get("process_backlog", True)
-            )
 
             if monitor_type not in {"echo", "ollama", "langgraph"}:
                 raise ValueError(f"Unsupported monitor type '{monitor_type}' in group '{group_id}'")
@@ -663,7 +658,6 @@ class ProcessManager:
                 provider=provider,
                 system_prompt=system_prompt,
                 system_prompt_name=system_prompt_name,
-                process_backlog=bool(process_backlog_flag),
             )
 
             started_monitor_ids.append(monitor_id)
@@ -736,9 +730,6 @@ class ProcessManager:
                         "model": agent.model,
                         "system_prompt": agent.system_prompt,
                         "start_delay_ms": agent.start_delay_ms,
-                        "process_backlog": agent.process_backlog
-                        if agent.process_backlog is not None
-                        else group.defaults.get("process_backlog"),
                     }
                     for agent in group.agents
                 ],
@@ -839,7 +830,7 @@ class ProcessManager:
             print(f"Error stopping monitor {monitor_id}: {e}")
             return False
 
-    async def restart_monitor(self, monitor_id: str, process_backlog: bool = True) -> bool:
+    async def restart_monitor(self, monitor_id: str) -> bool:
         """Restart a monitor with same configuration"""
         if monitor_id not in self.monitors:
             return False
@@ -858,7 +849,6 @@ class ProcessManager:
             provider=info.get("provider"),
             system_prompt=info.get("system_prompt"),
             system_prompt_name=info.get("system_prompt_name"),
-            process_backlog=process_backlog
         )
 
         # Remove old monitor entry
