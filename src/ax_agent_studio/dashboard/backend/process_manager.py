@@ -102,11 +102,25 @@ class ProcessManager:
         return prompt_ref, prompt_ref
 
     def _get_agent_config_path(self, agent_id: str) -> Path:
-        """Return absolute path to agent config JSON."""
-        config_path = self.base_dir / "configs" / "agents" / f"{agent_id}.json"
-        if not config_path.exists():
-            raise FileNotFoundError(f"Config for agent '{agent_id}' not found at {config_path}")
-        return config_path
+        """
+        Return absolute path to agent config JSON by finding the config
+        where the agent_name (from the MCP URL) matches agent_id.
+        This allows the filename to be anything - we extract the agent name from the URL.
+        """
+        # Get all configs and find the one with matching agent_name
+        all_configs = self.config_loader.list_configs()
+
+        for config in all_configs:
+            if config["agent_name"] == agent_id:
+                return Path(config["path"])
+
+        # If not found, raise error with helpful message
+        available_agents = [c["agent_name"] for c in all_configs]
+        raise FileNotFoundError(
+            f"No config found for agent '{agent_id}'.\n"
+            f"Available agents: {', '.join(available_agents) if available_agents else 'none'}\n"
+            f"Agent name is extracted from the MCP URL in your config file (e.g., https://mcp.paxai.app/mcp/agents/your_agent_name)"
+        )
 
     def scan_system_monitors(self) -> List[dict]:
         """Scan system for ALL running monitor processes (even orphans)"""

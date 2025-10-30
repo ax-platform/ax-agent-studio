@@ -1,8 +1,13 @@
 # aX Agent Studio Configuration
 
 mcp:
-  server_url: "http://localhost:8002"
-  oauth_url: "http://localhost:8001"
+  # Production aX Platform (default)
+  server_url: "https://mcp.paxai.app"
+  oauth_url: "https://api.paxai.app"
+
+  # For local development with MCPJam Inspector, use:
+  # server_url: "http://localhost:8002"
+  # oauth_url: "http://localhost:8001"
 
 monitors:
   timeout: null  # No timeout, wait forever

@@ -8,6 +8,20 @@ echo "🚀 Starting aX Agent Studio Dashboard..."
 echo "📁 Project root: $(pwd)"
 echo ""
 
+# Check and create config files if needed
+if [ ! -f "config.yaml" ] && [ -f "config.yaml.example" ]; then
+    echo "📝 Creating config.yaml from config.yaml.example..."
+    cp config.yaml.example config.yaml
+fi
+
+if [ ! -f ".env" ] && [ -f ".env.example" ]; then
+    echo "📝 Creating .env from .env.example..."
+    cp .env.example .env
+    echo ""
+    echo "⚠️  IMPORTANT: Edit .env to add your LLM provider API keys"
+    echo ""
+fi
+
 # Quick dependency check
 if [ ! -d ".venv" ]; then
     echo "📦 Installing dependencies..."
