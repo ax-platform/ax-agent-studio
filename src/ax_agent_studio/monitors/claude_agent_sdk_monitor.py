@@ -210,6 +210,19 @@ async def claude_agent_sdk_monitor(
             entry["env"] = server_cfg["env"]
         claude_servers[server_name] = entry
 
+    # Read security permissions from agent config
+    permissions_config = agent_config.get("permissions", {})
+    allowed_builtin_tools = permissions_config.get("allowedTools", [])
+    permission_mode = permissions_config.get("permissionMode")
+    working_dir = permissions_config.get("workingDir")
+
+    if permissions_config:
+        print(f"Security Config:")
+        print(f"  Allowed built-in tools: {allowed_builtin_tools or 'None'}")
+        print(f"  Permission mode: {permission_mode or 'default'}")
+        print(f"  Working directory: {working_dir or 'unrestricted'}")
+        print()
+
     system_prompt_override = os.getenv("AGENT_SYSTEM_PROMPT")
     conversation_history: List[str] = []
 
@@ -217,19 +230,34 @@ async def claude_agent_sdk_monitor(
         primary_session = manager.get_primary_session()
         allowlist = await _discover_allowed_tools(manager)
 
-        print("Allowed Tools:")
+        print("MCP Tools Discovered:")
         print(_format_allowed_tools(allowlist))
-        print("\n")
+        print()
 
         if not allowlist:
             logger.warning(
-                "Allowlist is empty. Claude will not be able to call MCP tools until tools are available."
+                "MCP allowlist is empty. Claude will not be able to call MCP tools until tools are available."
             )
 
+        # Merge MCP tools with allowed built-in tools
+        combined_allowlist = allowlist + allowed_builtin_tools
+
+        print("Final Tool Allowlist:")
+        print(_format_allowed_tools(combined_allowlist))
+        print()
+
         options_kwargs: Dict[str, object] = {
-            "allowed_tools": allowlist,
+            "allowed_tools": combined_allowlist,
             "mcp_servers": claude_servers,
         }
+
+        # Apply permission mode if configured
+        if permission_mode:
+            options_kwargs["permission_mode"] = permission_mode
+
+        # Apply working directory restriction if configured
+        if working_dir:
+            options_kwargs["cwd"] = working_dir
 
         try:
             options_signature = inspect.signature(ClaudeAgentOptions)
