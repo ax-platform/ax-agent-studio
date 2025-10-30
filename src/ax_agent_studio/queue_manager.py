@@ -25,6 +25,7 @@ import re
 from typing import Callable, Awaitable, Optional
 from mcp import ClientSession
 from ax_agent_studio.message_store import MessageStore
+from ax_agent_studio.mcp_heartbeat import keep_alive
 
 logger = logging.getLogger(__name__)
 
@@ -78,8 +79,6 @@ class QueueManager:
         self.startup_sweep_limit = startup_sweep_limit
         self.heartbeat_interval = heartbeat_interval
         self._running = False
-        self._ping_count = 0
-        self._ping_failures = 0
 
         logger.info(f"🔧 QueueManager initialized for @{agent_name}")
         logger.info(f"   Storage: {self.store.db_path}")
@@ -385,48 +384,15 @@ class QueueManager:
         """
         Heartbeat Task: Keep MCP connection alive with periodic pings.
 
-        This task prevents Cloud Run instances from timing out by sending
-        periodic pings every N seconds (default: 4 minutes = 240s).
-
-        MCP servers can disconnect after 5 minutes of inactivity, so we
-        ping every 4 minutes to keep the connection alive. The heartbeat
-        runs concurrently with wait=true calls in the poller task.
-
-        If a ping fails, it logs the error but continues trying, allowing
-        the monitor to detect and potentially restart the connection.
+        Uses the reusable keep_alive() utility from mcp_heartbeat module.
+        This ensures DRY - all MCP connections use the same heartbeat logic.
         """
-        if self.heartbeat_interval <= 0:
-            logger.info("💓 Heartbeat disabled (interval=0)")
-            return
-
-        logger.info(f"💓 Heartbeat task started (interval: {self.heartbeat_interval}s)")
-
-        while self._running:
-            try:
-                # Wait before next ping
-                await asyncio.sleep(self.heartbeat_interval)
-
-                # Send ping
-                from datetime import datetime
-                ping_start = datetime.now()
-                result = await self.session.send_ping()
-                ping_duration = (datetime.now() - ping_start).total_seconds()
-
-                self._ping_count += 1
-                logger.info(
-                    f"💓 PING #{self._ping_count}: {result.status} "
-                    f"(took {ping_duration:.2f}s, server time: {result.timestamp})"
-                )
-
-            except asyncio.CancelledError:
-                logger.info("💓 Heartbeat task cancelled")
-                break
-            except Exception as e:
-                self._ping_failures += 1
-                logger.error(f"❌ PING FAILURE #{self._ping_failures}: {type(e).__name__}: {e}")
-                logger.error("   Connection may be lost - monitor should restart")
-                # Continue trying - don't crash the monitor
-                await asyncio.sleep(5)  # Brief pause before retry
+        # Use the centralized heartbeat utility
+        await keep_alive(
+            self.session,
+            interval=self.heartbeat_interval,
+            name=self.agent_name
+        )
 
     async def run(self):
         """
@@ -467,10 +433,7 @@ class QueueManager:
             stats = self.store.get_stats(self.agent_name)
             logger.info(f"📊 Final stats: {stats['pending']} pending, {stats['completed']} completed")
             logger.info(f"   Avg processing time: {stats['avg_processing_time']:.2f}s")
-
-            # Show heartbeat stats if enabled
-            if self.heartbeat_interval > 0:
-                logger.info(f"   Heartbeat: {self._ping_count} pings sent, {self._ping_failures} failures")
+            # Note: Heartbeat stats are logged by keep_alive() utility
 
     async def cleanup_old_messages(self, days: int = 7) -> int:
         """
