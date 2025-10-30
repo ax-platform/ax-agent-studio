@@ -86,8 +86,31 @@ def get_providers_list(include_unavailable: bool = False) -> List[Dict[str, Any]
     return result
 
 
-def get_models_for_provider(provider_id: str) -> List[Dict[str, Any]]:
-    """Get available models for a specific provider"""
+async def get_models_for_provider(provider_id: str) -> List[Dict[str, Any]]:
+    """Get available models for a specific provider
+
+    For Ollama: Dynamically loads models from `ollama list` command
+    For others: Returns static list from providers.yaml
+    """
+    # Special case: Ollama uses dynamic model discovery
+    if provider_id == "ollama":
+        from .config_loader import ConfigLoader
+        config_loader = ConfigLoader()
+        ollama_models = await config_loader.get_ollama_models()
+
+        # Format Ollama models to match expected structure
+        return [
+            {
+                "id": model,
+                "name": model,
+                "description": f"Ollama model: {model}",
+                "recommended": False,
+                "default": False  # Could check against config.yaml default_model
+            }
+            for model in ollama_models
+        ]
+
+    # Standard case: Load from providers.yaml
     config = load_providers()
     providers = config.get("providers", {})
 

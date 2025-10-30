@@ -248,8 +248,12 @@ async def list_providers():
 
 @app.get("/api/providers/{provider_id}/models")
 async def list_provider_models(provider_id: str):
-    """Get available models for a specific provider"""
-    models = get_models_for_provider(provider_id)
+    """Get available models for a specific provider
+
+    For Ollama: Dynamically queries `ollama list` for available models
+    For others: Returns static models from providers.yaml
+    """
+    models = await get_models_for_provider(provider_id)
     if not models:
         raise HTTPException(status_code=404, detail=f"Provider '{provider_id}' not found or has no models")
     return {"models": models}
