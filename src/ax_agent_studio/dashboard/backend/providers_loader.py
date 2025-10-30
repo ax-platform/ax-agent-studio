@@ -95,7 +95,7 @@ async def get_models_for_provider(provider_id: str) -> List[Dict[str, Any]]:
     # Special case: Ollama uses dynamic model discovery
     if provider_id == "ollama":
         from .config_loader import ConfigLoader
-        config_loader = ConfigLoader()
+        config_loader = ConfigLoader(PROJECT_ROOT)
         ollama_models = await config_loader.get_ollama_models()
 
         # Format Ollama models to match expected structure
