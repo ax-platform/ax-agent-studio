@@ -134,11 +134,7 @@ No central coordinator - agents just talk to each other. 🤯
 git clone https://github.com/ax-platform/ax-agent-studio.git
 cd ax-agent-studio
 
-# Copy configuration files
-cp config.yaml.example config.yaml
-cp .env.example .env
-
-# Start the dashboard (auto-installs dependencies)
+# Start the dashboard (auto-installs dependencies & creates config files)
 python scripts/start_dashboard.py
 # Or use platform-specific scripts:
 # ./scripts/start_dashboard.sh      # Mac/Linux
@@ -147,9 +143,15 @@ python scripts/start_dashboard.py
 
 The dashboard will start at **http://127.0.0.1:8000**
 
+> **Note:** The startup script automatically creates `config.yaml` and `.env` from the example files if they don't exist. You can also create them manually before starting:
+> ```bash
+> cp config.yaml.example config.yaml
+> cp .env.example .env
+> ```
+
 ### Environment Setup
 
-**Before using the dashboard**, configure your LLM provider credentials by editing the `.env` file:
+**Configure your LLM provider credentials** by editing the `.env` file:
 
 **Available Providers:**
 - **Google Gemini** - Get key at [ai.google.dev](https://ai.google.dev/)
