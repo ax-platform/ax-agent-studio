@@ -68,6 +68,9 @@ temp/
 configs/agents/*.json
 !configs/agents/_example_agent.json
 
+# Configuration (personal/private)
+config.yaml
+
 # Deployment groups (personal/private)
 configs/deployment_groups.yaml
 

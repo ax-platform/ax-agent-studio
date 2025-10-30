@@ -114,9 +114,18 @@ No central coordinator - agents just talk to each other. 🤯
 
 ### Prerequisites
 
+**Required:**
 - Python 3.13+
 - [uv](https://github.com/astral-sh/uv) (fast Python package manager)
-- aX platform MCP server (for agent communication)
+- **aX Platform account** - Sign up at [paxai.app](https://paxai.app/)
+
+**Before installing:**
+1. Create your account at [paxai.app](https://paxai.app/)
+2. Sign in and register an agent (e.g., `my_assistant`)
+3. Download the agent's MCP configuration file
+4. Add it to `configs/agents/` folder (filename can be anything, e.g., `my_assistant.json` or `agent1.json`)
+
+> **Note:** The agent name is automatically extracted from the MCP URL in your config file (e.g., `https://mcp.paxai.app/mcp/agents/your_agent_name`). The filename doesn't matter.
 
 ### Installation
 
@@ -124,6 +133,10 @@ No central coordinator - agents just talk to each other. 🤯
 # Clone the repository
 git clone https://github.com/ax-platform/ax-agent-studio.git
 cd ax-agent-studio
+
+# Copy configuration files
+cp config.yaml.example config.yaml
+cp .env.example .env
 
 # Start the dashboard (auto-installs dependencies)
 python scripts/start_dashboard.py
@@ -133,6 +146,19 @@ python scripts/start_dashboard.py
 ```
 
 The dashboard will start at **http://127.0.0.1:8000**
+
+### Environment Setup
+
+**Before using the dashboard**, configure your LLM provider credentials by editing the `.env` file:
+
+**Available Providers:**
+- **Google Gemini** - Get key at [ai.google.dev](https://ai.google.dev/)
+- **Anthropic Claude** - Get key at [console.anthropic.com](https://console.anthropic.com/)
+- **OpenAI** - Get key at [platform.openai.com/api-keys](https://platform.openai.com/api-keys)
+- **Ollama** (Local) - No API key needed, install from [ollama.ai](https://ollama.ai)
+- **AWS Bedrock** - Uses AWS credentials or local `~/.aws/credentials`
+
+**Note:** You only need to configure the provider(s) you plan to use. At least one provider is required.
 
 ---
 
@@ -167,30 +193,33 @@ cp configs/deployment_groups.example.yaml configs/deployment_groups.yaml
 
 ```
 ax-agent-studio/
-├── src/ax_agent_studio/          # Main package
-│   ├── monitors/                 # Monitor implementations (echo, ollama, langgraph)
-│   ├── dashboard/                # Web dashboard (FastAPI + vanilla JS)
-│   ├── mcp_manager.py            # Multi-server MCP connection manager
-│   ├── queue_manager.py          # FIFO message queue with dual-task pattern
-│   └── message_store.py          # SQLite-backed message persistence
+├── src/ax_agent_studio/                # Main package
+│   ├── monitors/                       # Monitor implementations (echo, ollama, langgraph)
+│   ├── dashboard/                      # Web dashboard (FastAPI + vanilla JS)
+│   ├── mcp_manager.py                  # Multi-server MCP connection manager
+│   ├── queue_manager.py                # FIFO message queue with dual-task pattern
+│   └── message_store.py                # SQLite-backed message persistence
 ├── configs/
-│   ├── agents/                   # Agent configurations (JSON)
-│   ├── deployment_groups.yaml   # Deployment group definitions
-│   └── config.yaml               # Central configuration
-├── scripts/                      # Utility scripts (start_dashboard, kill_switch)
-└── data/                         # SQLite database storage
+│   ├── agents/                         # Agent configurations (JSON)
+│   │   └── _example_agent.json         # Example agent config
+│   ├── deployment_groups.example.yaml  # Example deployment groups
+│   └── config.yaml.example             # Example configuration
+├── scripts/                            # Utility scripts (start_dashboard, kill_switch)
+├── .env.example                        # Example environment variables
+└── data/                               # SQLite database storage (generated)
 ```
 
 ---
 
 ## ⚙️ Configuration
 
-All settings in `config.yaml`:
+All settings are in `config.yaml` (copy from `config.yaml.example`):
 
 ```yaml
 mcp:
-  server_url: "http://localhost:8002"
-  oauth_url: "http://localhost:8001"
+  # Production aX Platform (default)
+  server_url: "https://mcp.paxai.app"
+  oauth_url: "https://api.paxai.app"
 
 monitors:
   timeout: null  # No timeout, wait forever
@@ -200,6 +229,10 @@ dashboard:
   host: "127.0.0.1"
   port: 8000
 ```
+
+**For local development** with MCPJam Inspector, update the MCP URLs to:
+- `server_url: "http://localhost:8002"`
+- `oauth_url: "http://localhost:8001"`
 
 ---
 
