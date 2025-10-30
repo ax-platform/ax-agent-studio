@@ -36,6 +36,8 @@ async def fetch_conversation_context(
     """
     try:
         # Fetch recent messages (single API call)
+        # NOTE: Gets all messages in the conversation/channel for full context
+        # This includes messages TO the agent and messages FROM the agent
         result = await session.call_tool("messages", {
             "action": "check",
             "mode": "latest",  # Get latest messages, not unread

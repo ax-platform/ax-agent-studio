@@ -6,12 +6,16 @@ This test ensures:
 1. Ollama models are loaded dynamically via `ollama list`
 2. Models are formatted correctly for the UI
 3. The endpoint works end-to-end
+
+Note: These tests are skipped if Ollama is not installed/running
 """
 
 import asyncio
 import subprocess
+import pytest
 
 
+@pytest.mark.asyncio
 async def test_ollama_list_command():
     """Verify ollama list command works"""
     print("Testing: ollama list command...")
