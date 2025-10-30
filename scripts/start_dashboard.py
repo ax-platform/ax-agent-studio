@@ -101,7 +101,11 @@ def main():
     try:
         # Run Python directly from venv (no uv wrapper)
         # This should make Ctrl+C work cleanly
-        python_exe = venv_path / "bin" / "python"
+        # Handle different venv structures: Windows uses Scripts/, Unix uses bin/
+        if os.name == "nt":  # Windows
+            python_exe = venv_path / "Scripts" / "python.exe"
+        else:  # Unix/Mac
+            python_exe = venv_path / "bin" / "python"
 
         subprocess.run(
             [
