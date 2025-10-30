@@ -11,6 +11,7 @@ monitors:
   mark_read: false  # Keep messages unread so all agents see them
   startup_sweep: false  # DISABLED: MCP mode='unread' returns duplicates (TODO: investigate)
   startup_sweep_limit: 10  # Max messages to fetch on startup (0 = unlimited)
+  heartbeat_interval: 240  # Ping every 4 minutes to prevent 5-minute timeout (0 = disabled)
 
 ollama:
   base_url: "http://localhost:11434/v1"

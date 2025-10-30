@@ -2,17 +2,19 @@
 Modular FIFO Queue Manager for MCP Monitors
 
 This module provides a reusable queue abstraction that any monitor can plug into.
-It handles the dual-task pattern (poller + processor) and uses SQLite for persistence.
+It handles the triple-task pattern (poller + processor + heartbeat) and uses SQLite for persistence.
 
 Architecture:
 - Poller Task: Continuously receives messages via MCP, stores in SQLite
 - Processor Task: Pulls messages from FIFO queue, processes, sends responses
-- Both tasks run concurrently via asyncio.gather()
+- Heartbeat Task: Keeps MCP connection alive with periodic pings (every 4 minutes)
+- All tasks run concurrently via asyncio.gather()
 
 Benefits:
 - Zero message loss (SQLite buffer)
 - FIFO guaranteed (ORDER BY timestamp ASC)
 - Crash resilient (persistent storage)
+- Connection resilient (heartbeat prevents 5-minute timeout)
 - Modular (any monitor can use it)
 - Pluggable handlers (monitors implement simple async function)
 """
@@ -49,7 +51,8 @@ class QueueManager:
         mark_read: bool = False,
         poll_interval: float = 1.0,
         startup_sweep: bool = True,
-        startup_sweep_limit: int = 10
+        startup_sweep_limit: int = 10,
+        heartbeat_interval: int = 240  # 4 minutes default
     ):
         """
         Initialize QueueManager.
@@ -63,6 +66,7 @@ class QueueManager:
             poll_interval: Seconds to wait between queue checks if empty (default: 1.0)
             startup_sweep: Whether to fetch unread messages on startup (default: True)
             startup_sweep_limit: Max unread messages to fetch on startup, 0=unlimited (default: 10)
+            heartbeat_interval: Seconds between heartbeat pings (default: 240 = 4 minutes, 0=disabled)
         """
         self.agent_name = agent_name
         self.session = session
@@ -72,12 +76,16 @@ class QueueManager:
         self.poll_interval = poll_interval
         self.startup_sweep = startup_sweep
         self.startup_sweep_limit = startup_sweep_limit
+        self.heartbeat_interval = heartbeat_interval
         self._running = False
+        self._ping_count = 0
+        self._ping_failures = 0
 
         logger.info(f"🔧 QueueManager initialized for @{agent_name}")
         logger.info(f"   Storage: {self.store.db_path}")
         logger.info(f"   Mark read: {self.mark_read}")
         logger.info(f"   Startup sweep: {self.startup_sweep} (limit: {self.startup_sweep_limit})")
+        logger.info(f"   Heartbeat: {'enabled' if self.heartbeat_interval > 0 else 'disabled'} (interval: {self.heartbeat_interval}s)")
 
     def _parse_message(self, result) -> Optional[tuple[str, str, str]]:
         """
@@ -373,11 +381,58 @@ class QueueManager:
                 logger.error(f"❌ Processor error: {e}")
                 await asyncio.sleep(5)  # Brief pause on error
 
+    async def heartbeat(self):
+        """
+        Heartbeat Task: Keep MCP connection alive with periodic pings.
+
+        This task prevents Cloud Run instances from timing out by sending
+        periodic pings every N seconds (default: 4 minutes = 240s).
+
+        MCP servers can disconnect after 5 minutes of inactivity, so we
+        ping every 4 minutes to keep the connection alive. The heartbeat
+        runs concurrently with wait=true calls in the poller task.
+
+        If a ping fails, it logs the error but continues trying, allowing
+        the monitor to detect and potentially restart the connection.
+        """
+        if self.heartbeat_interval <= 0:
+            logger.info("💓 Heartbeat disabled (interval=0)")
+            return
+
+        logger.info(f"💓 Heartbeat task started (interval: {self.heartbeat_interval}s)")
+
+        while self._running:
+            try:
+                # Wait before next ping
+                await asyncio.sleep(self.heartbeat_interval)
+
+                # Send ping
+                from datetime import datetime
+                ping_start = datetime.now()
+                result = await self.session.send_ping()
+                ping_duration = (datetime.now() - ping_start).total_seconds()
+
+                self._ping_count += 1
+                logger.info(
+                    f"💓 PING #{self._ping_count}: {result.status} "
+                    f"(took {ping_duration:.2f}s, server time: {result.timestamp})"
+                )
+
+            except asyncio.CancelledError:
+                logger.info("💓 Heartbeat task cancelled")
+                break
+            except Exception as e:
+                self._ping_failures += 1
+                logger.error(f"❌ PING FAILURE #{self._ping_failures}: {type(e).__name__}: {e}")
+                logger.error("   Connection may be lost - monitor should restart")
+                # Continue trying - don't crash the monitor
+                await asyncio.sleep(5)  # Brief pause before retry
+
     async def run(self):
         """
-        Run both tasks concurrently (poller + processor).
+        Run all tasks concurrently (poller + processor + heartbeat).
 
-        This is the main entry point for monitors. It starts both tasks
+        This is the main entry point for monitors. It starts all tasks
         and runs until interrupted (Ctrl+C).
         """
         self._running = True
@@ -390,11 +445,17 @@ class QueueManager:
             # Do startup sweep to catch up on missed messages
             await self._startup_sweep()
 
-            # Run both tasks concurrently
-            await asyncio.gather(
+            # Run all tasks concurrently (poller + processor + heartbeat)
+            tasks = [
                 self.poll_and_store(),
-                self.process_queue()
-            )
+                self.process_queue(),
+            ]
+
+            # Add heartbeat if enabled
+            if self.heartbeat_interval > 0:
+                tasks.append(self.heartbeat())
+
+            await asyncio.gather(*tasks)
         except KeyboardInterrupt:
             logger.info("🛑 QueueManager stopped by user")
         except Exception as e:
@@ -406,6 +467,10 @@ class QueueManager:
             stats = self.store.get_stats(self.agent_name)
             logger.info(f"📊 Final stats: {stats['pending']} pending, {stats['completed']} completed")
             logger.info(f"   Avg processing time: {stats['avg_processing_time']:.2f}s")
+
+            # Show heartbeat stats if enabled
+            if self.heartbeat_interval > 0:
+                logger.info(f"   Heartbeat: {self._ping_count} pings sent, {self._ping_failures} failures")
 
     async def cleanup_old_messages(self, days: int = 7) -> int:
         """

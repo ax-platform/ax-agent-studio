@@ -853,7 +853,8 @@ async def langgraph_mcp_monitor(agent_name: str, model: str = "gpt-oss:latest", 
                 message_handler=handle_message,
                 mark_read=monitor_config.get("mark_read", False),
                 startup_sweep=monitor_config.get("startup_sweep", True),
-                startup_sweep_limit=monitor_config.get("startup_sweep_limit", 10)
+                startup_sweep_limit=monitor_config.get("startup_sweep_limit", 10),
+                heartbeat_interval=monitor_config.get("heartbeat_interval", 240)
             )
 
             print("🚀 Starting FIFO queue manager...\n")

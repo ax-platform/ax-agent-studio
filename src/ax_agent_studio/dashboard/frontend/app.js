@@ -75,19 +75,33 @@ function setupEventListeners() {
         await loadDeploymentGroups(selectedEnvironment);
     });
 
-    document.getElementById('monitor-type-select').addEventListener('change', (e) => {
+    document.getElementById('monitor-type-select').addEventListener('change', async (e) => {
         const providerGroup = document.getElementById('provider-group');
         const modelGroup = document.getElementById('model-group');
         const systemPromptGroup = document.getElementById('system-prompt-group');
 
+        // Only Echo monitor doesn't need any configuration
+        // - Ollama needs: model selection (uses Ollama provider implicitly)
+        // - LangGraph needs: provider, model, and optional system prompt
         if (e.target.value === 'echo') {
+            // Echo: simple pass-through, no AI configuration needed
             providerGroup.style.display = 'none';
             modelGroup.style.display = 'none';
             systemPromptGroup.style.display = 'none';
+        } else if (e.target.value === 'ollama') {
+            // Ollama: needs model, but provider is implicit (always Ollama)
+            providerGroup.style.display = 'none';
+            modelGroup.style.display = 'block';
+            systemPromptGroup.style.display = 'block';
+            // Load Ollama models when Ollama monitor is selected
+            await loadModelsForProvider('ollama');
         } else {
+            // LangGraph: needs all options (provider, model, system prompt)
             providerGroup.style.display = 'block';
             modelGroup.style.display = 'block';
             systemPromptGroup.style.display = 'block';
+            // Load models for currently selected provider
+            await loadModelsForProvider(selectedProvider);
         }
     });
 

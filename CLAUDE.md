@@ -84,7 +84,7 @@ ax-agent-studio/
 │   ├── config.py                 # Config loader (reads config.yaml)
 │   ├── mcp_manager.py            # Multi-server MCP manager (agent factory)
 │   ├── message_store.py          # ✨ NEW: SQLite-backed FIFO message queue
-│   ├── queue_manager.py          # ✨ NEW: Modular queue manager (dual-task pattern)
+│   ├── queue_manager.py          # ✨ NEW: Modular queue manager (triple-task pattern)
 │   ├── monitors/                 # Monitor implementations
 │   │   ├── echo_monitor.py       # Simple echo monitor with FIFO
 │   │   ├── ollama_monitor.py     # Local LLM monitor with FIFO
@@ -135,6 +135,7 @@ monitors:
   reconnect_delay: 5
   max_retries: 3
   mark_read: true
+  heartbeat_interval: 240  # Ping every 4 minutes to prevent timeout (0 = disabled)
 
 ollama:
   base_url: "http://localhost:11434/v1"
@@ -162,11 +163,11 @@ All monitors import and use these functions for consistent configuration.
 
 **Problem Solved**: Monitors were missing rapid-fire messages because `wait=true` blocks during processing.
 
-**Solution**: Modular FIFO queue with dual-task pattern using SQLite persistence.
+**Solution**: Modular FIFO queue with triple-task pattern using SQLite persistence.
 
 ### Architecture Overview
 
-All monitors now use **QueueManager** (`queue_manager.py`) with two concurrent tasks:
+All monitors now use **QueueManager** (`queue_manager.py`) with three concurrent tasks:
 
 **Task 1: Poller (Message Receiver)**
 - Continuously calls `messages` tool with `wait=true`
@@ -179,10 +180,17 @@ All monitors now use **QueueManager** (`queue_manager.py`) with two concurrent t
 - Sends response
 - Marks message as complete
 
+**Task 3: Heartbeat (Connection Keeper)**
+- Pings MCP server every 4 minutes (configurable)
+- Prevents Cloud Run 5-minute timeout disconnections
+- Detects connection failures early
+- Logs ping stats for monitoring
+
 **Benefits:**
 - ✅ Zero message loss (SQLite buffer)
 - ✅ FIFO guaranteed (`ORDER BY timestamp ASC`)
 - ✅ Crash resilient (persistent storage)
+- ✅ Connection resilient (heartbeat prevents timeouts)
 - ✅ Modular (zero code duplication)
 - ✅ Pluggable handlers
 
