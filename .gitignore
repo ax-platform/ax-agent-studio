@@ -97,3 +97,6 @@ HANDOFF_SUMMARY.md
 data/
 *.db
 *.db-journal
+
+# Local documentation (internal)
+docs/
