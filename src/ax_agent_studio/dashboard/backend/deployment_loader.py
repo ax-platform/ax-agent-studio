@@ -27,7 +27,7 @@ class DeploymentAgent:
     model: Optional[str] = None
     system_prompt: Optional[str] = None
     start_delay_ms: Optional[int] = None
-    process_backlog: Optional[bool] = None
+    process_backlog: Optional[bool] = None  # DEPRECATED: Kept for backward compatibility, defaults to False
 
 
 @dataclasses.dataclass
