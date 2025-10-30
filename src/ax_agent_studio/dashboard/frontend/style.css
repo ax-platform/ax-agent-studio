@@ -643,3 +643,68 @@ header h1 {
 .health-stat.warning .stat-value {
     color: #92400e;
 }
+
+/* Capability Badges */
+.capabilities-section {
+    margin-top: 0.75rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid #334155;
+}
+
+.capabilities-label {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+}
+
+.capabilities-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.capability-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: lowercase;
+    white-space: nowrap;
+}
+
+/* Color categories for capabilities */
+.capability-language {
+    background: #10b981;
+    color: white;
+}
+
+.capability-cloud {
+    background: #3b82f6;
+    color: white;
+}
+
+.capability-testing {
+    background: #f59e0b;
+    color: white;
+}
+
+.capability-review {
+    background: #8b5cf6;
+    color: white;
+}
+
+.capability-additional {
+    background: #64748b;
+    color: white;
+}
+
+.capability-other {
+    background: #475569;
+    color: white;
+}

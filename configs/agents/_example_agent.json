@@ -6,49 +6,11 @@
     "3. Create a new file here: configs/agents/your_agent_name.json",
     "4. Paste the config you copied - that's it!",
     "5. Optional: Add more MCP servers for additional capabilities",
-    "6. Optional: Configure security permissions (see below)",
-    "7. Delete these comment fields (starting with _) in your config"
+    "6. Delete these comment fields (starting with _) in your config"
   ],
 
-  "permissions": {
-    "_comment": "Security settings for Claude Code SDK monitor (optional)",
-    "allowedTools": ["WebFetch", "WebSearch"],
-    "permissionMode": "default",
-    "workingDir": "/tmp/agent_workspace",
-    "_allowed_tools_options": [
-      "WebFetch - Fetch content from URLs",
-      "WebSearch - Search the web",
-      "Read - Read files (restricted by workingDir)",
-      "Write - Write files (restricted by workingDir)",
-      "Edit - Edit files (restricted by workingDir)",
-      "Bash - Execute shell commands (use with caution!)",
-      "Glob - Find files by pattern",
-      "Grep - Search file contents"
-    ],
-    "_permission_modes": [
-      "default - Prompt for risky actions (recommended)",
-      "acceptEdits - Auto-approve file edits",
-      "bypassPermissions - Allow all without prompts (dangerous!)"
-    ]
-  },
-
   "mcpServers": {
-    "_comment_local": "For local development (ax-docker)",
-    "ax-docker": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "mcp-remote@0.1.29",
-        "http://localhost:8002/mcp/agents/your_agent_name",
-        "--transport",
-        "http-only",
-        "--oauth-server",
-        "http://localhost:8001"
-      ]
-    },
-
-    "_comment_production": "For production (ax-gcp) - uncomment and use instead of ax-docker",
-    "_ax-gcp": {
+    "ax-gcp": {
       "command": "npx",
       "args": [
         "-y",
@@ -58,20 +20,6 @@
         "http-only",
         "--oauth-server",
         "https://api.paxai.app"
-      ]
-    },
-
-    "_comment_optional": "Optional: Add more MCP servers",
-    "_fetch": {
-      "command": "uvx",
-      "args": ["mcp-server-fetch"]
-    },
-    "_filesystem": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-filesystem",
-        "/Users/jacob/ax-agent-studio/agent_files"
       ]
     }
   }

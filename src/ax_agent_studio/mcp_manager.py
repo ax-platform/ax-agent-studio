@@ -12,19 +12,30 @@ from typing import Dict, List, Any, Optional
 from contextlib import AsyncExitStack
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
+from ax_agent_studio.mcp_heartbeat import HeartbeatManager
 
 logger = logging.getLogger(__name__)
 
 
 class MCPServerManager:
-    """Manages multiple MCP server connections"""
+    """Manages multiple MCP server connections with automatic heartbeat"""
 
     def __init__(
         self,
         agent_name: str,
         base_dir: Optional[Path] = None,
         config_path: Optional[Path] = None,
+        heartbeat_interval: int = 240,
     ):
+        """
+        Initialize MCP Server Manager.
+
+        Args:
+            agent_name: Name of the agent
+            base_dir: Base directory for configs (default: project root)
+            config_path: Path to agent config JSON (default: configs/agents/{agent_name}.json)
+            heartbeat_interval: Seconds between heartbeat pings (default: 240 = 4 min, 0 = disabled)
+        """
         self.agent_name = agent_name
         self.base_dir = base_dir or Path(__file__).parent.parent.parent
         if config_path is not None:
@@ -36,6 +47,10 @@ class MCPServerManager:
         self.sessions: Dict[str, ClientSession] = {}
         self.exit_stack = None
         self.config = None
+
+        # Heartbeat manager for keeping connections alive
+        self.heartbeat_manager = HeartbeatManager(interval=heartbeat_interval)
+        logger.info(f"MCPServerManager initialized with heartbeat interval: {heartbeat_interval}s")
 
     async def __aenter__(self):
         """Async context manager entry - connect to all servers"""
@@ -111,6 +126,12 @@ class MCPServerManager:
                 # Store session
                 self.sessions[server_name] = session
 
+                # Start heartbeat for this session
+                await self.heartbeat_manager.start(
+                    session,
+                    name=f"{self.agent_name}/{server_name}"
+                )
+
                 # Get available tools
                 tools_response = await session.list_tools()
                 tool_count = len(tools_response.tools) if hasattr(tools_response, 'tools') else 0
@@ -126,7 +147,11 @@ class MCPServerManager:
         print(f"✅ Connected to {len(self.sessions)}/{len(mcp_servers)} servers\n")
 
     async def disconnect_all(self):
-        """Disconnect from all MCP servers"""
+        """Disconnect from all MCP servers and stop heartbeats"""
+        # Stop all heartbeats
+        await self.heartbeat_manager.stop_all()
+
+        # Disconnect sessions
         if self.exit_stack:
             await self.exit_stack.__aexit__(None, None, None)
             self.sessions.clear()

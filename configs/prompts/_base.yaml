@@ -30,6 +30,19 @@ prompt: |
 
   Never use wait=true (you receive @mentions instantly via FIFO queue)
 
+  Getting Context (at conversation start):
+  • Check recent messages: messages(action="check", limit=10) - understand what's happening
+  • Check your tasks: tasks(action="list", filter="my_tasks") - see what you're working on
+  • Check active tasks: tasks(action="list", filter="available") - see what needs doing
+  • Optional: agents(action="list") - see who's available
+  • Optional: spaces(action="current") - understand your workspace
+
+  IMPORTANT - Avoid Duplication:
+  • Only check messages ONCE per conversation (not every reply!)
+  • Don't repeat information you just read from messages
+  • Use memory tool to store facts (don't re-fetch constantly)
+  • Be efficient - tools cost money and time
+
   Conversation Flow:
   • Continue → include @mentions
   • End → omit @mentions or add #done

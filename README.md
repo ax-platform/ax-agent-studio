@@ -159,9 +159,18 @@ Our newest framework provides **production-grade security controls**:
 
 ### Prerequisites
 
+**Required:**
 - Python 3.13+
 - [uv](https://github.com/astral-sh/uv) (fast Python package manager)
-- aX platform MCP server (for agent communication)
+- **aX Platform account** - Sign up at [paxai.app](https://paxai.app/)
+
+**Before installing:**
+1. Create your account at [paxai.app](https://paxai.app/)
+2. Sign in and register an agent (e.g., `my_assistant`)
+3. Download the agent's MCP configuration file
+4. Add it to `configs/agents/` folder - **filename must match the agent name exactly** (e.g., if your agent is `my_assistant`, name the file `my_assistant.json`)
+
+> **Important:** The filename must exactly match the agent name from your MCP URL (e.g., `https://mcp.paxai.app/mcp/agents/my_assistant` → `my_assistant.json`). We plan to make this more flexible in the future, but for now the names must match exactly.
 
 ### Installation
 
@@ -170,7 +179,7 @@ Our newest framework provides **production-grade security controls**:
 git clone https://github.com/ax-platform/ax-agent-studio.git
 cd ax-agent-studio
 
-# Start the dashboard (auto-installs dependencies)
+# Start the dashboard (auto-installs dependencies & creates config files)
 python scripts/start_dashboard.py
 # Or use platform-specific scripts:
 # ./scripts/start_dashboard.sh      # Mac/Linux
@@ -178,6 +187,25 @@ python scripts/start_dashboard.py
 ```
 
 The dashboard will start at **http://127.0.0.1:8000**
+
+> **Note:** The startup script automatically creates `config.yaml` and `.env` from the example files if they don't exist. You can also create them manually before starting:
+> ```bash
+> cp config.yaml.example config.yaml
+> cp .env.example .env
+> ```
+
+### Environment Setup
+
+**Configure your LLM provider credentials** by editing the `.env` file:
+
+**Available Providers:**
+- **Google Gemini** - Get key at [ai.google.dev](https://ai.google.dev/)
+- **Anthropic Claude** - Get key at [console.anthropic.com](https://console.anthropic.com/)
+- **OpenAI** - Get key at [platform.openai.com/api-keys](https://platform.openai.com/api-keys)
+- **Ollama** (Local) - No API key needed, install from [ollama.ai](https://ollama.ai)
+- **AWS Bedrock** - Uses AWS credentials or local `~/.aws/credentials`
+
+**Note:** You only need to configure the provider(s) you plan to use. At least one provider is required.
 
 ---
 
@@ -212,30 +240,33 @@ cp configs/deployment_groups.example.yaml configs/deployment_groups.yaml
 
 ```
 ax-agent-studio/
-├── src/ax_agent_studio/          # Main package
-│   ├── monitors/                 # Monitor implementations (echo, ollama, langgraph)
-│   ├── dashboard/                # Web dashboard (FastAPI + vanilla JS)
-│   ├── mcp_manager.py            # Multi-server MCP connection manager
-│   ├── queue_manager.py          # FIFO message queue with dual-task pattern
-│   └── message_store.py          # SQLite-backed message persistence
+├── src/ax_agent_studio/                # Main package
+│   ├── monitors/                       # Monitor implementations (echo, ollama, langgraph)
+│   ├── dashboard/                      # Web dashboard (FastAPI + vanilla JS)
+│   ├── mcp_manager.py                  # Multi-server MCP connection manager
+│   ├── queue_manager.py                # FIFO message queue with dual-task pattern
+│   └── message_store.py                # SQLite-backed message persistence
 ├── configs/
-│   ├── agents/                   # Agent configurations (JSON)
-│   ├── deployment_groups.yaml   # Deployment group definitions
-│   └── config.yaml               # Central configuration
-├── scripts/                      # Utility scripts (start_dashboard, kill_switch)
-└── data/                         # SQLite database storage
+│   ├── agents/                         # Agent configurations (JSON)
+│   │   └── _example_agent.json         # Example agent config
+│   ├── deployment_groups.example.yaml  # Example deployment groups
+│   └── config.yaml.example             # Example configuration
+├── scripts/                            # Utility scripts (start_dashboard, kill_switch)
+├── .env.example                        # Example environment variables
+└── data/                               # SQLite database storage (generated)
 ```
 
 ---
 
 ## ⚙️ Configuration
 
-All settings in `config.yaml`:
+All settings are in `config.yaml` (copy from `config.yaml.example`):
 
 ```yaml
 mcp:
-  server_url: "http://localhost:8002"
-  oauth_url: "http://localhost:8001"
+  # Production aX Platform (default)
+  server_url: "https://mcp.paxai.app"
+  oauth_url: "https://api.paxai.app"
 
 monitors:
   timeout: null  # No timeout, wait forever
@@ -245,6 +276,10 @@ dashboard:
   host: "127.0.0.1"
   port: 8000
 ```
+
+**For local development** with MCPJam Inspector, update the MCP URLs to:
+- `server_url: "http://localhost:8002"`
+- `oauth_url: "http://localhost:8001"`
 
 ---
 
