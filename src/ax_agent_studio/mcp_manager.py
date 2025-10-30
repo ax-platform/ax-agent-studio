@@ -19,10 +19,18 @@ logger = logging.getLogger(__name__)
 class MCPServerManager:
     """Manages multiple MCP server connections"""
 
-    def __init__(self, agent_name: str, base_dir: Optional[Path] = None):
+    def __init__(
+        self,
+        agent_name: str,
+        base_dir: Optional[Path] = None,
+        config_path: Optional[Path] = None,
+    ):
         self.agent_name = agent_name
         self.base_dir = base_dir or Path(__file__).parent.parent.parent
-        self.config_path = self.base_dir / "configs" / "agents" / f"{agent_name}.json"
+        if config_path is not None:
+            self.config_path = Path(config_path)
+        else:
+            self.config_path = self.base_dir / "configs" / "agents" / f"{agent_name}.json"
 
         # Multi-server state
         self.sessions: Dict[str, ClientSession] = {}

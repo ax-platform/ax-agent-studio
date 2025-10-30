@@ -74,12 +74,14 @@ function setupEventListeners() {
         await loadDeploymentGroups(selectedEnvironment);
     });
 
-    document.getElementById('monitor-type-select').addEventListener('change', (e) => {
+    document.getElementById('monitor-type-select').addEventListener('change', async (e) => {
         const providerGroup = document.getElementById('provider-group');
         const modelGroup = document.getElementById('model-group');
         const systemPromptGroup = document.getElementById('system-prompt-group');
 
-        if (e.target.value === 'echo') {
+        const selectedType = e.target.value;
+
+        if (selectedType === 'echo') {
             providerGroup.style.display = 'none';
             modelGroup.style.display = 'none';
             systemPromptGroup.style.display = 'none';
@@ -87,6 +89,18 @@ function setupEventListeners() {
             providerGroup.style.display = 'block';
             modelGroup.style.display = 'block';
             systemPromptGroup.style.display = 'block';
+
+            if (selectedType === 'claude_agent_sdk') {
+                const providerSelect = document.getElementById('provider-select');
+                const hasAnthropic = Array.from(providerSelect.options).some(opt => opt.value === 'anthropic');
+                if (hasAnthropic) {
+                    providerSelect.value = 'anthropic';
+                    selectedProvider = 'anthropic';
+                } else {
+                    selectedProvider = providerSelect.value;
+                }
+                await loadModelsForProvider(selectedProvider);
+            }
         }
     });
 
@@ -617,7 +631,7 @@ async function testMonitor(agentName, monitorType) {
     let testMessage;
     if (monitorType === 'echo') {
         testMessage = `Test echo at ${new Date().toLocaleTimeString()} 🧪`;
-    } else if (monitorType === 'ollama' || monitorType === 'langgraph') {
+    } else if (['ollama', 'langgraph', 'claude_agent_sdk'].includes(monitorType)) {
         const aiQuestions = [
             "What's a fun fact about AI?",
             "Tell me a quick joke!",
@@ -854,6 +868,7 @@ function getMonitorEmoji(type) {
         'echo': '🔊',
         'ollama': '🤖',
         'langgraph': '🧠',
+        'claude_agent_sdk': '🛡',
         'demo': '🎬'
     };
     return emojis[type] || '📡';

@@ -47,7 +47,7 @@ log_streamer = LogStreamer(PROJECT_ROOT / "logs")
 class MonitorConfig(BaseModel):
     agent_name: str
     config_path: str
-    monitor_type: Literal["echo", "ollama", "langgraph"]
+    monitor_type: Literal["echo", "ollama", "langgraph", "claude_agent_sdk"]
     model: Optional[str] = None
     provider: Optional[str] = None
     system_prompt: Optional[str] = None

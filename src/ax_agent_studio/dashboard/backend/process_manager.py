@@ -288,7 +288,7 @@ class ProcessManager:
         self,
         agent_name: str,
         config_path: str,
-        monitor_type: Literal["echo", "ollama", "langgraph"],
+        monitor_type: Literal["echo", "ollama", "langgraph", "claude_agent_sdk"],
         model: Optional[str] = None,
         provider: Optional[str] = None,
         system_prompt: Optional[str] = None,
@@ -391,6 +391,18 @@ class ProcessManager:
                 cmd.extend(["--model", model])
             if provider:
                 cmd.extend(["--provider", provider])
+        elif monitor_type == "claude_agent_sdk":
+            cmd = [
+                str(venv_python),
+                "-u",
+                "-m",
+                "ax_agent_studio.monitors.claude_agent_sdk_monitor",
+                agent_name,
+                "--config",
+                config_path,
+            ]
+            if model:
+                cmd.extend(["--model", model])
         else:
             raise ValueError(f"Unknown monitor type: {monitor_type}")
 
@@ -636,7 +648,7 @@ class ProcessManager:
                 else defaults.get("process_backlog", False)  # Always start fresh
             )
 
-            if monitor_type not in {"echo", "ollama", "langgraph"}:
+            if monitor_type not in {"echo", "ollama", "langgraph", "claude_agent_sdk"}:
                 raise ValueError(f"Unsupported monitor type '{monitor_type}' in group '{group_id}'")
 
             config_path = self._get_agent_config_path(agent.id)
