@@ -422,10 +422,10 @@ async def stop_monitor(request: StopMonitorRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/monitors/restart/{monitor_id}")
-async def restart_monitor(monitor_id: str, process_backlog: bool = True):
-    """Restart a monitor"""
+async def restart_monitor(monitor_id: str):
+    """Restart a monitor (always starts fresh)"""
     try:
-        success = await process_manager.restart_monitor(monitor_id, process_backlog)
+        success = await process_manager.restart_monitor(monitor_id)
         if success:
             return {
                 "success": True,
