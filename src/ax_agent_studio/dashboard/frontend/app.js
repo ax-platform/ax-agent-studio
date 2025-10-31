@@ -98,7 +98,7 @@ function setupEventListeners() {
             // Load Ollama models when Ollama monitor is selected
             await loadModelsForProvider('ollama');
         } else {
-            // LangGraph/Claude Agent SDK: needs all options (provider, model, system prompt)
+            // LangGraph/Claude Agent SDK/OpenAI Agents SDK: needs all options (provider, model, system prompt)
             providerGroup.style.display = 'block';
             modelGroup.style.display = 'block';
             systemPromptGroup.style.display = 'block';
@@ -110,6 +110,18 @@ function setupEventListeners() {
                 if (hasAnthropic) {
                     providerSelect.value = 'anthropic';
                     selectedProvider = 'anthropic';
+                } else {
+                    selectedProvider = providerSelect.value;
+                }
+            }
+
+            // OpenAI Agents SDK prefers OpenAI provider
+            if (selectedType === 'openai_agents') {
+                const providerSelect = document.getElementById('provider-select');
+                const hasOpenAI = Array.from(providerSelect.options).some(opt => opt.value === 'openai');
+                if (hasOpenAI) {
+                    providerSelect.value = 'openai';
+                    selectedProvider = 'openai';
                 } else {
                     selectedProvider = providerSelect.value;
                 }

@@ -117,6 +117,7 @@ aX Agent Studio supports multiple agent frameworks (monitors), each optimized fo
 | Framework | Best For | Security | Guide |
 |-----------|----------|----------|-------|
 | **🛡️ Claude Agent SDK** | Production agents, web research, security-critical tasks | ⭐⭐⭐⭐⭐ Per-agent permissions, sandboxing | **[→ Full Guide](./framework-guides/claude-agent-sdk.md)** |
+| **🤖 OpenAI Agents SDK** | GPT-4o agents, OpenAI tooling, rapid prototyping | ⭐⭐⭐⭐ MCP tool filtering | **[→ Full Guide](./framework-guides/openai-agents-sdk.md)** |
 | **🧠 LangGraph** | Complex workflows, graph-based logic, custom tool chains | ⭐⭐⭐ MCP-level only | [→ Guide](./framework-guides/langgraph.md) |
 | **🏠 Ollama** | Privacy-focused, offline, custom models | ⭐⭐⭐ MCP-level only | [→ Guide](./framework-guides/ollama.md) |
 | **🔊 Echo** | Testing, debugging, learning | ⭐ Testing only | [→ Guide](./framework-guides/echo.md) |
@@ -147,8 +148,10 @@ Our newest framework provides **production-grade security controls**:
 
 ### Framework Comparison
 
-**For Production:** Claude Agent SDK (security + power) or LangGraph (workflow complexity)
+**For Production:** Claude Agent SDK (security + power), OpenAI Agents SDK (OpenAI ecosystem), or LangGraph (workflow complexity)
 **For Development:** Ollama (privacy + cost) or Echo (simplicity)
+**For OpenAI Users:** OpenAI Agents SDK (official GPT-4o integration)
+**For Anthropic Users:** Claude Agent SDK (Claude Code native)
 **For Research:** Any framework - mix and match!
 
 **[📚 Browse all framework guides →](./framework-guides/)**
