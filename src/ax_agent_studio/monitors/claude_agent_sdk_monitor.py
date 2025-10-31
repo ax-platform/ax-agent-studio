@@ -323,6 +323,9 @@ async def claude_agent_sdk_monitor(
             msg_id = message.get("id", "")
             msg_id_short = msg_id[:8] if isinstance(msg_id, str) else ""
 
+            # Apply workaround for incoming triple backtick truncation bug
+            raw_content = _fix_code_blocks(raw_content)
+
             user_text = _extract_message_body(raw_content)
             logger.info("Processing message %s from %s", msg_id_short or "(no id)", sender)
 
