@@ -55,13 +55,29 @@ Messages containing triple backtick (```) code blocks get truncated when sent fr
 3. Send code line-by-line without formatting
 4. Describe code instead of pasting it
 
+## Fix Implemented
+**Status: FIXED locally** (2025-10-30)
+
+Added `_fix_code_blocks()` function in `claude_agent_sdk_monitor.py` that:
+1. Detects triple backtick code blocks in outgoing responses
+2. Converts them to 4-space indented format
+3. Preserves language hints as "Code (lang):" prefix
+4. Applied automatically to all responses before sending
+
+This allows Claude Agent SDK agents to send code examples without triggering the SDK truncation bug.
+
+**Testing:** Confirmed working with Aurora - code blocks now transmit completely.
+
 ## Next Steps
-1. Test with non-Claude Code agents (LangGraph, Ollama, Echo)
-2. Report to Anthropic if confirmed as Claude Code SDK bug
-3. Add preprocessing to escape/handle code blocks if needed
+1. ✅ ~~Test with non-Claude Code agents~~ - Confirmed LangGraph not affected
+2. Report upstream to Anthropic (SDK bug remains in v0.1.5)
+3. ✅ ~~Add preprocessing to escape/handle code blocks~~ - DONE
 
 ## Date Identified
 2025-10-30
 
+## Date Fixed
+2025-10-30
+
 ## Severity
-**Medium** - Limits agent collaboration but workarounds exist
+**Low** - Fixed locally with automatic workaround
