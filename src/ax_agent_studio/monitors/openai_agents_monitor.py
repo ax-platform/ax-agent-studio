@@ -17,9 +17,14 @@ import sys
 from pathlib import Path
 from typing import Dict, List, Optional
 
+from dotenv import load_dotenv
+
 from ax_agent_studio.config import get_monitor_config
 from ax_agent_studio.mcp_manager import MCPServerManager
 from ax_agent_studio.queue_manager import QueueManager
+
+# Load environment variables from .env file
+load_dotenv()
 
 try:
     from agents import Agent, Runner
@@ -166,127 +171,142 @@ async def openai_agents_monitor(
     conversation_history: List[Dict] = []
 
     # Create MCP servers using OpenAI Agents SDK MCP classes
-    mcp_servers = await _create_mcp_servers_from_config(agent_config)
+    mcp_server_instances = await _create_mcp_servers_from_config(agent_config)
 
-    print(f"\n✅ Configured {len(mcp_servers)} MCP servers")
+    print(f"\n✅ Configured {len(mcp_server_instances)} MCP servers")
     print()
 
-    # We still need MCPServerManager for the primary session (queue access)
+    # Enter all MCP server context managers
+    # This connects them so they're ready to use
     async with MCPServerManager(agent_name, base_dir=base_dir, config_path=resolved_config) as manager:
         primary_session = manager.get_primary_session()
 
-        # Build agent instructions
-        base_instructions = (
-            f"You are @{agent_name}, an AI agent deployed in the aX Agent Studio.\n"
-            "Follow these rules:\n"
-            "1. Always start replies with @{{sender}} but never mention yourself.\n"
-            "2. Keep responses helpful, friendly, and concise.\n"
-            "3. Use MCP tools to complete tasks.\n"
-            "4. Reference message IDs when supplied (format: id:XXXXXXXX)."
-        )
+        # Open all MCP server connections
+        # We need to use AsyncExitStack to manage multiple async context managers
+        from contextlib import AsyncExitStack
 
-        if system_prompt_override:
-            instructions = f"{base_instructions}\n\nAdditional instructions:\n{system_prompt_override}"
-        else:
-            instructions = base_instructions
+        async with AsyncExitStack() as stack:
+            # Connect all MCP servers
+            mcp_servers = []
+            for server in mcp_server_instances:
+                connected_server = await stack.enter_async_context(server)
+                mcp_servers.append(connected_server)
 
-        # Create OpenAI agent with MCP servers
-        # Note: We create the agent inside the context managers
-        async def handle_message(message: Dict) -> str:
-            sender = message.get("sender", "unknown")
-            if sender == agent_name:
-                logger.info("Ignoring self-mention for %s", agent_name)
-                return ""
+            print(f"✅ Connected to {len(mcp_servers)} MCP servers")
+            print()
 
-            raw_content = message.get("content", "")
-            msg_id = message.get("id", "")
-            msg_id_short = msg_id[:8] if isinstance(msg_id, str) else ""
-
-            user_text = _extract_message_body(raw_content)
-            logger.info("Processing message %s from %s", msg_id_short or "(no id)", sender)
-
-            # Build context-aware instructions
-            context_instructions = instructions.replace("{sender}", sender)
-
-            # Add conversation history for context
-            if conversation_history:
-                history_text = "\n".join(
-                    f"{msg['role']}: {msg['content']}"
-                    for msg in conversation_history[-_HISTORY_LIMIT:]
-                )
-                context_instructions += f"\n\nRecent conversation:\n{history_text}"
-
-            # Add current message context
-            full_prompt = (
-                f"Incoming message from @{sender} [id:{msg_id_short or 'unknown'}]:\n"
-                f"{user_text}\n\n"
-                f"Respond as @{agent_name} following all rules."
+            # Build agent instructions
+            base_instructions = (
+                f"You are @{agent_name}, an AI agent deployed in the aX Agent Studio.\n"
+                "Follow these rules:\n"
+                "1. Always start replies with @{{sender}} but never mention yourself.\n"
+                "2. Keep responses helpful, friendly, and concise.\n"
+                "3. Use MCP tools to complete tasks.\n"
+                "4. Reference message IDs when supplied (format: id:XXXXXXXX)."
             )
 
-            try:
-                # Create agent for this specific interaction
-                # OpenAI Agents SDK agents are lightweight and can be created per-message
-                agent = Agent(
-                    name=agent_name,
-                    instructions=context_instructions,
-                    mcp_servers=mcp_servers,
-                    model=model,
+            if system_prompt_override:
+                instructions = f"{base_instructions}\n\nAdditional instructions:\n{system_prompt_override}"
+            else:
+                instructions = base_instructions
+
+            # Create OpenAI agent with MCP servers
+            # Note: We create the agent inside the context managers
+            async def handle_message(message: Dict) -> str:
+                sender = message.get("sender", "unknown")
+                if sender == agent_name:
+                    logger.info("Ignoring self-mention for %s", agent_name)
+                    return ""
+
+                raw_content = message.get("content", "")
+                msg_id = message.get("id", "")
+                msg_id_short = msg_id[:8] if isinstance(msg_id, str) else ""
+
+                user_text = _extract_message_body(raw_content)
+                logger.info("Processing message %s from %s", msg_id_short or "(no id)", sender)
+
+                # Build context-aware instructions
+                context_instructions = instructions.replace("{sender}", sender)
+
+                # Add conversation history for context
+                if conversation_history:
+                    history_text = "\n".join(
+                        f"{msg['role']}: {msg['content']}"
+                        for msg in conversation_history[-_HISTORY_LIMIT:]
+                    )
+                    context_instructions += f"\n\nRecent conversation:\n{history_text}"
+
+                # Add current message context
+                full_prompt = (
+                    f"Incoming message from @{sender} [id:{msg_id_short or 'unknown'}]:\n"
+                    f"{user_text}\n\n"
+                    f"Respond as @{agent_name} following all rules."
                 )
 
-                # Run the agent with the message
-                result = await Runner.run(agent, full_prompt)
+                try:
+                    # Create agent for this specific interaction
+                    # OpenAI Agents SDK agents are lightweight and can be created per-message
+                    agent = Agent(
+                        name=agent_name,
+                        instructions=context_instructions,
+                        mcp_servers=mcp_servers,
+                        model=model,
+                    )
 
-                # Extract response text
-                response_text = ""
-                if hasattr(result, "messages") and result.messages:
-                    # Get the last assistant message
-                    for msg in reversed(result.messages):
-                        if msg.role == "assistant" and hasattr(msg, "content"):
-                            for content in msg.content:
-                                if hasattr(content, "text"):
-                                    response_text = content.text
+                    # Run the agent with the message
+                    result = await Runner.run(agent, full_prompt)
+
+                    # Extract response text
+                    response_text = ""
+                    if hasattr(result, "messages") and result.messages:
+                        # Get the last assistant message
+                        for msg in reversed(result.messages):
+                            if msg.role == "assistant" and hasattr(msg, "content"):
+                                for content in msg.content:
+                                    if hasattr(content, "text"):
+                                        response_text = content.text
+                                        break
+                                if response_text:
                                     break
-                            if response_text:
-                                break
 
-                if not response_text:
-                    response_text = "I processed your request but have no text response."
+                    if not response_text:
+                        response_text = "I processed your request but have no text response."
 
-            except Exception as exc:  # pragma: no cover
-                logger.error("OpenAI agent execution failed: %s", exc)
-                return f"@{sender} I encountered an error: {str(exc)[:100]}"
+                except Exception as exc:  # pragma: no cover
+                    logger.error("OpenAI agent execution failed: %s", exc)
+                    return f"@{sender} I encountered an error: {str(exc)[:100]}"
 
-            # Ensure response starts with @sender
-            response_text = response_text.strip()
-            if not response_text.startswith(f"@{sender}"):
-                response_text = f"@{sender} {response_text}"
+                # Ensure response starts with @sender
+                response_text = response_text.strip()
+                if not response_text.startswith(f"@{sender}"):
+                    response_text = f"@{sender} {response_text}"
 
-            # Remove self-mentions
-            if f"@{agent_name}" in response_text:
-                response_text = response_text.replace(f"@{agent_name}", agent_name)
+                # Remove self-mentions
+                if f"@{agent_name}" in response_text:
+                    response_text = response_text.replace(f"@{agent_name}", agent_name)
 
-            # Update conversation history
-            conversation_history.append({"role": "user", "content": f"@{sender}: {user_text}"})
-            conversation_history.append({"role": "assistant", "content": response_text})
+                # Update conversation history
+                conversation_history.append({"role": "user", "content": f"@{sender}: {user_text}"})
+                conversation_history.append({"role": "assistant", "content": response_text})
 
-            if len(conversation_history) > _HISTORY_LIMIT * 2:
-                conversation_history[:] = conversation_history[-_HISTORY_LIMIT * 2:]
+                if len(conversation_history) > _HISTORY_LIMIT * 2:
+                    conversation_history[:] = conversation_history[-_HISTORY_LIMIT * 2:]
 
-            logger.info("Response generated: %d chars", len(response_text))
-            return response_text
+                logger.info("Response generated: %d chars", len(response_text))
+                return response_text
 
-        monitor_config = get_monitor_config()
-        queue_manager = QueueManager(
-            agent_name=agent_name,
-            session=primary_session,
-            message_handler=handle_message,
-            mark_read=monitor_config.get("mark_read", False),
-            startup_sweep=monitor_config.get("startup_sweep", True),
-            startup_sweep_limit=monitor_config.get("startup_sweep_limit", 10),
-        )
+            monitor_config = get_monitor_config()
+            queue_manager = QueueManager(
+                agent_name=agent_name,
+                session=primary_session,
+                message_handler=handle_message,
+                mark_read=monitor_config.get("mark_read", False),
+                startup_sweep=monitor_config.get("startup_sweep", True),
+                startup_sweep_limit=monitor_config.get("startup_sweep_limit", 10),
+            )
 
-        print("🚀 Starting FIFO queue manager...\n")
-        await queue_manager.run()
+            print("🚀 Starting FIFO queue manager...\n")
+            await queue_manager.run()
 
 
 def main() -> None:
