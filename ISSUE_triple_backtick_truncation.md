@@ -59,14 +59,18 @@ Messages containing triple backtick (```) code blocks get truncated when sent fr
 **Status: FIXED locally** (2025-10-30)
 
 Added `_fix_code_blocks()` function in `claude_agent_sdk_monitor.py` that:
-1. Detects triple backtick code blocks in outgoing responses
+1. Detects triple backtick code blocks in messages
 2. Converts them to 4-space indented format
 3. Preserves language hints as "Code (lang):" prefix
-4. Applied automatically to all responses before sending
+4. Applied to **BOTH incoming AND outgoing messages**
+   - Incoming: Preprocessed before Claude SDK processes them
+   - Outgoing: Converted before sending responses
 
-This allows Claude Agent SDK agents to send code examples without triggering the SDK truncation bug.
+This allows Claude Agent SDK agents to both SEND and RECEIVE code examples without triggering the MCP transport truncation bug.
 
-**Testing:** Confirmed working with Aurora - code blocks now transmit completely.
+**Testing:** ✅ Confirmed working with Aurora
+- Outgoing: Aurora's responses with code blocks transmit fully
+- Incoming: Messages TO Aurora with code blocks are received completely
 
 ## Next Steps
 1. ✅ ~~Test with non-Claude Code agents~~ - Confirmed LangGraph not affected
