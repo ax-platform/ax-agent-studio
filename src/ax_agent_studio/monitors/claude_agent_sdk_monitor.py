@@ -136,7 +136,8 @@ def _fix_code_blocks(text: str) -> str:
 
     # Match ```language (optional) followed by code content followed by ```
     # Handles both Unix (\n) and Windows (\r\n) line endings
-    pattern = r"```(\w+)?\r?\n(.*?)\r?\n```"
+    # Language pattern [^\r\n]+? matches any characters except newlines (supports c++, F#, objective-c, etc.)
+    pattern = r"```([^\r\n]+?)?\r?\n(.*?)\r?\n```"
     result = re.sub(pattern, replace_code_block, text, flags=re.DOTALL)
 
     return result
@@ -263,10 +264,13 @@ async def claude_agent_sdk_monitor(
     # Check authentication mode: subscription vs API key
     use_subscription = os.getenv("USE_CLAUDE_SUBSCRIPTION", "false").lower() == "true"
     api_key = os.getenv("ANTHROPIC_API_KEY")
+    saved_api_key = None
 
     if use_subscription:
         # Force subscription mode by temporarily removing API key from environment
+        # Save the key so we can restore it later (other monitors may need it)
         if api_key:
+            saved_api_key = api_key
             logger.info(
                 "USE_CLAUDE_SUBSCRIPTION=true overriding ANTHROPIC_API_KEY. "
                 "Forcing subscription mode (Claude CLI credentials)."
@@ -274,7 +278,7 @@ async def claude_agent_sdk_monitor(
             print("🔐 Authentication: Claude subscription (CLI credentials)")
             print("    Overriding API key to use subscription mode")
             print("    Ensure you're logged in via: claude login\n")
-            # Temporarily unset API key for this process only
+            # Temporarily unset API key for this monitor only
             os.environ.pop("ANTHROPIC_API_KEY", None)
         else:
             logger.info("Using Claude subscription credentials (Claude CLI session)")
@@ -337,6 +341,11 @@ async def claude_agent_sdk_monitor(
                 options_kwargs["system_prompt"] = system_prompt_override
 
         options = ClaudeAgentOptions(**options_kwargs)
+
+        # Restore API key if we removed it (so other monitors in same process can use it)
+        if saved_api_key:
+            os.environ["ANTHROPIC_API_KEY"] = saved_api_key
+            logger.debug("Restored ANTHROPIC_API_KEY to environment for other monitors")
 
         identity_prompt_template = (
             "You are @{agent_name}, an Anthropic Claude agent deployed in the aX Agent Studio.\n"
