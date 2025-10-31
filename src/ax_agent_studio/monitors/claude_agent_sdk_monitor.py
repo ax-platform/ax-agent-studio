@@ -101,7 +101,8 @@ def _extract_message_body(raw_content: str) -> str:
         return ""
 
     # Common format: "• sender: @agent message" or "@agent message"
-    mention_match = re.search(r"@\S+\s+(.+)", raw_content)
+    # Use DOTALL flag so .* matches across newlines (multi-line messages)
+    mention_match = re.search(r"@\S+\s+(.*)", raw_content, re.DOTALL)
     if mention_match:
         return mention_match.group(1).strip()
 
