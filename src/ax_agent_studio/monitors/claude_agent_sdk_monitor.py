@@ -226,6 +226,34 @@ async def claude_agent_sdk_monitor(
     system_prompt_override = os.getenv("AGENT_SYSTEM_PROMPT")
     conversation_history: List[str] = []
 
+    # Check authentication mode: subscription vs API key
+    use_subscription = os.getenv("USE_CLAUDE_SUBSCRIPTION", "false").lower() == "true"
+    api_key = os.getenv("ANTHROPIC_API_KEY")
+
+    if use_subscription:
+        if api_key:
+            logger.warning(
+                "USE_CLAUDE_SUBSCRIPTION=true but ANTHROPIC_API_KEY is set. "
+                "The API key will take precedence. Unset ANTHROPIC_API_KEY to use subscription."
+            )
+            print("⚠️  Warning: API key detected - will use API key billing instead of subscription")
+            print("    To use subscription: unset ANTHROPIC_API_KEY\n")
+        else:
+            logger.info("Using Claude subscription credentials (Claude CLI session)")
+            print("🔐 Authentication: Claude subscription (CLI credentials)")
+            print("    Ensure you're logged in via: claude login\n")
+    else:
+        if not api_key:
+            logger.warning(
+                "ANTHROPIC_API_KEY not set. Claude Agent SDK will attempt to use Claude CLI credentials. "
+                "Set USE_CLAUDE_SUBSCRIPTION=true to explicitly use subscription mode."
+            )
+            print("⚠️  Warning: ANTHROPIC_API_KEY not set - falling back to CLI credentials")
+            print("    Set ANTHROPIC_API_KEY or USE_CLAUDE_SUBSCRIPTION=true\n")
+        else:
+            logger.info("Using Claude API key for authentication")
+            print("🔐 Authentication: API key (billed to Anthropic API account)\n")
+
     async with MCPServerManager(agent_name, base_dir=base_dir, config_path=resolved_config) as manager:
         primary_session = manager.get_primary_session()
         allowlist = await _discover_allowed_tools(manager)
