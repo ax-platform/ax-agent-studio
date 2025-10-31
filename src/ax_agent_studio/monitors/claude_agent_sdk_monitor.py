@@ -119,13 +119,13 @@ def _fix_code_blocks(text: str) -> str:
     if not text or "```" not in text:
         return text
 
-    # Pattern to match code blocks: ```language\ncode\n```
+    # Pattern to match code blocks: ```language\ncode\n``` (handles both Unix and Windows line endings)
     def replace_code_block(match):
         language = match.group(1) or ""
         code = match.group(2)
 
-        # Convert to 4-space indented format
-        indented_lines = [f"    {line}" for line in code.split("\n")]
+        # Convert to 4-space indented format (handle both \n and \r\n)
+        indented_lines = [f"    {line}" for line in code.splitlines()]
         indented_code = "\n".join(indented_lines)
 
         # Add language hint if present
@@ -134,7 +134,8 @@ def _fix_code_blocks(text: str) -> str:
         return f"Code:\n{indented_code}"
 
     # Match ```language (optional) followed by code content followed by ```
-    pattern = r"```(\w+)?\n(.*?)\n```"
+    # Handles both Unix (\n) and Windows (\r\n) line endings
+    pattern = r"```(\w+)?\r?\n(.*?)\r?\n```"
     result = re.sub(pattern, replace_code_block, text, flags=re.DOTALL)
 
     return result
