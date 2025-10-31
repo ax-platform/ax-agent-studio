@@ -200,12 +200,45 @@ The dashboard will start at **http://127.0.0.1:8000**
 
 **Available Providers:**
 - **Google Gemini** - Get key at [ai.google.dev](https://ai.google.dev/)
-- **Anthropic Claude** - Get key at [console.anthropic.com](https://console.anthropic.com/)
+- **Anthropic Claude** - See authentication options below
 - **OpenAI** - Get key at [platform.openai.com/api-keys](https://platform.openai.com/api-keys)
 - **Ollama** (Local) - No API key needed, install from [ollama.ai](https://ollama.ai)
 - **AWS Bedrock** - Uses AWS credentials or local `~/.aws/credentials`
 
 **Note:** You only need to configure the provider(s) you plan to use. At least one provider is required.
+
+#### Claude Agent SDK Authentication
+
+The Claude Agent SDK monitor supports two authentication methods:
+
+**Option 1: API Key (Default)**
+```bash
+# .env file
+ANTHROPIC_API_KEY=sk-ant-...
+```
+Costs are billed to your Anthropic API account. Get a key at [console.anthropic.com](https://console.anthropic.com/).
+
+**Option 2: Claude Subscription (Pro/Max)**
+```bash
+# .env file
+USE_CLAUDE_SUBSCRIPTION=true
+# Do NOT set ANTHROPIC_API_KEY
+```
+
+Then authenticate via Claude CLI:
+```bash
+claude login
+```
+
+**Benefits of subscription mode:**
+- Use your existing Claude Pro/Max subscription
+- No separate API billing
+- Same models and rate limits as web/desktop Claude
+
+**Important notes:**
+- Subscription mode only works locally (requires Claude CLI session)
+- If `ANTHROPIC_API_KEY` is set, it takes precedence over subscription mode
+- The monitor will show clear warnings if authentication is misconfigured
 
 ---
 

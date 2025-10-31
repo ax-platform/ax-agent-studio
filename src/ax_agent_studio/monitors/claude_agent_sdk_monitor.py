@@ -263,13 +263,17 @@ async def claude_agent_sdk_monitor(
     api_key = os.getenv("ANTHROPIC_API_KEY")
 
     if use_subscription:
+        # Force subscription mode by temporarily removing API key from environment
         if api_key:
-            logger.warning(
-                "USE_CLAUDE_SUBSCRIPTION=true but ANTHROPIC_API_KEY is set. "
-                "The API key will take precedence. Unset ANTHROPIC_API_KEY to use subscription."
+            logger.info(
+                "USE_CLAUDE_SUBSCRIPTION=true overriding ANTHROPIC_API_KEY. "
+                "Forcing subscription mode (Claude CLI credentials)."
             )
-            print("⚠️  Warning: API key detected - will use API key billing instead of subscription")
-            print("    To use subscription: unset ANTHROPIC_API_KEY\n")
+            print("🔐 Authentication: Claude subscription (CLI credentials)")
+            print("    Overriding API key to use subscription mode")
+            print("    Ensure you're logged in via: claude login\n")
+            # Temporarily unset API key for this process only
+            os.environ.pop("ANTHROPIC_API_KEY", None)
         else:
             logger.info("Using Claude subscription credentials (Claude CLI session)")
             print("🔐 Authentication: Claude subscription (CLI credentials)")
