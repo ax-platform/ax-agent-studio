@@ -108,6 +108,38 @@ def _extract_message_body(raw_content: str) -> str:
     return raw_content.strip()
 
 
+def _fix_code_blocks(text: str) -> str:
+    """Workaround for Claude Agent SDK bug: triple backticks cause truncation.
+
+    Converts triple backtick code blocks to 4-space indentation to prevent
+    message truncation when sending responses.
+
+    See: ISSUE_triple_backtick_truncation.md
+    """
+    if not text or "```" not in text:
+        return text
+
+    # Pattern to match code blocks: ```language\ncode\n```
+    def replace_code_block(match):
+        language = match.group(1) or ""
+        code = match.group(2)
+
+        # Convert to 4-space indented format
+        indented_lines = [f"    {line}" for line in code.split("\n")]
+        indented_code = "\n".join(indented_lines)
+
+        # Add language hint if present
+        if language:
+            return f"Code ({language}):\n{indented_code}"
+        return f"Code:\n{indented_code}"
+
+    # Match ```language (optional) followed by code content followed by ```
+    pattern = r"```(\w+)?\n(.*?)\n```"
+    result = re.sub(pattern, replace_code_block, text, flags=re.DOTALL)
+
+    return result
+
+
 def _event_text(event) -> Optional[str]:
     """Pull text out of Claude streaming events."""
     if event is None:
@@ -325,6 +357,9 @@ async def claude_agent_sdk_monitor(
             if f"@{agent_name}" in response_text:
                 response_text = response_text.replace(f"@{agent_name}", agent_name)
                 logger.info("Stripped self-mention for %s", agent_name)
+
+            # Apply workaround for triple backtick truncation bug
+            response_text = _fix_code_blocks(response_text)
 
             conversation_history.append(f"@{sender}: {user_text}")
             conversation_history.append(f"@{agent_name}: {response_text}")
