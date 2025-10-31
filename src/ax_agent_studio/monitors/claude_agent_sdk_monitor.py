@@ -296,137 +296,140 @@ async def claude_agent_sdk_monitor(
             logger.info("Using Claude API key for authentication")
             print("🔐 Authentication: API key (billed to Anthropic API account)\n")
 
-    async with MCPServerManager(agent_name, base_dir=base_dir, config_path=resolved_config) as manager:
-        primary_session = manager.get_primary_session()
-        allowlist = await _discover_allowed_tools(manager)
-
-        print("MCP Tools Discovered:")
-        print(_format_allowed_tools(allowlist))
-        print()
-
-        if not allowlist:
-            logger.warning(
-                "MCP allowlist is empty. Claude will not be able to call MCP tools until tools are available."
+    try:
+        async with MCPServerManager(agent_name, base_dir=base_dir, config_path=resolved_config) as manager:
+            primary_session = manager.get_primary_session()
+            allowlist = await _discover_allowed_tools(manager)
+    
+            print("MCP Tools Discovered:")
+            print(_format_allowed_tools(allowlist))
+            print()
+    
+            if not allowlist:
+                logger.warning(
+                    "MCP allowlist is empty. Claude will not be able to call MCP tools until tools are available."
+                )
+    
+            # Merge MCP tools with allowed built-in tools
+            combined_allowlist = allowlist + allowed_builtin_tools
+    
+            print("Final Tool Allowlist:")
+            print(_format_allowed_tools(combined_allowlist))
+            print()
+    
+            options_kwargs: Dict[str, object] = {
+                "allowed_tools": combined_allowlist,
+                "mcp_servers": claude_servers,
+            }
+    
+            # Apply permission mode if configured
+            if permission_mode:
+                options_kwargs["permission_mode"] = permission_mode
+    
+            # Apply working directory restriction if configured
+            if working_dir:
+                options_kwargs["cwd"] = working_dir
+    
+            try:
+                options_signature = inspect.signature(ClaudeAgentOptions)
+            except (TypeError, ValueError):  # pragma: no cover - signature introspection edge cases
+                options_signature = None
+    
+            if options_signature is not None:
+                if "model" in options_signature.parameters and model:
+                    options_kwargs["model"] = model
+                if "system_prompt" in options_signature.parameters and system_prompt_override:
+                    options_kwargs["system_prompt"] = system_prompt_override
+    
+            options = ClaudeAgentOptions(**options_kwargs)
+    
+    
+            identity_prompt_template = (
+                "You are @{agent_name}, an Anthropic Claude agent deployed in the aX Agent Studio.\n"
+                "Follow these rules strictly:\n"
+                "1. Always start replies with @{sender} but never mention @{agent_name}.\n"
+                "2. Keep responses helpful, friendly, and under 180 words.\n"
+                "3. Use MCP tools only from the provided allowlist.\n"
+                "4. Reference message IDs when they are supplied (format id:XXXXXXXX)."
+            ).format(agent_name=agent_name, sender="{sender}")
+    
+            async def handle_message(message: Dict) -> str:
+                sender = message.get("sender", "unknown")
+                if sender == agent_name:
+                    logger.info("Ignoring self-mention for %s", agent_name)
+                    return ""
+    
+                raw_content = message.get("content", "")
+                msg_id = message.get("id", "")
+                msg_id_short = msg_id[:8] if isinstance(msg_id, str) else ""
+    
+                # Apply workaround for incoming triple backtick truncation bug
+                raw_content = _fix_code_blocks(raw_content)
+    
+                user_text = _extract_message_body(raw_content)
+                logger.info("Processing message %s from %s", msg_id_short or "(no id)", sender)
+    
+                history_text = "\n".join(conversation_history[-_HISTORY_LIMIT:])
+                prompt_sections: List[str] = [identity_prompt_template.replace("{sender}", sender)]
+                if system_prompt_override:
+                    prompt_sections.append(system_prompt_override)
+                if history_text:
+                    prompt_sections.append("Conversation history:\n" + history_text)
+    
+                prompt_sections.append(
+                    f"Incoming message from @{sender} [id:{msg_id_short or 'unknown'}]:\n{user_text}\n\n"
+                    f"Respond as @{agent_name} while following all rules."
+                )
+    
+                prompt = "\n\n".join(section for section in prompt_sections if section)
+    
+                try:
+                    response_text = await _run_claude(prompt, options)
+                except Exception as exc:  # pragma: no cover - network errors
+                    logger.error("Claude Agent SDK query failed: %s", exc)
+                    return f"@{sender} I'm having trouble thinking right now. Error: {exc}"[:240]
+    
+                if not response_text:
+                    logger.warning("Empty response from Claude for message %s", msg_id_short)
+                    response_text = "I'm still processing this request. Could you rephrase or provide more detail?"
+    
+                response_text = response_text.strip()
+                if not response_text.startswith(f"@{sender}"):
+                    response_text = f"@{sender} {response_text}"
+    
+                if f"@{agent_name}" in response_text:
+                    response_text = response_text.replace(f"@{agent_name}", agent_name)
+                    logger.info("Stripped self-mention for %s", agent_name)
+    
+                # Apply workaround for triple backtick truncation bug
+                response_text = _fix_code_blocks(response_text)
+    
+                conversation_history.append(f"@{sender}: {user_text}")
+                conversation_history.append(f"@{agent_name}: {response_text}")
+                if len(conversation_history) > _HISTORY_LIMIT:
+                    conversation_history[:] = conversation_history[-_HISTORY_LIMIT:]
+    
+                logger.info("Response:\n%s", response_text)
+                return response_text
+    
+            monitor_config = get_monitor_config()
+            queue_manager = QueueManager(
+                agent_name=agent_name,
+                session=primary_session,
+                message_handler=handle_message,
+                mark_read=monitor_config.get("mark_read", False),
+                startup_sweep=monitor_config.get("startup_sweep", True),
+                startup_sweep_limit=monitor_config.get("startup_sweep_limit", 10),
             )
+    
+            print("🚀 Starting FIFO queue manager...\n")
+            await queue_manager.run()
 
-        # Merge MCP tools with allowed built-in tools
-        combined_allowlist = allowlist + allowed_builtin_tools
-
-        print("Final Tool Allowlist:")
-        print(_format_allowed_tools(combined_allowlist))
-        print()
-
-        options_kwargs: Dict[str, object] = {
-            "allowed_tools": combined_allowlist,
-            "mcp_servers": claude_servers,
-        }
-
-        # Apply permission mode if configured
-        if permission_mode:
-            options_kwargs["permission_mode"] = permission_mode
-
-        # Apply working directory restriction if configured
-        if working_dir:
-            options_kwargs["cwd"] = working_dir
-
-        try:
-            options_signature = inspect.signature(ClaudeAgentOptions)
-        except (TypeError, ValueError):  # pragma: no cover - signature introspection edge cases
-            options_signature = None
-
-        if options_signature is not None:
-            if "model" in options_signature.parameters and model:
-                options_kwargs["model"] = model
-            if "system_prompt" in options_signature.parameters and system_prompt_override:
-                options_kwargs["system_prompt"] = system_prompt_override
-
-        options = ClaudeAgentOptions(**options_kwargs)
-
-        # Restore API key if we removed it (so other monitors in same process can use it)
+    finally:
+        # Restore API key if we removed it (for other monitors in same process)
         if saved_api_key:
             os.environ["ANTHROPIC_API_KEY"] = saved_api_key
             logger.debug("Restored ANTHROPIC_API_KEY to environment for other monitors")
-
-        identity_prompt_template = (
-            "You are @{agent_name}, an Anthropic Claude agent deployed in the aX Agent Studio.\n"
-            "Follow these rules strictly:\n"
-            "1. Always start replies with @{sender} but never mention @{agent_name}.\n"
-            "2. Keep responses helpful, friendly, and under 180 words.\n"
-            "3. Use MCP tools only from the provided allowlist.\n"
-            "4. Reference message IDs when they are supplied (format id:XXXXXXXX)."
-        ).format(agent_name=agent_name, sender="{sender}")
-
-        async def handle_message(message: Dict) -> str:
-            sender = message.get("sender", "unknown")
-            if sender == agent_name:
-                logger.info("Ignoring self-mention for %s", agent_name)
-                return ""
-
-            raw_content = message.get("content", "")
-            msg_id = message.get("id", "")
-            msg_id_short = msg_id[:8] if isinstance(msg_id, str) else ""
-
-            # Apply workaround for incoming triple backtick truncation bug
-            raw_content = _fix_code_blocks(raw_content)
-
-            user_text = _extract_message_body(raw_content)
-            logger.info("Processing message %s from %s", msg_id_short or "(no id)", sender)
-
-            history_text = "\n".join(conversation_history[-_HISTORY_LIMIT:])
-            prompt_sections: List[str] = [identity_prompt_template.replace("{sender}", sender)]
-            if system_prompt_override:
-                prompt_sections.append(system_prompt_override)
-            if history_text:
-                prompt_sections.append("Conversation history:\n" + history_text)
-
-            prompt_sections.append(
-                f"Incoming message from @{sender} [id:{msg_id_short or 'unknown'}]:\n{user_text}\n\n"
-                f"Respond as @{agent_name} while following all rules."
-            )
-
-            prompt = "\n\n".join(section for section in prompt_sections if section)
-
-            try:
-                response_text = await _run_claude(prompt, options)
-            except Exception as exc:  # pragma: no cover - network errors
-                logger.error("Claude Agent SDK query failed: %s", exc)
-                return f"@{sender} I'm having trouble thinking right now. Error: {exc}"[:240]
-
-            if not response_text:
-                logger.warning("Empty response from Claude for message %s", msg_id_short)
-                response_text = "I'm still processing this request. Could you rephrase or provide more detail?"
-
-            response_text = response_text.strip()
-            if not response_text.startswith(f"@{sender}"):
-                response_text = f"@{sender} {response_text}"
-
-            if f"@{agent_name}" in response_text:
-                response_text = response_text.replace(f"@{agent_name}", agent_name)
-                logger.info("Stripped self-mention for %s", agent_name)
-
-            # Apply workaround for triple backtick truncation bug
-            response_text = _fix_code_blocks(response_text)
-
-            conversation_history.append(f"@{sender}: {user_text}")
-            conversation_history.append(f"@{agent_name}: {response_text}")
-            if len(conversation_history) > _HISTORY_LIMIT:
-                conversation_history[:] = conversation_history[-_HISTORY_LIMIT:]
-
-            logger.info("Response:\n%s", response_text)
-            return response_text
-
-        monitor_config = get_monitor_config()
-        queue_manager = QueueManager(
-            agent_name=agent_name,
-            session=primary_session,
-            message_handler=handle_message,
-            mark_read=monitor_config.get("mark_read", False),
-            startup_sweep=monitor_config.get("startup_sweep", True),
-            startup_sweep_limit=monitor_config.get("startup_sweep_limit", 10),
-        )
-
-        print("🚀 Starting FIFO queue manager...\n")
-        await queue_manager.run()
 
 
 def main() -> None:
