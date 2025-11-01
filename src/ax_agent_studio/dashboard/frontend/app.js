@@ -411,15 +411,21 @@ async function startMonitor() {
         return;
     }
 
-    // Check if an agent with this name is already running
-    const existingMonitor = monitors.find(m => m.agent_name === config.agent_name && m.status === 'running');
+    // Check if an agent with this name is already running in the SAME environment with SAME type
+    // This prevents accidentally stopping production agents when deploying dev agents with same name
+    const existingMonitor = monitors.find(m =>
+        m.agent_name === config.agent_name &&
+        m.status === 'running' &&
+        m.environment === selectedEnvironment &&
+        m.monitor_type === monitorType
+    );
     if (existingMonitor) {
         // Show confirmation dialog
         const confirmed = confirm(
             `⚠️ REPLACE EXISTING AGENT?\n\n` +
-            `An agent named "${config.agent_name}" is already running.\n\n` +
+            `An agent named "${config.agent_name}" is already running in ${selectedEnvironment}.\n\n` +
             `Deploying this agent will:\n` +
-            `• Stop the current agent\n` +
+            `• Stop the current ${monitorType} agent\n` +
             `• Clear its state and history\n` +
             `• Start a fresh instance with new settings\n\n` +
             `Do you want to replace the existing agent?`
