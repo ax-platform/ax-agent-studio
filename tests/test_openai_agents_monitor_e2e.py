@@ -40,7 +40,7 @@ async def send_test_message(sender_handle: str, agent_name: str, message: str):
         async with ClientSession(read, write) as session:
             await session.initialize()
 
-            print(f"📤 Sending message from @{sender_handle} to @{agent_name}: {message}")
+            print(f" Sending message from @{sender_handle} to @{agent_name}: {message}")
             print(f"⏳ Waiting for @{agent_name} to respond (timeout: 60s)...\n")
 
             # Send message with wait=true and wait_mode='mentions'
@@ -63,22 +63,22 @@ async def send_test_message(sender_handle: str, agent_name: str, message: str):
                     content = result.content
                     if isinstance(content, list) and len(content) > 0:
                         text = str(content[0].text) if hasattr(content[0], "text") else str(content[0])
-                        print(f"📨 Response received:\n{text}\n")
+                        print(f" Response received:\n{text}\n")
 
                         # Check if agent responded (should mention the sender)
                         if f"@{sender_handle}" in text and agent_name in text:
-                            print("✅ Agent response detected!")
+                            print(" Agent response detected!")
                             return True
                         else:
-                            print("⚠️  Response format unexpected")
+                            print("️  Response format unexpected")
                             print(f"   Expected mention of @{sender_handle} from @{agent_name}")
                             return False
                 else:
-                    print("⚠️  No content in response")
+                    print("️  No content in response")
                     return False
 
             except Exception as e:
-                print(f"❌ Error during send/wait: {e}")
+                print(f" Error during send/wait: {e}")
                 print("   Monitor may not have responded in time or encountered an error")
                 return False
 
@@ -96,19 +96,19 @@ async def test_openai_agents_monitor():
 
     # Verify OPENAI_API_KEY is set
     if not os.getenv("OPENAI_API_KEY"):
-        print("❌ OPENAI_API_KEY not found in environment")
+        print(" OPENAI_API_KEY not found in environment")
         print("   Set it in your .env file or environment")
         return False
 
     # Start the monitor in a subprocess
-    print(f"🚀 Starting OpenAI Agents SDK monitor for @{agent_name}...")
+    print(f" Starting OpenAI Agents SDK monitor for @{agent_name}...")
 
     base_dir = Path(__file__).resolve().parent.parent
     venv_python = base_dir / ".venv" / "bin" / "python"
     config_path = base_dir / "configs" / "agents" / f"{agent_name}.json"
 
     if not config_path.exists():
-        print(f"❌ Agent config not found: {config_path}")
+        print(f" Agent config not found: {config_path}")
         return False
 
     # Start monitor process
@@ -147,7 +147,7 @@ async def test_openai_agents_monitor():
         while time.time() - start_time < timeout:
             if monitor_process.poll() is not None:
                 # Process died
-                print("❌ Monitor process died during initialization")
+                print(" Monitor process died during initialization")
                 stdout, _ = monitor_process.communicate()
                 print(f"Monitor output:\n{stdout}")
                 return False
@@ -161,47 +161,47 @@ async def test_openai_agents_monitor():
                 break
 
         if not initialized:
-            print("❌ Monitor did not initialize in time")
+            print(" Monitor did not initialize in time")
             monitor_process.terminate()
             return False
 
-        print("✅ Monitor appears to be running\n")
+        print(" Monitor appears to be running\n")
 
         # Send test message from different handle
         success = await send_test_message(sender_handle, agent_name, test_message)
 
         if success:
-            print("\n🎉 End-to-end test PASSED!")
-            print(f"   ✓ Monitor started successfully")
-            print(f"   ✓ Message sent from @{sender_handle}")
-            print(f"   ✓ @{agent_name} processed and responded")
+            print("\n End-to-end test PASSED!")
+            print(f"    Monitor started successfully")
+            print(f"    Message sent from @{sender_handle}")
+            print(f"    @{agent_name} processed and responded")
             return True
         else:
-            print("\n❌ Test FAILED: No response detected")
+            print("\n Test FAILED: No response detected")
             print("   Fetching monitor logs for debugging...")
             return False
 
     finally:
         # Clean up monitor process and show its output
-        print("\n🧹 Cleaning up monitor process...")
+        print("\n Cleaning up monitor process...")
 
         # Get monitor output before terminating
         monitor_process.terminate()
         try:
             stdout, _ = monitor_process.communicate(timeout=5)
-            print("\n📋 Monitor Output:")
+            print("\n Monitor Output:")
             print("=" * 60)
             print(stdout)
             print("=" * 60)
-            print("✅ Monitor process terminated")
+            print(" Monitor process terminated")
         except subprocess.TimeoutExpired:
             monitor_process.kill()
             stdout, _ = monitor_process.communicate()
-            print("\n📋 Monitor Output:")
+            print("\n Monitor Output:")
             print("=" * 60)
             print(stdout)
             print("=" * 60)
-            print("⚠️  Monitor process killed (did not terminate gracefully)")
+            print("️  Monitor process killed (did not terminate gracefully)")
 
 
 if __name__ == "__main__":
@@ -212,7 +212,7 @@ if __name__ == "__main__":
         print("\n\nTest cancelled")
         sys.exit(1)
     except Exception as e:
-        print(f"\n❌ Test failed with exception: {e}")
+        print(f"\n Test failed with exception: {e}")
         import traceback
 
         traceback.print_exc()

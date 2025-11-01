@@ -55,14 +55,14 @@ async def keep_alive(
                 heartbeat.cancel()
     """
     if interval <= 0:
-        logger.info(f"💓 Heartbeat disabled (interval=0) for {name or 'session'}")
+        logger.info(f" Heartbeat disabled (interval=0) for {name or 'session'}")
         return
 
     ping_count = 0
     ping_failures = 0
     prefix = f"[{name}] " if name else ""
 
-    logger.info(f"💓 {prefix}Heartbeat started (interval: {interval}s)")
+    logger.info(f" {prefix}Heartbeat started (interval: {interval}s)")
 
     while not (stop_event and stop_event.is_set()):
         try:
@@ -76,16 +76,16 @@ async def keep_alive(
 
             ping_count += 1
             logger.info(
-                f"💓 {prefix}PING #{ping_count}: {result.status} "
+                f" {prefix}PING #{ping_count}: {result.status} "
                 f"(took {ping_duration:.2f}s, server time: {result.timestamp})"
             )
 
         except asyncio.CancelledError:
-            logger.info(f"💓 {prefix}Heartbeat cancelled")
+            logger.info(f" {prefix}Heartbeat cancelled")
             break
         except Exception as e:
             ping_failures += 1
-            logger.error(f"❌ {prefix}PING FAILURE #{ping_failures}: {type(e).__name__}: {e}")
+            logger.error(f" {prefix}PING FAILURE #{ping_failures}: {type(e).__name__}: {e}")
             logger.error("   Connection may be lost - consider restarting")
             # Continue trying - don't crash
             await asyncio.sleep(5)  # Brief pause before retry
@@ -93,7 +93,7 @@ async def keep_alive(
     # Log final stats
     if ping_count > 0 or ping_failures > 0:
         logger.info(
-            f"💓 {prefix}Heartbeat stopped: "
+            f" {prefix}Heartbeat stopped: "
             f"{ping_count} pings sent, {ping_failures} failures"
         )
 
@@ -125,7 +125,7 @@ class HeartbeatManager:
         """
         self.interval = interval
         self.tasks: dict[str, asyncio.Task] = {}
-        logger.info(f"💓 HeartbeatManager initialized (interval: {interval}s)")
+        logger.info(f" HeartbeatManager initialized (interval: {interval}s)")
 
     async def start(
         self,
@@ -145,14 +145,14 @@ class HeartbeatManager:
             The heartbeat task
         """
         if name in self.tasks:
-            logger.warning(f"⚠️  Heartbeat already running for {name}, stopping old one")
+            logger.warning(f"️  Heartbeat already running for {name}, stopping old one")
             await self.stop(name)
 
         task = asyncio.create_task(
             keep_alive(session, interval or self.interval, name)
         )
         self.tasks[name] = task
-        logger.info(f"💓 Heartbeat started for {name}")
+        logger.info(f" Heartbeat started for {name}")
         return task
 
     async def stop(self, name: str) -> None:
@@ -164,7 +164,7 @@ class HeartbeatManager:
                 await task
             except asyncio.CancelledError:
                 pass
-            logger.info(f"💓 Heartbeat stopped for {name}")
+            logger.info(f" Heartbeat stopped for {name}")
 
     async def stop_all(self) -> None:
         """Stop all heartbeats."""

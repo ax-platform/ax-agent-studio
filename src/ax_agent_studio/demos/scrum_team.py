@@ -136,33 +136,33 @@ async def run_scrum_demo(product_owner: str, developer: str, qa_manager: str):
 
     print("""
 ╔══════════════════════════════════════════════════════════════════╗
-║  🏃 Scrum Team Demo: Autonomous Agents with MCP Tools           ║
+║   Scrum Team Demo: Autonomous Agents with MCP Tools           ║
 ╚══════════════════════════════════════════════════════════════════╝
     """)
 
-    print("👥 Team Members:")
-    print(f"   📋 Product Owner: @{product_owner} (creates & prioritizes tasks)")
-    print(f"   💻 Developer: @{developer} (works on tasks)")
-    print(f"   ✅ QA/Manager: @{qa_manager} (reviews & closes tasks)")
+    print(" Team Members:")
+    print(f"    Product Owner: @{product_owner} (creates & prioritizes tasks)")
+    print(f"    Developer: @{developer} (works on tasks)")
+    print(f"    QA/Manager: @{qa_manager} (reviews & closes tasks)")
     print()
 
-    print("🔧 Each agent can:")
+    print(" Each agent can:")
     print("   - create_task: Create new tasks")
     print("   - list_tasks: View all tasks")
     print("   - search_messages: Search for information")
     print("   - send_message: Communicate with team")
     print()
 
-    print("⚠️  Prerequisites:")
+    print("️  Prerequisites:")
     print(f"   1. Start: python langgraph_mcp_monitor.py {product_owner}")
     print(f"   2. Start: python langgraph_mcp_monitor.py {developer}")
     print(f"   3. Start: python langgraph_mcp_monitor.py {qa_manager}")
     print()
 
-    input("✋ Press Enter when all monitors are running...")
+    input(" Press Enter when all monitors are running...")
     print()
 
-    print("🚀 Starting Scrum Sprint Demo...\n")
+    print(" Starting Scrum Sprint Demo...\n")
 
     current_phase = None
 
@@ -171,7 +171,7 @@ async def run_scrum_demo(product_owner: str, developer: str, qa_manager: str):
         if step["phase"] != current_phase:
             current_phase = step["phase"]
             print(f"\n{'='*70}")
-            print(f"📌 Phase: {current_phase}")
+            print(f" Phase: {current_phase}")
             print(f"{'='*70}\n")
 
         from_agent = agents[step["from"]]
@@ -182,14 +182,14 @@ async def run_scrum_demo(product_owner: str, developer: str, qa_manager: str):
         print(f"   From: @{from_agent} ({step['from']})")
         print(f"   To: @{to_agent}")
         print(f"   Message: {message[:80]}...")
-        print(f"   🔧 Expected tool: {step['expected_tool']}")
+        print(f"    Expected tool: {step['expected_tool']}")
 
         # Send message
         try:
             await send_scrum_message(from_agent, to_agent, message)
-            print(f"   ✅ Message sent!")
+            print(f"    Message sent!")
         except Exception as e:
-            print(f"   ❌ Error: {e}")
+            print(f"    Error: {e}")
 
         # Wait for agent to process (adjust based on your Ollama speed)
         wait_time = 15
@@ -198,21 +198,21 @@ async def run_scrum_demo(product_owner: str, developer: str, qa_manager: str):
         print()
 
     print("\n" + "="*70)
-    print("🎉 Scrum Sprint Demo Complete!")
+    print(" Scrum Sprint Demo Complete!")
     print("="*70)
     print()
-    print("📊 Summary:")
+    print(" Summary:")
     print(f"   - Total messages: {len(SCRUM_WORKFLOW)}")
     print(f"   - Phases completed: {len(set(s['phase'] for s in SCRUM_WORKFLOW))}")
     print(f"   - Expected tool calls: {len([s for s in SCRUM_WORKFLOW if s.get('expected_tool')])}")
     print()
-    print("💡 What happened:")
+    print(" What happened:")
     print("   - Product Owner created tasks with priorities")
     print("   - Developer worked on tasks and communicated status")
     print("   - QA/Manager reviewed work and searched for info")
     print("   - Team collaborated autonomously using MCP tools!")
     print()
-    print("🔍 Check your monitors' output to see:")
+    print(" Check your monitors' output to see:")
     print("   - LangGraph workflow execution")
     print("   - Tool calls (create_task, search_messages, list_tasks)")
     print("   - Multi-step reasoning")

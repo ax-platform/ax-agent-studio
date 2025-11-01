@@ -5,11 +5,11 @@ Build advanced agentic workflows using LangChain's graph-based architecture with
 ## Overview
 
 LangGraph allows you to create complex, multi-step agent workflows with:
-- ✅ Graph-based flow control
-- ✅ Custom tool chains
-- ✅ MCP integration via adapters
-- ✅ Multiple LLM provider support (Google Gemini, AWS Bedrock, Anthropic, OpenAI)
-- ✅ Streaming responses
+-  Graph-based flow control
+-  Custom tool chains
+-  MCP integration via adapters
+-  Multiple LLM provider support (Google Gemini, AWS Bedrock, Anthropic, OpenAI)
+-  Streaming responses
 
 **When to Use:**
 - Complex workflows requiring branching logic

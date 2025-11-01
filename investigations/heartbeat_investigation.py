@@ -29,20 +29,20 @@ async def heartbeat_monitor(session: ClientSession, interval: int = 30):
     Raises:
         Exception: When ping fails, indicating connection lost
     """
-    logger.info(f"💓 Heartbeat monitor started (interval: {interval}s)")
+    logger.info(f" Heartbeat monitor started (interval: {interval}s)")
 
     while True:
         try:
             await asyncio.sleep(interval)
 
-            logger.info("💓 Sending heartbeat ping...")
+            logger.info(" Sending heartbeat ping...")
             result = await session.send_ping()
 
-            logger.info(f"✅ Heartbeat OK - {result.status} at {result.timestamp}")
+            logger.info(f" Heartbeat OK - {result.status} at {result.timestamp}")
 
         except Exception as e:
-            logger.error(f"❌ Heartbeat FAILED: {e}")
-            logger.error("🔌 Connection lost - monitor should reconnect")
+            logger.error(f" Heartbeat FAILED: {e}")
+            logger.error(" Connection lost - monitor should reconnect")
             raise
 
 
@@ -68,16 +68,16 @@ async def test_with_heartbeat():
         async with stdio_client(server_params) as (read, write):
             async with ClientSession(read, write) as session:
                 await session.initialize()
-                logger.info(f"🔌 Connected to MCP server for @{agent_name}")
+                logger.info(f" Connected to MCP server for @{agent_name}")
 
                 # Run heartbeat and message polling concurrently
                 async def message_poller():
                     """Simulate the message polling task (wait=true)"""
-                    logger.info("📥 Message poller started")
+                    logger.info(" Message poller started")
 
                     while True:
                         try:
-                            logger.info("📥 Waiting for messages (wait=true)...")
+                            logger.info(" Waiting for messages (wait=true)...")
 
                             # This blocks until a message arrives or timeout
                             result = await session.call_tool("messages", {
@@ -86,10 +86,10 @@ async def test_with_heartbeat():
                                 "timeout": 60,  # 60 second timeout for testing
                             })
 
-                            logger.info(f"📨 Received: {result.content}")
+                            logger.info(f" Received: {result.content}")
 
                         except Exception as e:
-                            logger.error(f"❌ Poller error: {e}")
+                            logger.error(f" Poller error: {e}")
                             raise
 
                 # Run both tasks concurrently
@@ -100,10 +100,10 @@ async def test_with_heartbeat():
                 )
 
     except KeyboardInterrupt:
-        logger.info("🛑 Stopped by user")
+        logger.info(" Stopped by user")
     except Exception as e:
-        logger.error(f"💥 Fatal error: {e}")
-        logger.info("🔄 Monitor should reconnect here...")
+        logger.error(f" Fatal error: {e}")
+        logger.info(" Monitor should reconnect here...")
 
 
 async def quick_ping_test():
@@ -123,12 +123,12 @@ async def quick_ping_test():
     async with stdio_client(server_params) as (read, write):
         async with ClientSession(read, write) as session:
             await session.initialize()
-            print("✅ Connected to MCP server")
+            print(" Connected to MCP server")
 
             # Send 3 pings
             for i in range(3):
                 result = await session.send_ping()
-                print(f"💓 Ping {i+1}: {result.status} at {result.timestamp}")
+                print(f" Ping {i+1}: {result.status} at {result.timestamp}")
                 await asyncio.sleep(2)
 
 
@@ -136,10 +136,10 @@ if __name__ == "__main__":
     import sys
 
     if len(sys.argv) > 1 and sys.argv[1] == "quick":
-        print("🔧 Running quick ping test...")
+        print(" Running quick ping test...")
         asyncio.run(quick_ping_test())
     else:
-        print("🔧 Running full heartbeat monitor test...")
-        print("📝 This will ping every 15s while waiting for messages")
-        print("💡 Send a test message to @orion_344 to see both tasks working")
+        print(" Running full heartbeat monitor test...")
+        print(" This will ping every 15s while waiting for messages")
+        print(" Send a test message to @orion_344 to see both tasks working")
         asyncio.run(test_with_heartbeat())

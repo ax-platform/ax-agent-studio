@@ -29,17 +29,17 @@ async def test_ollama_list_command():
         stdout, stderr = await process.communicate()
 
         if process.returncode != 0:
-            print(f"  ❌ FAIL: ollama list failed: {stderr.decode()}")
+            print(f"   FAIL: ollama list failed: {stderr.decode()}")
             return False
 
         lines = stdout.decode().strip().split('\n')
         model_count = len(lines) - 1  # Exclude header
 
-        print(f"  ✅ PASS: Found {model_count} Ollama models")
+        print(f"   PASS: Found {model_count} Ollama models")
         return True
 
     except Exception as e:
-        print(f"  ❌ FAIL: Exception: {e}")
+        print(f"   FAIL: Exception: {e}")
         return False
 
 
@@ -59,23 +59,23 @@ async def test_providers_loader():
         models = await get_models_for_provider('ollama')
 
         if not models:
-            print("  ❌ FAIL: No models returned")
+            print("   FAIL: No models returned")
             return False
 
         # Verify structure
         for model in models:
             if not all(k in model for k in ['id', 'name', 'description']):
-                print(f"  ❌ FAIL: Invalid model structure: {model}")
+                print(f"   FAIL: Invalid model structure: {model}")
                 return False
 
-        print(f"  ✅ PASS: Loaded {len(models)} models")
+        print(f"   PASS: Loaded {len(models)} models")
         print("  Models:")
         for m in models:
             print(f"    - {m['name']}")
         return True
 
     except Exception as e:
-        print(f"  ❌ FAIL: Exception: {e}")
+        print(f"   FAIL: Exception: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -93,21 +93,21 @@ async def test_dashboard_endpoint():
             response = await client.get("http://127.0.0.1:8000/api/providers/ollama/models")
 
             if response.status_code != 200:
-                print(f"  ⚠️  SKIP: Dashboard not running (status {response.status_code})")
+                print(f"  ️  SKIP: Dashboard not running (status {response.status_code})")
                 return True  # Not a failure, just can't test
 
             data = response.json()
             models = data.get('models', [])
 
             if not models:
-                print("  ❌ FAIL: No models returned from API")
+                print("   FAIL: No models returned from API")
                 return False
 
-            print(f"  ✅ PASS: API returned {len(models)} models")
+            print(f"   PASS: API returned {len(models)} models")
             return True
 
     except Exception as e:
-        print(f"  ⚠️  SKIP: Dashboard not running ({e})")
+        print(f"  ️  SKIP: Dashboard not running ({e})")
         return True  # Not a failure, just can't test
 
 
@@ -134,10 +134,10 @@ async def main():
     total = len(results)
 
     if passed == total:
-        print(f"✅ ALL TESTS PASSED ({passed}/{total})")
+        print(f" ALL TESTS PASSED ({passed}/{total})")
         return 0
     else:
-        print(f"❌ SOME TESTS FAILED ({passed}/{total} passed)")
+        print(f" SOME TESTS FAILED ({passed}/{total} passed)")
         return 1
 
 

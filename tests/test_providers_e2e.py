@@ -24,7 +24,7 @@ async def test_provider(provider: str, model: str):
         # Create LLM
         print(f"Creating LLM...")
         llm = create_llm(provider=provider, model=model)
-        print(f"✅ LLM created successfully")
+        print(f" LLM created successfully")
 
         # Simple test message
         print(f"Sending test message...")
@@ -32,13 +32,13 @@ async def test_provider(provider: str, model: str):
         messages = [HumanMessage(content="Say 'Hello from {provider}!' in exactly those words.")]
 
         response = llm.invoke(messages)
-        print(f"✅ Response received:")
+        print(f" Response received:")
         print(f"   {response.content[:200]}...")
 
         return True
 
     except Exception as e:
-        print(f"❌ Test failed: {e}")
+        print(f" Test failed: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -47,7 +47,7 @@ async def test_provider(provider: str, model: str):
 async def main():
     """Run tests for all configured providers"""
     print("\n" + "="*60)
-    print("🧪 Multi-Provider End-to-End Test Suite")
+    print(" Multi-Provider End-to-End Test Suite")
     print("="*60)
 
     tests = [
@@ -72,20 +72,20 @@ async def main():
 
     # Summary
     print("\n" + "="*60)
-    print("📊 Test Results Summary")
+    print(" Test Results Summary")
     print("="*60)
 
     for test_name, success in results.items():
-        status = "✅ PASS" if success else "❌ FAIL"
+        status = " PASS" if success else " FAIL"
         print(f"{status}: {test_name}")
 
     all_passed = all(results.values())
 
     if all_passed:
-        print("\n🎉 All tests passed! Multi-provider support is working!")
+        print("\n All tests passed! Multi-provider support is working!")
         return 0
     else:
-        print("\n⚠️  Some tests failed. Check errors above.")
+        print("\n️  Some tests failed. Check errors above.")
         return 1
 
 

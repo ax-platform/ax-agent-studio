@@ -37,14 +37,14 @@ class MonitorTester:
 
     async def cleanup(self):
         """Clean up all started monitors"""
-        print("\n🧹 Cleaning up test monitors...")
+        print("\n Cleaning up test monitors...")
         for monitor_id in self.started_monitors:
             try:
                 await self.client.post("/api/monitors/kill", json={"monitor_id": monitor_id})
                 await self.client.delete(f"/api/monitors/{monitor_id}")
-                print(f"   ✓ Cleaned up {monitor_id}")
+                print(f"    Cleaned up {monitor_id}")
             except Exception as e:
-                print(f"   ⚠️  Failed to clean up {monitor_id}: {e}")
+                print(f"   ️  Failed to clean up {monitor_id}: {e}")
 
         await self.client.aclose()
 
@@ -70,7 +70,7 @@ class MonitorTester:
         monitor_id = data["monitor_id"]
         self.started_monitors.append(monitor_id)
 
-        print(f"   ✓ Started {monitor_type} (ID: {monitor_id})")
+        print(f"    Started {monitor_type} (ID: {monitor_id})")
         return monitor_id
 
     async def wait_for_monitor(self, monitor_id: str, timeout: int = 10):
@@ -102,13 +102,13 @@ class MonitorTester:
         """Stop a running monitor"""
         response = await self.client.post("/api/monitors/stop", json={"monitor_id": monitor_id})
         assert response.status_code == 200
-        print(f"   ✓ Stopped {monitor_id}")
+        print(f"    Stopped {monitor_id}")
 
 
 async def test_echo_monitor(tester: MonitorTester):
     """Test Echo monitor (no provider, no model)"""
     print("\n" + "="*60)
-    print("🔊 Testing Echo Monitor")
+    print(" Testing Echo Monitor")
     print("="*60)
     print("Requirements: No provider, no model (simple passthrough)")
 
@@ -124,20 +124,20 @@ async def test_echo_monitor(tester: MonitorTester):
         is_running = await tester.wait_for_monitor(monitor_id, timeout=10)
         assert is_running, "Echo monitor failed to start"
 
-        print("   ✓ Echo monitor is running")
+        print("    Echo monitor is running")
 
         # Test sending a message
         result = await tester.send_test_message(TEST_AGENT, "Echo test message")
-        print(f"   ✓ Message sent successfully")
+        print(f"    Message sent successfully")
 
         # Stop the monitor
         await tester.stop_monitor(monitor_id)
 
-        print("\n✅ Echo monitor test PASSED")
+        print("\n Echo monitor test PASSED")
         return True
 
     except Exception as e:
-        print(f"\n❌ Echo monitor test FAILED: {e}")
+        print(f"\n Echo monitor test FAILED: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -146,7 +146,7 @@ async def test_echo_monitor(tester: MonitorTester):
 async def test_ollama_monitor(tester: MonitorTester):
     """Test Ollama monitor (no provider, requires model)"""
     print("\n" + "="*60)
-    print("🤖 Testing Ollama Monitor")
+    print(" Testing Ollama Monitor")
     print("="*60)
     print("Requirements: No provider (implicit), requires model")
 
@@ -156,7 +156,7 @@ async def test_ollama_monitor(tester: MonitorTester):
         models = response.json()["models"]
 
         if not models:
-            print("   ⚠️  No Ollama models available, skipping test")
+            print("   ️  No Ollama models available, skipping test")
             return None  # Skip test
 
         # Use first available model
@@ -174,16 +174,16 @@ async def test_ollama_monitor(tester: MonitorTester):
         is_running = await tester.wait_for_monitor(monitor_id, timeout=15)
         assert is_running, "Ollama monitor failed to start"
 
-        print("   ✓ Ollama monitor is running")
+        print("    Ollama monitor is running")
 
         # Stop the monitor (don't send test message to save time)
         await tester.stop_monitor(monitor_id)
 
-        print("\n✅ Ollama monitor test PASSED")
+        print("\n Ollama monitor test PASSED")
         return True
 
     except Exception as e:
-        print(f"\n❌ Ollama monitor test FAILED: {e}")
+        print(f"\n Ollama monitor test FAILED: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -192,7 +192,7 @@ async def test_ollama_monitor(tester: MonitorTester):
 async def test_claude_agent_sdk_monitor(tester: MonitorTester):
     """Test Claude Agent SDK monitor (no provider, requires Claude model)"""
     print("\n" + "="*60)
-    print("🛡 Testing Claude Agent SDK Monitor")
+    print(" Testing Claude Agent SDK Monitor")
     print("="*60)
     print("Requirements: No provider (uses Anthropic SDK), requires Claude model")
 
@@ -219,16 +219,16 @@ async def test_claude_agent_sdk_monitor(tester: MonitorTester):
         is_running = await tester.wait_for_monitor(monitor_id, timeout=20)
         assert is_running, "Claude Agent SDK monitor failed to start"
 
-        print("   ✓ Claude Agent SDK monitor is running")
+        print("    Claude Agent SDK monitor is running")
 
         # Stop the monitor
         await tester.stop_monitor(monitor_id)
 
-        print("\n✅ Claude Agent SDK monitor test PASSED")
+        print("\n Claude Agent SDK monitor test PASSED")
         return True
 
     except Exception as e:
-        print(f"\n❌ Claude Agent SDK monitor test FAILED: {e}")
+        print(f"\n Claude Agent SDK monitor test FAILED: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -237,7 +237,7 @@ async def test_claude_agent_sdk_monitor(tester: MonitorTester):
 async def test_langgraph_monitor(tester: MonitorTester):
     """Test LangGraph monitor (requires provider and model)"""
     print("\n" + "="*60)
-    print("🧠 Testing LangGraph Monitor")
+    print(" Testing LangGraph Monitor")
     print("="*60)
     print("Requirements: Requires provider + model (multi-provider support)")
 
@@ -258,7 +258,7 @@ async def test_langgraph_monitor(tester: MonitorTester):
             configured_provider = next((p for p in providers if p["configured"]), None)
 
         if not configured_provider:
-            print("   ⚠️  No providers configured, skipping test")
+            print("   ️  No providers configured, skipping test")
             return None
 
         provider_id = configured_provider["id"]
@@ -283,16 +283,16 @@ async def test_langgraph_monitor(tester: MonitorTester):
         is_running = await tester.wait_for_monitor(monitor_id, timeout=20)
         assert is_running, "LangGraph monitor failed to start"
 
-        print("   ✓ LangGraph monitor is running")
+        print("    LangGraph monitor is running")
 
         # Stop the monitor
         await tester.stop_monitor(monitor_id)
 
-        print("\n✅ LangGraph monitor test PASSED")
+        print("\n LangGraph monitor test PASSED")
         return True
 
     except Exception as e:
-        print(f"\n❌ LangGraph monitor test FAILED: {e}")
+        print(f"\n LangGraph monitor test FAILED: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -301,7 +301,7 @@ async def test_langgraph_monitor(tester: MonitorTester):
 async def main():
     """Run all monitor E2E tests"""
     print("\n" + "="*60)
-    print("🧪 All Monitors E2E Test Suite")
+    print(" All Monitors E2E Test Suite")
     print("="*60)
     print(f"Testing against: {DASHBOARD_URL}")
     print("Make sure the dashboard is running: uv run dashboard")
@@ -311,13 +311,13 @@ async def main():
     try:
         response = await tester.client.get("/api/health")
         if response.status_code != 200:
-            print("\n❌ Dashboard is not responding")
+            print("\n Dashboard is not responding")
             return 1
     except Exception as e:
-        print(f"\n❌ Cannot connect to dashboard: {e}")
+        print(f"\n Cannot connect to dashboard: {e}")
         return 1
 
-    print("✅ Dashboard is running\n")
+    print(" Dashboard is running\n")
 
     # Run all tests
     results = {}
@@ -334,14 +334,14 @@ async def main():
 
     # Summary
     print("\n" + "="*60)
-    print("📊 Test Results Summary")
+    print(" Test Results Summary")
     print("="*60)
 
     for test_name, result in results.items():
         if result is True:
-            status = "✅ PASS"
+            status = " PASS"
         elif result is False:
-            status = "❌ FAIL"
+            status = " FAIL"
         else:
             status = "⏭️  SKIP"
         print(f"{status}: {test_name}")
@@ -351,10 +351,10 @@ async def main():
     all_passed = all(ran_tests) if ran_tests else False
 
     if all_passed:
-        print("\n🎉 All monitor tests passed!")
+        print("\n All monitor tests passed!")
         return 0
     else:
-        print("\n⚠️  Some tests failed or were skipped")
+        print("\n️  Some tests failed or were skipped")
         return 1
 
 

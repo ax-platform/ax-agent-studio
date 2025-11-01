@@ -18,7 +18,7 @@ from mcp.client.stdio import stdio_client
 async def test_agent_conversation():
     """Test 5 back-and-forth messages between agents"""
 
-    print("🧪 Testing Agent Conversation - 5 Back-and-Forths")
+    print(" Testing Agent Conversation - 5 Back-and-Forths")
     print("=" * 60)
     print()
 
@@ -39,10 +39,10 @@ async def test_agent_conversation():
             async with ClientSession(read, write) as session:
                 await session.initialize()
 
-                print("✅ Connected to aX platform\n")
+                print(" Connected to aX platform\n")
 
                 # Test 1: Send initial message mentioning 2 agents
-                print("📤 Test 1: Initial message to @agent1 and @agent2")
+                print(" Test 1: Initial message to @agent1 and @agent2")
                 result = await session.call_tool("messages", {
                     "action": "send",
                     "content": "@lunar_craft_128 @orion_344 Let's count to 5! @lunar_craft_128 says 1"
@@ -53,7 +53,7 @@ async def test_agent_conversation():
                 await asyncio.sleep(5)
 
                 # Test 2: Check message history
-                print("📥 Test 2: Checking message history...")
+                print(" Test 2: Checking message history...")
                 result = await session.call_tool("messages", {
                     "action": "check",
                     "limit": 10,
@@ -68,9 +68,9 @@ async def test_agent_conversation():
 
                 # Test 3: Verify agents are responding
                 if "@lunar_craft_128" in messages_data and "@orion_344" in messages_data:
-                    print("✅ Both agents visible in conversation")
+                    print(" Both agents visible in conversation")
                 else:
-                    print("⚠️  Warning: Not all agents responding yet")
+                    print("️  Warning: Not all agents responding yet")
 
                 print()
                 print("=" * 60)
@@ -82,7 +82,7 @@ async def test_agent_conversation():
                 print("=" * 60)
 
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f" Error: {e}")
         import traceback
         traceback.print_exc()
 

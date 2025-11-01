@@ -36,7 +36,7 @@ providers:
     models:
       # Stable Production Models (Recommended)
       - id: "gemini-2.5-flash"
-        name: "Gemini 2.5 Flash ⚡"
+        name: "Gemini 2.5 Flash "
         description: "Stable - best balance of speed + capability"
         recommended: true
       - id: "gemini-2.5-flash-lite"
@@ -78,7 +78,7 @@ providers:
         description: "Most capable Claude model"
         recommended: true
       - id: "claude-haiku-4-5"
-        name: "Claude Haiku 4.5 ⚡"
+        name: "Claude Haiku 4.5 "
         description: "Latest fast model - $1/M in, $5/M out"
         recommended: true
       - id: "claude-3-5-haiku-latest"
@@ -102,11 +102,11 @@ providers:
     models:
       # GPT-5 Family (October 2025)
       - id: "gpt-5"
-        name: "GPT-5 🚀"
+        name: "GPT-5 "
         description: "Full multimodal flagship with strong reasoning & agentic capabilities"
         recommended: true
       - id: "gpt-5-mini"
-        name: "GPT-5 Mini ⚡"
+        name: "GPT-5 Mini "
         description: "Fast, lower-cost variant optimized for interactive agents & tool calls"
         recommended: true
       - id: "gpt-5-nano"
@@ -149,7 +149,7 @@ providers:
     default_model: "us.anthropic.claude-haiku-4-5-20251001-v1:0"
     models:
       - id: "us.anthropic.claude-haiku-4-5-20251001-v1:0"
-        name: "Claude Haiku 4.5 ⚡"
+        name: "Claude Haiku 4.5 "
         description: "Latest fast Claude - best for agents (US inference profile)"
         recommended: true
       - id: "us.anthropic.claude-sonnet-4-5-20250929-v1:0"

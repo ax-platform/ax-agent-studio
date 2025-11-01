@@ -33,21 +33,21 @@ def check_config_files(project_root: Path) -> bool:
 
         if not config_path.exists():
             if example_path.exists():
-                print(f"📝 Creating {config_file} from {example_file}...")
+                print(f" Creating {config_file} from {example_file}...")
                 config_path.write_text(example_path.read_text())
                 copied_files.append(config_file)
             else:
                 missing_files.append(example_file)
 
     if copied_files:
-        print(f"✅ Created config files: {', '.join(copied_files)}\n")
-        print("⚠️  IMPORTANT: Edit these files to add your credentials:")
+        print(f" Created config files: {', '.join(copied_files)}\n")
+        print("️  IMPORTANT: Edit these files to add your credentials:")
         print(f"   - .env: Add your LLM provider API keys")
         print(f"   - config.yaml: Review settings (defaults should work)")
         print()
 
     if missing_files:
-        print(f"❌ Missing required example files: {', '.join(missing_files)}")
+        print(f" Missing required example files: {', '.join(missing_files)}")
         return False
 
     return True
@@ -58,8 +58,8 @@ def main():
     project_root = Path(__file__).parent.parent.resolve()
     venv_path = project_root / ".venv"
 
-    print("🚀 Starting aX Agent Studio Dashboard...")
-    print(f"📁 Project root: {project_root}\n")
+    print(" Starting aX Agent Studio Dashboard...")
+    print(f" Project root: {project_root}\n")
 
     # Check and create config files if needed
     if not check_config_files(project_root):
@@ -67,10 +67,10 @@ def main():
 
     # Check dependencies
     if not venv_path.exists():
-        print("⚠️  Virtual environment not found!")
-        print("📦 Running 'uv sync' to install dependencies...\n")
+        print("️  Virtual environment not found!")
+        print(" Running 'uv sync' to install dependencies...\n")
     else:
-        print("🔄 Checking dependencies...\n")
+        print(" Checking dependencies...\n")
 
     # Always run uv sync (it's fast if everything is already installed)
     try:
@@ -79,14 +79,14 @@ def main():
             cwd=project_root,
             check=True
         )
-        print("✅ Dependencies ready!\n")
+        print(" Dependencies ready!\n")
     except subprocess.CalledProcessError as e:
-        print(f"\n❌ Failed to install dependencies: {e}")
-        print("💡 Make sure 'uv' is installed: https://github.com/astral-sh/uv")
+        print(f"\n Failed to install dependencies: {e}")
+        print(" Make sure 'uv' is installed: https://github.com/astral-sh/uv")
         sys.exit(1)
     except FileNotFoundError:
-        print("\n❌ 'uv' command not found!")
-        print("💡 Install uv: https://github.com/astral-sh/uv")
+        print("\n 'uv' command not found!")
+        print(" Install uv: https://github.com/astral-sh/uv")
         sys.exit(1)
 
     # Set up environment
@@ -94,8 +94,8 @@ def main():
     env["PYTHONPATH"] = str(project_root / "src")
 
     # Start the dashboard
-    print("🌐 Starting dashboard on http://127.0.0.1:8000")
-    print("📊 Press Ctrl+C to stop\n")
+    print(" Starting dashboard on http://127.0.0.1:8000")
+    print(" Press Ctrl+C to stop\n")
     print("-" * 60)
 
     try:
@@ -122,10 +122,10 @@ def main():
         )
     except KeyboardInterrupt:
         # Ctrl+C pressed - subprocess is already dead
-        print("\n\n👋 Dashboard stopped")
+        print("\n\n Dashboard stopped")
     except subprocess.CalledProcessError:
         # Subprocess exited with error
-        print("\n❌ Dashboard stopped with error")
+        print("\n Dashboard stopped with error")
         sys.exit(1)
 
 

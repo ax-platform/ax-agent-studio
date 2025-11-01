@@ -31,14 +31,14 @@ async def echo_monitor(agent_name, config_path=None):
     if config_path:
         import json
         from pathlib import Path
-        print(f"📁 Loading agent config from: {config_path}")
+        print(f" Loading agent config from: {config_path}")
         with open(config_path) as f:
             agent_config = json.load(f)
 
         # Get the primary MCP server (first one in mcpServers)
         mcp_servers = agent_config.get("mcpServers", {})
         if not mcp_servers:
-            print("⚠️  No mcpServers in agent config, falling back to global config.yaml")
+            print("️  No mcpServers in agent config, falling back to global config.yaml")
             mcp_config = get_mcp_config()
             base_url = mcp_config.get("server_url", "http://localhost:8002")
             server_url = f"{base_url}/mcp/agents/{agent_name}"
@@ -66,10 +66,10 @@ async def echo_monitor(agent_name, config_path=None):
             if not server_url:
                 raise ValueError(f"Could not find server URL in config: {config_path}")
 
-            print(f"✅ Using MCP server from agent config: {server_url}")
+            print(f" Using MCP server from agent config: {server_url}")
     else:
         # Fallback to global config.yaml
-        print("⚠️  No config path provided, using global config.yaml")
+        print("️  No config path provided, using global config.yaml")
         mcp_config = get_mcp_config()
         base_url = mcp_config.get("server_url", "http://localhost:8002")
         server_url = f"{base_url}/mcp/agents/{agent_name}"
@@ -86,7 +86,7 @@ async def echo_monitor(agent_name, config_path=None):
         ]
     )
 
-    print(f"🔄 Echo Monitor starting for @{agent_name}")
+    print(f" Echo Monitor starting for @{agent_name}")
     print(f"   Server: {server_url}")
     print(f"   Mode: FIFO queue")
     print(f"   Press Ctrl+C to stop\n")
@@ -95,7 +95,7 @@ async def echo_monitor(agent_name, config_path=None):
         async with stdio_client(server_params) as (read, write):
             async with ClientSession(read, write) as session:
                 await session.initialize()
-                print(f"✅ Connected to MCP server\n")
+                print(f" Connected to MCP server\n")
 
                 # Define message handler (pluggable function for QueueManager)
                 async def handle_message(msg: dict) -> str:
@@ -124,12 +124,12 @@ async def echo_monitor(agent_name, config_path=None):
                         # Echo back with timestamp and message ID
                         timestamp = datetime.now().strftime('%H:%M:%S')
                         msg_id_short = msg_id[:8] if len(msg_id) > 8 else msg_id
-                        return f"Echo received at {timestamp} from @{sender} [id:{msg_id_short}]: {original_msg} 📢"
+                        return f"Echo received at {timestamp} from @{sender} [id:{msg_id_short}]: {original_msg} "
 
                     except Exception as e:
                         print(f"   Error parsing message: {e}")
                         timestamp = datetime.now().strftime('%H:%M:%S')
-                        return f"Echo received at {timestamp} from @{sender}! 📢"
+                        return f"Echo received at {timestamp} from @{sender}! "
 
                 # Use QueueManager for FIFO processing
                 from ax_agent_studio.queue_manager import QueueManager
@@ -144,13 +144,13 @@ async def echo_monitor(agent_name, config_path=None):
                     heartbeat_interval=monitor_config.get("heartbeat_interval", 240)
                 )
 
-                print("🚀 Starting FIFO queue manager...\n")
+                print(" Starting FIFO queue manager...\n")
                 await queue_mgr.run()
 
     except KeyboardInterrupt:
-        print("\n\n🛑 Echo monitor stopped by user")
+        print("\n\n Echo monitor stopped by user")
     except Exception as e:
-        print(f"\n❌ Error: {e}")
+        print(f"\n Error: {e}")
         import traceback
         traceback.print_exc()
 

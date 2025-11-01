@@ -35,7 +35,7 @@ async def test_with_pings(agent_name: str, duration_seconds: int = 300):
     This is the control group - pings should keep connection alive.
     """
     logger.info("=" * 80)
-    logger.info("🧪 TEST 1: WAIT WITH PINGS (Control Group)")
+    logger.info(" TEST 1: WAIT WITH PINGS (Control Group)")
     logger.info(f"   Duration: {duration_seconds}s")
     logger.info("=" * 80)
 
@@ -46,10 +46,10 @@ async def test_with_pings(agent_name: str, duration_seconds: int = 300):
         async with MCPServerManager(agent_name) as mcp_manager:
             session = mcp_manager.get_session("ax-gcp")
             if not session:
-                logger.error("❌ No ax-gcp session found")
+                logger.error(" No ax-gcp session found")
                 return
 
-            logger.info("✅ Connected to MCP server")
+            logger.info(" Connected to MCP server")
 
             # Ping task
             async def pinger():
@@ -59,14 +59,14 @@ async def test_with_pings(agent_name: str, duration_seconds: int = 300):
                     try:
                         result = await session.send_ping()
                         ping_count += 1
-                        logger.info(f"💓 PING #{ping_count}: {result.status}")
+                        logger.info(f" PING #{ping_count}: {result.status}")
                     except Exception as e:
-                        logger.error(f"❌ PING FAILED: {e}")
+                        logger.error(f" PING FAILED: {e}")
                         raise
 
             # Wait task
             async def waiter():
-                logger.info(f"📥 Starting wait (timeout={duration_seconds}s)...")
+                logger.info(f" Starting wait (timeout={duration_seconds}s)...")
                 wait_start = datetime.now()
 
                 try:
@@ -79,11 +79,11 @@ async def test_with_pings(agent_name: str, duration_seconds: int = 300):
                     })
 
                     wait_duration = (datetime.now() - wait_start).total_seconds()
-                    logger.info(f"✅ Wait returned after {wait_duration:.1f}s")
+                    logger.info(f" Wait returned after {wait_duration:.1f}s")
                     logger.info(f"   Result: {str(result.content)[:100]}")
 
                 except Exception as e:
-                    logger.error(f"❌ WAIT FAILED: {e}")
+                    logger.error(f" WAIT FAILED: {e}")
                     raise
 
             # Run both tasks with timeout
@@ -96,13 +96,13 @@ async def test_with_pings(agent_name: str, duration_seconds: int = 300):
                 logger.info("⏰ Test timeout reached")
 
     except Exception as e:
-        logger.error(f"💥 Test failed: {e}")
+        logger.error(f" Test failed: {e}")
     finally:
         uptime = (datetime.now() - start_time).total_seconds()
-        logger.info(f"\n📊 RESULTS:")
+        logger.info(f"\n RESULTS:")
         logger.info(f"   Uptime: {uptime:.1f}s")
         logger.info(f"   Pings sent: {ping_count}")
-        logger.info(f"   Test: {'✅ PASSED' if uptime >= duration_seconds * 0.9 else '❌ FAILED'}")
+        logger.info(f"   Test: {' PASSED' if uptime >= duration_seconds * 0.9 else ' FAILED'}")
 
 
 async def test_without_pings(agent_name: str, duration_seconds: int = 300):
@@ -112,9 +112,9 @@ async def test_without_pings(agent_name: str, duration_seconds: int = 300):
     This is the test group - will it disconnect?
     """
     logger.info("\n" + "=" * 80)
-    logger.info("🧪 TEST 2: WAIT WITHOUT PINGS (Test Group)")
+    logger.info(" TEST 2: WAIT WITHOUT PINGS (Test Group)")
     logger.info(f"   Duration: {duration_seconds}s")
-    logger.info("   ⚠️  NO PINGS - Will connection survive?")
+    logger.info("   ️  NO PINGS - Will connection survive?")
     logger.info("=" * 80)
 
     start_time = datetime.now()
@@ -123,11 +123,11 @@ async def test_without_pings(agent_name: str, duration_seconds: int = 300):
         async with MCPServerManager(agent_name) as mcp_manager:
             session = mcp_manager.get_session("ax-gcp")
             if not session:
-                logger.error("❌ No ax-gcp session found")
+                logger.error(" No ax-gcp session found")
                 return
 
-            logger.info("✅ Connected to MCP server")
-            logger.info(f"📥 Starting wait (timeout={duration_seconds}s)...")
+            logger.info(" Connected to MCP server")
+            logger.info(f" Starting wait (timeout={duration_seconds}s)...")
             logger.info("   ⏳ No pings will be sent - pure wait test")
 
             wait_start = datetime.now()
@@ -142,32 +142,32 @@ async def test_without_pings(agent_name: str, duration_seconds: int = 300):
                 })
 
                 wait_duration = (datetime.now() - wait_start).total_seconds()
-                logger.info(f"✅ Wait returned after {wait_duration:.1f}s")
+                logger.info(f" Wait returned after {wait_duration:.1f}s")
                 logger.info(f"   Result: {str(result.content)[:100]}")
 
             except Exception as e:
                 wait_duration = (datetime.now() - wait_start).total_seconds()
-                logger.error(f"❌ WAIT FAILED after {wait_duration:.1f}s: {e}")
+                logger.error(f" WAIT FAILED after {wait_duration:.1f}s: {e}")
                 raise
 
     except Exception as e:
-        logger.error(f"💥 Test failed: {e}")
+        logger.error(f" Test failed: {e}")
     finally:
         uptime = (datetime.now() - start_time).total_seconds()
-        logger.info(f"\n📊 RESULTS:")
+        logger.info(f"\n RESULTS:")
         logger.info(f"   Uptime: {uptime:.1f}s")
         logger.info(f"   Expected: {duration_seconds}s")
-        logger.info(f"   Test: {'✅ PASSED' if uptime >= duration_seconds * 0.9 else '❌ FAILED'}")
+        logger.info(f"   Test: {' PASSED' if uptime >= duration_seconds * 0.9 else ' FAILED'}")
 
         if uptime < duration_seconds * 0.5:
-            logger.warning(f"   ⚠️  CONNECTION DROPPED EARLY!")
+            logger.warning(f"   ️  CONNECTION DROPPED EARLY!")
             logger.warning(f"   This suggests wait=true needs pings to stay alive")
 
 
 async def run_comparison(agent_name: str):
     """Run both tests back-to-back for comparison"""
     logger.info("\n" + "=" * 80)
-    logger.info("🔬 PING VS NO-PING COMPARISON TEST")
+    logger.info(" PING VS NO-PING COMPARISON TEST")
     logger.info(f"   Agent: @{agent_name}")
     logger.info(f"   Server: Production GCP")
     logger.info("=" * 80)
@@ -181,7 +181,7 @@ async def run_comparison(agent_name: str):
     await test_without_pings(agent_name, duration_seconds=180)  # 3 minutes
 
     logger.info("\n" + "=" * 80)
-    logger.info("🎯 CONCLUSION:")
+    logger.info(" CONCLUSION:")
     logger.info("   If Test 1 (with pings) succeeds and Test 2 (no pings) fails,")
     logger.info("   then pings are REQUIRED to keep the connection alive!")
     logger.info("=" * 80)

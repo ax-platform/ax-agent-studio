@@ -26,7 +26,7 @@ from ax_agent_studio.queue_manager import QueueManager
 try:
     from claude_agent_sdk import ClaudeAgentOptions, query
 except ImportError:  # pragma: no cover - dependency is optional for some test runs
-    print("❌ Missing dependency: claude-agent-sdk")
+    print(" Missing dependency: claude-agent-sdk")
     print("   Install with: pip install claude-agent-sdk")
     sys.exit(1)
 
@@ -218,7 +218,7 @@ async def claude_agent_sdk_monitor(
     resolved_config = _resolve_config_path(agent_name, config_path, base_dir)
 
     print(f"\n{'=' * 60}")
-    print(f"🛡 CLAUDE AGENT SDK MONITOR: {agent_name}")
+    print(f" CLAUDE AGENT SDK MONITOR: {agent_name}")
     print(f"{'=' * 60}")
     print(f"Config: {resolved_config}")
     print(f"Model: {model}")
@@ -275,14 +275,14 @@ async def claude_agent_sdk_monitor(
                 "USE_CLAUDE_SUBSCRIPTION=true overriding ANTHROPIC_API_KEY. "
                 "Forcing subscription mode (Claude CLI credentials)."
             )
-            print("🔐 Authentication: Claude subscription (CLI credentials)")
+            print(" Authentication: Claude subscription (CLI credentials)")
             print("    Overriding API key to use subscription mode")
             print("    Ensure you're logged in via: claude login\n")
             # Temporarily unset API key for this monitor only
             os.environ.pop("ANTHROPIC_API_KEY", None)
         else:
             logger.info("Using Claude subscription credentials (Claude CLI session)")
-            print("🔐 Authentication: Claude subscription (CLI credentials)")
+            print(" Authentication: Claude subscription (CLI credentials)")
             print("    Ensure you're logged in via: claude login\n")
     else:
         if not api_key:
@@ -290,11 +290,11 @@ async def claude_agent_sdk_monitor(
                 "ANTHROPIC_API_KEY not set. Claude Agent SDK will attempt to use Claude CLI credentials. "
                 "Set USE_CLAUDE_SUBSCRIPTION=true to explicitly use subscription mode."
             )
-            print("⚠️  Warning: ANTHROPIC_API_KEY not set - falling back to CLI credentials")
+            print("️  Warning: ANTHROPIC_API_KEY not set - falling back to CLI credentials")
             print("    Set ANTHROPIC_API_KEY or USE_CLAUDE_SUBSCRIPTION=true\n")
         else:
             logger.info("Using Claude API key for authentication")
-            print("🔐 Authentication: API key (billed to Anthropic API account)\n")
+            print(" Authentication: API key (billed to Anthropic API account)\n")
 
     try:
         async with MCPServerManager(agent_name, base_dir=base_dir, config_path=resolved_config) as manager:
@@ -422,7 +422,7 @@ async def claude_agent_sdk_monitor(
                 startup_sweep_limit=monitor_config.get("startup_sweep_limit", 10),
             )
     
-            print("🚀 Starting FIFO queue manager...\n")
+            print(" Starting FIFO queue manager...\n")
             await queue_manager.run()
 
     finally:

@@ -57,7 +57,7 @@ class ConnectionTracker:
         """Record a ping failure"""
         self.ping_failures += 1
         self.connection_drops += 1
-        logger.error(f"❌ PING FAILURE #{self.ping_failures}: {error}")
+        logger.error(f" PING FAILURE #{self.ping_failures}: {error}")
 
     def record_wait_iteration(self):
         """Record a wait iteration (blocking call started)"""
@@ -80,7 +80,7 @@ class ConnectionTracker:
         """Print current statistics"""
         uptime = self.get_uptime()
         logger.info("=" * 80)
-        logger.info(f"📊 CONNECTION STATISTICS - @{self.agent_name}")
+        logger.info(f" CONNECTION STATISTICS - @{self.agent_name}")
         logger.info(f"   Uptime: {uptime}")
         logger.info(f"   Pings: {self.ping_count} successful, {self.ping_failures} failed")
         logger.info(f"   Wait iterations: {self.wait_iterations}")
@@ -107,7 +107,7 @@ async def heartbeat_task(
         interval: Seconds between pings
         stop_event: Event to signal task should stop
     """
-    logger.info(f"💓 Heartbeat task started (interval: {interval}s)")
+    logger.info(f" Heartbeat task started (interval: {interval}s)")
 
     while not (stop_event and stop_event.is_set()):
         try:
@@ -120,12 +120,12 @@ async def heartbeat_task(
             tracker.record_ping_success(result.timestamp)
 
             logger.info(
-                f"💓 PING #{tracker.ping_count}: {result.status} "
+                f" PING #{tracker.ping_count}: {result.status} "
                 f"(took {ping_duration:.2f}s, server time: {result.timestamp})"
             )
 
         except asyncio.CancelledError:
-            logger.info("💓 Heartbeat task cancelled")
+            logger.info(" Heartbeat task cancelled")
             break
         except Exception as e:
             tracker.record_ping_failure(str(e))
@@ -152,14 +152,14 @@ async def wait_task(
         wait_timeout: Timeout for each wait call (seconds)
         stop_event: Event to signal task should stop
     """
-    logger.info(f"📥 Wait task started (timeout: {wait_timeout}s per call)")
+    logger.info(f" Wait task started (timeout: {wait_timeout}s per call)")
 
     while not (stop_event and stop_event.is_set()):
         try:
             tracker.record_wait_iteration()
             wait_start = datetime.now()
 
-            logger.info(f"📥 WAIT #{tracker.wait_iterations}: Blocking with wait=true (timeout={wait_timeout}s)...")
+            logger.info(f" WAIT #{tracker.wait_iterations}: Blocking with wait=true (timeout={wait_timeout}s)...")
 
             result = await session.call_tool("messages", {
                 "action": "check",
@@ -184,16 +184,16 @@ async def wait_task(
             else:
                 tracker.record_message()
                 logger.info(
-                    f"📨 MESSAGE RECEIVED #{tracker.messages_received}: "
+                    f" MESSAGE RECEIVED #{tracker.messages_received}: "
                     f"After {wait_duration:.1f}s"
                 )
                 logger.info(f"   Content preview: {content_str[:200]}")
 
         except asyncio.CancelledError:
-            logger.info("📥 Wait task cancelled")
+            logger.info(" Wait task cancelled")
             break
         except Exception as e:
-            logger.error(f"❌ WAIT ERROR: {type(e).__name__}: {e}")
+            logger.error(f" WAIT ERROR: {type(e).__name__}: {e}")
             logger.error(f"   Connection likely lost")
             # Brief pause before retry
             await asyncio.sleep(5)
@@ -212,7 +212,7 @@ async def stats_reporter(
         interval: Seconds between reports
         stop_event: Event to signal task should stop
     """
-    logger.info(f"📊 Stats reporter started (interval: {interval}s)")
+    logger.info(f" Stats reporter started (interval: {interval}s)")
 
     while not (stop_event and stop_event.is_set()):
         await asyncio.sleep(interval)
@@ -228,7 +228,7 @@ async def run_test(agent_name: str, duration_minutes: int = 5):
         duration_minutes: How long to run the test (default: 5 minutes)
     """
     logger.info("=" * 80)
-    logger.info(f"🧪 STARTING GCP WAIT + HEARTBEAT TEST")
+    logger.info(f" STARTING GCP WAIT + HEARTBEAT TEST")
     logger.info(f"   Agent: @{agent_name}")
     logger.info(f"   Duration: {duration_minutes} minutes")
     logger.info(f"   Server: Production GCP (mcp.paxai.app)")
@@ -239,17 +239,17 @@ async def run_test(agent_name: str, duration_minutes: int = 5):
 
     try:
         async with MCPServerManager(agent_name) as mcp_manager:
-            logger.info(f"✅ Connected to MCP server(s)")
+            logger.info(f" Connected to MCP server(s)")
 
             # Get the ax-gcp session (production server)
             session = mcp_manager.get_session("ax-gcp")
             if not session:
-                logger.error("❌ No ax-gcp session found - check agent config")
+                logger.error(" No ax-gcp session found - check agent config")
                 return
 
-            logger.info(f"✅ Using ax-gcp session for @{agent_name}")
+            logger.info(f" Using ax-gcp session for @{agent_name}")
             logger.info("")
-            logger.info("🚀 Starting concurrent tasks:")
+            logger.info(" Starting concurrent tasks:")
             logger.info("   1. Heartbeat: Ping every 30s")
             logger.info("   2. Wait: Block for messages (5 minute timeout)")
             logger.info("   3. Stats: Report every 60s")
@@ -274,45 +274,45 @@ async def run_test(agent_name: str, duration_minutes: int = 5):
 
     except KeyboardInterrupt:
         logger.info("")
-        logger.info("🛑 Test stopped by user (Ctrl+C)")
+        logger.info(" Test stopped by user (Ctrl+C)")
     except Exception as e:
-        logger.error(f"💥 Fatal error: {type(e).__name__}: {e}")
+        logger.error(f" Fatal error: {type(e).__name__}: {e}")
     finally:
         logger.info("")
-        logger.info("📊 FINAL STATISTICS:")
+        logger.info(" FINAL STATISTICS:")
         tracker.print_stats()
         logger.info("")
 
         # Analysis
-        logger.info("🔍 ANALYSIS:")
+        logger.info(" ANALYSIS:")
 
         if tracker.ping_failures > 0:
-            logger.warning(f"   ⚠️  {tracker.ping_failures} ping failures detected - connection unstable")
+            logger.warning(f"   ️  {tracker.ping_failures} ping failures detected - connection unstable")
         else:
-            logger.info(f"   ✅ All {tracker.ping_count} pings successful - connection stable")
+            logger.info(f"    All {tracker.ping_count} pings successful - connection stable")
 
         if tracker.wait_timeouts > 0:
             logger.info(f"   ⏰ {tracker.wait_timeouts} wait timeouts (no messages received)")
 
         if tracker.messages_received > 0:
-            logger.info(f"   📨 {tracker.messages_received} messages received during test")
+            logger.info(f"    {tracker.messages_received} messages received during test")
 
         uptime = tracker.get_uptime()
         if uptime.total_seconds() >= (duration_minutes * 60 * 0.9):
-            logger.info(f"   ✅ Test completed full duration ({uptime})")
+            logger.info(f"    Test completed full duration ({uptime})")
         else:
-            logger.warning(f"   ⚠️  Test ended early (uptime: {uptime} / {duration_minutes}m)")
+            logger.warning(f"   ️  Test ended early (uptime: {uptime} / {duration_minutes}m)")
 
         logger.info("")
-        logger.info("💡 KEY FINDINGS:")
+        logger.info(" KEY FINDINGS:")
         logger.info(f"   • Connection uptime: {uptime}")
         logger.info(f"   • Heartbeat reliability: {tracker.ping_count - tracker.ping_failures}/{tracker.ping_count}")
         logger.info(f"   • Wait call success rate: {tracker.wait_iterations - tracker.wait_timeouts}/{tracker.wait_iterations}")
 
         if tracker.ping_failures == 0 and tracker.wait_iterations > 0:
-            logger.info("   • ✅ Heartbeat appears to keep connection alive!")
+            logger.info("   •  Heartbeat appears to keep connection alive!")
         elif tracker.ping_failures > 0:
-            logger.warning("   • ⚠️  Connection dropped despite heartbeat - investigate further")
+            logger.warning("   • ️  Connection dropped despite heartbeat - investigate further")
 
         logger.info("")
 

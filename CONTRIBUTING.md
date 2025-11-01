@@ -18,15 +18,15 @@ Thank you for your interest in contributing to aX Agent Studio! This project thr
 Be respectful, inclusive, and collaborative. We're building the future of agent orchestration together!
 
 **Expected behavior:**
-- ✅ Be welcoming to newcomers
-- ✅ Respect differing viewpoints
-- ✅ Accept constructive criticism
-- ✅ Focus on what's best for the community
+-  Be welcoming to newcomers
+-  Respect differing viewpoints
+-  Accept constructive criticism
+-  Focus on what's best for the community
 
 **Unacceptable behavior:**
-- ❌ Harassment, trolling, or insulting comments
-- ❌ Personal or political attacks
-- ❌ Publishing others' private information
+-  Harassment, trolling, or insulting comments
+-  Personal or political attacks
+-  Publishing others' private information
 
 ---
 
@@ -96,13 +96,13 @@ python tests/test_gemini_e2e.py
 
 ### Types of Contributions We Love
 
-1. **🐛 Bug Fixes** - Find and fix bugs, improve error handling
-2. **✨ New Features** - Add new monitor types, tools, or integrations
-3. **📖 Documentation** - Improve README, add tutorials, fix typos
-4. **🧪 Tests** - Add test coverage, improve test reliability
-5. **🎨 UI/UX** - Enhance dashboard design, improve user experience
-6. **🚀 Performance** - Optimize message processing, reduce latency
-7. **🛠️ Examples** - Create example agents, demos, or integration guides
+1. ** Bug Fixes** - Find and fix bugs, improve error handling
+2. ** New Features** - Add new monitor types, tools, or integrations
+3. ** Documentation** - Improve README, add tutorials, fix typos
+4. ** Tests** - Add test coverage, improve test reliability
+5. ** UI/UX** - Enhance dashboard design, improve user experience
+6. ** Performance** - Optimize message processing, reduce latency
+7. **️ Examples** - Create example agents, demos, or integration guides
 
 ### Contribution Workflow
 
@@ -229,11 +229,11 @@ to prevent self-replies.
 ### Pull Request Guidelines
 
 **Before submitting:**
-- ✅ Code runs without errors
-- ✅ Tests pass (if applicable)
-- ✅ Documentation updated
-- ✅ No sensitive data (API keys, credentials) committed
-- ✅ Branch is up to date with `main`
+-  Code runs without errors
+-  Tests pass (if applicable)
+-  Documentation updated
+-  No sensitive data (API keys, credentials) committed
+-  Branch is up to date with `main`
 
 **PR Description should include:**
 - **What** changed
@@ -366,8 +366,8 @@ examples/
 ### Stay Updated
 
 - ⭐ **Star** this repo to get updates
-- 👀 **Watch** for new releases
-- 🐦 Follow **aX Platform** on social media (links TBD)
+-  **Watch** for new releases
+-  Follow **aX Platform** on social media (links TBD)
 
 ---
 
@@ -397,6 +397,6 @@ By contributing to aX Agent Studio, you agree that your contributions will be li
 
 ---
 
-**Thank you for making aX Agent Studio better! 🚀**
+**Thank you for making aX Agent Studio better! **
 
 Let's build the future of agent orchestration together.

@@ -37,12 +37,12 @@ Because agents are just MCP clients running monitor code, you can create:
 
 | Agent Type | Purpose | Example |
 |------------|---------|---------|
-| 🤖 **Conversational Agents** | Respond to @mentions, collaborate with users/agents | Customer support, team assistants |
-| 📊 **Monitoring Services** | Watch logs, metrics, or events and alert via messages | DevOps alerts, system health checks |
-| 🔔 **Event Responders** | React to webhooks, API calls, or system events | CI/CD notifications, error handlers |
-| 🔄 **Workflow Orchestrators** | Coordinate multi-step processes across agents | Scrum teams, approval chains |
-| 📂 **Data Processors** | Transform data, generate reports, analyze files | ETL pipelines, report generators |
-| 🎯 **Task Executors** | Pull from task queue, execute, report back | Background job workers |
+|  **Conversational Agents** | Respond to @mentions, collaborate with users/agents | Customer support, team assistants |
+|  **Monitoring Services** | Watch logs, metrics, or events and alert via messages | DevOps alerts, system health checks |
+|  **Event Responders** | React to webhooks, API calls, or system events | CI/CD notifications, error handlers |
+|  **Workflow Orchestrators** | Coordinate multi-step processes across agents | Scrum teams, approval chains |
+|  **Data Processors** | Transform data, generate reports, analyze files | ETL pipelines, report generators |
+|  **Task Executors** | Pull from task queue, execute, report back | Background job workers |
 
 ### It's Just Input → Process → Output
 
@@ -147,10 +147,10 @@ MCP Server (aX Platform)
 ```
 
 **Key Benefits:**
-- ✅ **Zero Message Loss** - SQLite persistence survives crashes
-- ✅ **FIFO Guaranteed** - Process in strict chronological order
-- ✅ **No Blocking** - Poller never stops listening
-- ✅ **Crash Resilient** - Resume from last processed message
+-  **Zero Message Loss** - SQLite persistence survives crashes
+-  **FIFO Guaranteed** - Process in strict chronological order
+-  **No Blocking** - Poller never stops listening
+-  **Crash Resilient** - Resume from last processed message
 
 ---
 
@@ -214,9 +214,9 @@ async def handle_message(msg: dict) -> str:
     alert = parse_alert(msg['content'])
 
     if alert.severity == 'critical':
-        return f"🚨 @oncall URGENT: {alert.description}"
+        return f" @oncall URGENT: {alert.description}"
     elif alert.severity == 'warning':
-        return f"⚠️ FYI: {alert.description} #monitoring"
+        return f"️ FYI: {alert.description} #monitoring"
 
     return None  # Ignore info-level
 ```
@@ -259,7 +259,7 @@ data_ingester: @data_transformer Data ready in s3://raw/sales_2025-01-15.csv
 
 data_transformer: @data_analyzer Transformed data → s3://processed/sales_2025-01-15.parquet
 
-data_analyzer: @data_ingester Analysis complete! Revenue up 15% 📈 #daily-report
+data_analyzer: @data_ingester Analysis complete! Revenue up 15%  #daily-report
 ```
 
 **Implementation**:
@@ -279,9 +279,9 @@ GitHub Push Event
        ▼ (Webhook)
 @build_agent Run tests for PR #456
        │
-       ├─✅ Tests pass → @deploy_agent Deploy to staging
+       ├─ Tests pass → @deploy_agent Deploy to staging
        │
-       └─❌ Tests fail → @developer Fix failing tests:
+       └─ Tests fail → @developer Fix failing tests:
                          • test_auth.py:45 - Token expired
                          • test_api.py:89 - 500 error
 ```
@@ -310,15 +310,15 @@ async def handle_message(msg: dict) -> str:
 
 agent_a: Done! Here's the result: [...]
 
-@reputation_tracker: 🎉 (reacts to agent_a's message)
+@reputation_tracker:  (reacts to agent_a's message)
 
 # Later...
 User: Who's the top performer?
 
 @reputation_tracker:
-📊 Leaderboard:
-1. agent_a: 47 points (🎉×12, 💯×8, 🔥×7)
-2. agent_b: 23 points (🎉×5, 💯×3)
+ Leaderboard:
+1. agent_a: 47 points (×12, ×8, ×7)
+2. agent_b: 23 points (×5, ×3)
 ```
 
 **Implementation**:
@@ -439,12 +439,12 @@ Agents can use **any MCP-compatible tool server**:
 
 ### What Could Be Built
 
-- 🏢 **Enterprise Process Automation** - Replace RPA with intelligent agents
-- 🎮 **Game NPCs** - MCP-powered characters that coordinate behaviors
-- 🏥 **Healthcare Triage** - Agents route patients based on symptoms
-- 📚 **Research Assistants** - Team of agents (searcher, summarizer, fact-checker)
-- 🏭 **Factory Automation** - IoT sensors → agents → actuators
-- 🎨 **Creative Collaboration** - Agents that brainstorm, write, edit together
+-  **Enterprise Process Automation** - Replace RPA with intelligent agents
+-  **Game NPCs** - MCP-powered characters that coordinate behaviors
+-  **Healthcare Triage** - Agents route patients based on symptoms
+-  **Research Assistants** - Team of agents (searcher, summarizer, fact-checker)
+-  **Factory Automation** - IoT sensors → agents → actuators
+-  **Creative Collaboration** - Agents that brainstorm, write, edit together
 
 ### Scaling Patterns
 
@@ -476,17 +476,17 @@ Agents can use **any MCP-compatible tool server**:
 
 Traditional agent frameworks:
 
-❌ Proprietary protocols (vendor lock-in)
-❌ Central orchestrator (single point of failure)
-❌ Limited tool integration (custom adapters needed)
-❌ Complex deployment (different patterns per framework)
+ Proprietary protocols (vendor lock-in)
+ Central orchestrator (single point of failure)
+ Limited tool integration (custom adapters needed)
+ Complex deployment (different patterns per framework)
 
 **MCP-based agent orchestration:**
 
-✅ **Standard protocol** - Any MCP client can participate
-✅ **Decentralized** - Agents coordinate via messages, no orchestrator
-✅ **Universal tools** - MCP tool servers work across all agents
-✅ **Simple deployment** - Same pattern for all agents (input → process → output)
+ **Standard protocol** - Any MCP client can participate
+ **Decentralized** - Agents coordinate via messages, no orchestrator
+ **Universal tools** - MCP tool servers work across all agents
+ **Simple deployment** - Same pattern for all agents (input → process → output)
 
 This is the **agent factory pattern**: a platform where you can rapidly deploy, scale, and coordinate autonomous agents using a unified messaging protocol.
 
@@ -496,9 +496,9 @@ This is the **agent factory pattern**: a platform where you can rapidly deploy, 
 
 ## Learn More
 
-- 📖 **[README.md](./README.md)** - Getting started, installation, usage
-- 🛠️ **[CLAUDE.md](./CLAUDE.md)** - Developer documentation, architecture details
-- 🎯 **[COOL_DISCOVERIES.md](./COOL_DISCOVERIES.md)** - Experiments and interesting patterns
-- 🤝 **[CONTRIBUTING.md](./CONTRIBUTING.md)** - How to contribute to this project
+-  **[README.md](./README.md)** - Getting started, installation, usage
+- ️ **[CLAUDE.md](./CLAUDE.md)** - Developer documentation, architecture details
+-  **[COOL_DISCOVERIES.md](./COOL_DISCOVERIES.md)** - Experiments and interesting patterns
+-  **[CONTRIBUTING.md](./CONTRIBUTING.md)** - How to contribute to this project
 
 **Join the community and build the future of agent orchestration!**
