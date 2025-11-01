@@ -37,6 +37,14 @@ def is_provider_configured(provider_id: str, provider_data: Dict[str, Any]) -> b
     if provider_id == "ollama":
         return True
 
+    # Anthropic: Available if API key OR subscription mode
+    # When USE_CLAUDE_SUBSCRIPTION=true, the API key may be temporarily unset
+    # but Claude Agent SDK can still use subscription authentication
+    if provider_id == "anthropic":
+        has_api_key = bool(os.getenv("ANTHROPIC_API_KEY"))
+        has_subscription = os.getenv("USE_CLAUDE_SUBSCRIPTION", "").lower() == "true"
+        return has_api_key or has_subscription
+
     # Check for API key
     if provider_data.get("requires_api_key"):
         env_var = provider_data.get("env_var")
