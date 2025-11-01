@@ -141,6 +141,13 @@ def get_provider_config(provider_id: str) -> Optional[Dict[str, Any]]:
 
 
 def get_defaults() -> Dict[str, str]:
-    """Get default provider and model"""
+    """Get default provider, model, and agent type"""
+    import os
     config = load_providers()
-    return config.get("defaults", {"provider": "gemini", "model": "gemini-2.5-flash"})
+    defaults = config.get("defaults", {"provider": "gemini", "model": "gemini-2.5-flash"})
+
+    # Add default agent type from environment (defaults to claude_agent_sdk)
+    default_agent_type = os.getenv("DEFAULT_AGENT_TYPE", "claude_agent_sdk")
+    defaults["agent_type"] = default_agent_type
+
+    return defaults

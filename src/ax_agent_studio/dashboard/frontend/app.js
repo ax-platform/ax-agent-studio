@@ -266,6 +266,16 @@ async function loadProviders() {
             select.value = defaults.provider;
         }
 
+        // Set default agent type (claude_agent_sdk, langgraph, ollama, or echo)
+        if (defaults.agent_type) {
+            const monitorTypeSelect = document.getElementById('monitor-type-select');
+            if (monitorTypeSelect) {
+                monitorTypeSelect.value = defaults.agent_type;
+                // Trigger the change event to update UI accordingly
+                monitorTypeSelect.dispatchEvent(new Event('change'));
+            }
+        }
+
         // Load models for default provider
         await loadModelsForProvider(selectedProvider);
 
