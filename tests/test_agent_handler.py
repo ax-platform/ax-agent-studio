@@ -98,7 +98,7 @@ def test_actual_llm_prompt():
     print("\n Expected LLM response:")
     print(f"   '@{sender} I am receiving this message from @{sender}'")
 
-    print("\n️  WRONG response (what we're seeing in production):")
+    print("\n  WRONG response (what we're seeing in production):")
     print(f"   '@{agent_name} I am receiving this message from unknown'")
 
 
@@ -133,7 +133,7 @@ def test_conversation_reply_format():
 
         # Check if wrong reply has self-mention
         if f"@{scenario['to']}" in scenario['wrong_reply']:
-            print(f"   ️  WARNING: Wrong reply contains self-mention!")
+            print(f"     WARNING: Wrong reply contains self-mention!")
 
 
 def run_all_tests():
@@ -156,7 +156,7 @@ def run_all_tests():
         print("1. Sender information IS being correctly extracted")
         print("2. Sender information IS being passed to the LLM")
         print("3. The message format includes 'Message from @{sender}:'")
-        print("\n️  IF AGENTS STILL RESPOND WITH WRONG @MENTIONS:")
+        print("\n  IF AGENTS STILL RESPOND WITH WRONG @MENTIONS:")
         print("   The problem is the LLM not following instructions,")
         print("   NOT the code. We need to improve the base prompt!")
         print("="*60)

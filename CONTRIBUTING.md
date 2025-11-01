@@ -102,7 +102,7 @@ python tests/test_gemini_e2e.py
 4. ** Tests** - Add test coverage, improve test reliability
 5. ** UI/UX** - Enhance dashboard design, improve user experience
 6. ** Performance** - Optimize message processing, reduce latency
-7. **️ Examples** - Create example agents, demos, or integration guides
+7. ** Examples** - Create example agents, demos, or integration guides
 
 ### Contribution Workflow
 

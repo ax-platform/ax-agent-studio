@@ -31,7 +31,7 @@ def deactivate():
         print(" KILL SWITCH DEACTIVATED")
         print("   Agents will resume processing")
     else:
-        print("ℹ️  Kill switch was already off")
+        print("ℹ  Kill switch was already off")
 
 def kill_all_monitors():
     """Kill all monitor processes immediately"""
@@ -53,7 +53,7 @@ def kill_all_monitors():
         )
 
         if check.stdout.strip():
-            print("️  Some monitors may still be running:")
+            print("  Some monitors may still be running:")
             print(check.stdout)
         else:
             print(" All monitors killed - no processes burning money!")

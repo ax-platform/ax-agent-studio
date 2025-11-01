@@ -507,7 +507,7 @@ async def kill_all_monitors():
 
         return {
             "success": True,
-            "message": f"️ Nuclear option: Killed {count} monitor(s), cleared {deleted_count} from list, activated kill switch",
+            "message": f" Nuclear option: Killed {count} monitor(s), cleared {deleted_count} from list, activated kill switch",
             "kill_switch_active": True,
             "killed_count": count,
             "cleared_count": deleted_count

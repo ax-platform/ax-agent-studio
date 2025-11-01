@@ -265,7 +265,7 @@ def test_langgraph_agent_ui():
 def test_default_agent_type():
     """Test that default agent type is set correctly from env var"""
     print("\n" + "="*60)
-    print("️  Testing Default Agent Type")
+    print("  Testing Default Agent Type")
     print("="*60)
     print("Expected: DEFAULT_AGENT_TYPE from .env is pre-selected")
 
@@ -307,7 +307,7 @@ def test_default_agent_type():
 def test_duplicate_agent_warning():
     """Test that deploying a duplicate agent shows a warning dialog"""
     print("\n" + "="*60)
-    print("️  Testing Duplicate Agent Warning")
+    print("  Testing Duplicate Agent Warning")
     print("="*60)
     print("Expected: Confirmation dialog when deploying agent with same name")
 
@@ -340,7 +340,7 @@ def test_duplicate_agent_warning():
             agent_options = agent_select.locator('option').all_inner_texts()
 
             if not agent_options or len(agent_options) == 0:
-                print("   ️  No agents configured, skipping test")
+                print("     No agents configured, skipping test")
                 return None
 
             # Select first agent
@@ -363,7 +363,7 @@ def test_duplicate_agent_warning():
             selected_config = next((c for c in configs_data["configs"] if c["path"] == selected_value), None)
 
             if not selected_config:
-                print("   ️  Could not find agent config, skipping test")
+                print("     Could not find agent config, skipping test")
                 return None
 
             agent_name = selected_config["agent_name"]
@@ -461,7 +461,7 @@ def main():
         print("  - duplicate_agent_warning.png (if test ran)")
         return 0
     else:
-        print("\n️  Some tests failed or were skipped. Check screenshots in /tmp/")
+        print("\n  Some tests failed or were skipped. Check screenshots in /tmp/")
         return 1
 
 

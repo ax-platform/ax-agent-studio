@@ -149,7 +149,7 @@ Example:
                     return ai_reply
 
                 except Exception as e:
-                    print(f"   ️  Ollama error: {e}")
+                    print(f"     Ollama error: {e}")
                     return f"@{sender} Sorry, I'm having trouble thinking right now. Error: {str(e)[:50]}"
 
             # Use QueueManager for FIFO processing
@@ -216,13 +216,13 @@ if __name__ == "__main__":
 
             print(f" Using MCP server from agent config: {server_url}")
         else:
-            print("️  No mcpServers in agent config, falling back to global config")
+            print("  No mcpServers in agent config, falling back to global config")
             mcp_config = get_mcp_config()
             server_url = f"{mcp_config.get('server_url', 'http://localhost:8002')}/mcp/agents/{args.agent_name}"
     elif args.server:
         server_url = f"{args.server}/mcp/agents/{args.agent_name}"
     else:
-        print("️  No config or server provided, using global config.yaml")
+        print("  No config or server provided, using global config.yaml")
         mcp_config = get_mcp_config()
         server_url = f"{mcp_config.get('server_url', 'http://localhost:8002')}/mcp/agents/{args.agent_name}"
 

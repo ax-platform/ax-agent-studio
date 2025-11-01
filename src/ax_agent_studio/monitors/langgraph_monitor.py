@@ -711,7 +711,7 @@ Always respond helpfully and use tools when appropriate. Be concise but thorough
                 break
 
         if not ai_response:
-            logger.warning("️  No AIMessage with content found in workflow result")
+            logger.warning("  No AIMessage with content found in workflow result")
             ai_response = "I apologize, but I couldn't generate a response."
         else:
             # Normalize response format (handle both string and complex list formats)
@@ -819,7 +819,7 @@ async def langgraph_mcp_monitor(agent_name: str, model: str = "gpt-oss:latest", 
 
                 # SAFETY CHECK: Block self-mentions at handler level
                 if sender == agent_name:
-                    logger.warning(f"️  HANDLER BLOCKING SELF-MENTION: sender={sender}, agent={agent_name}")
+                    logger.warning(f"  HANDLER BLOCKING SELF-MENTION: sender={sender}, agent={agent_name}")
                     return ""  # Return empty string = don't post anything
 
                 logger.info(f" Processing message from {sender} with LangGraph + {provider}...")

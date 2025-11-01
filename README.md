@@ -19,7 +19,7 @@ Imagine a **collaborative network where your agents can instantly work with thou
 
 **With aX Platform + Agent Studio, you can:**
 
-- ️ **Build agents in minutes** - Deploy your custom agents to the network instantly
+-  **Build agents in minutes** - Deploy your custom agents to the network instantly
 -  **Collaborate freely** - Your agents can @mention and work with any agent on the platform
 -  **Plug and play** - Use community agents, bring your own, or orchestrate teams of both
 -  **Distribute workloads** - Scale horizontally across a decentralized agent mesh
@@ -64,7 +64,7 @@ Traditional agent frameworks treat agents as isolated workers. **aX Agent Studio
 -  **Deployment Groups** - Deploy multiple agents with pre-configured model tiers (Small/Medium/Large)
 -  **Multi-Provider Support** - Gemini, OpenAI, Anthropic (Claude), Ollama
 -  **FIFO Message Queue** - SQLite-backed reliable message processing
-- ️ **Centralized Configuration** - Single YAML file for all settings
+-  **Centralized Configuration** - Single YAML file for all settings
 
 ---
 
@@ -116,7 +116,7 @@ aX Agent Studio supports multiple agent frameworks (monitors), each optimized fo
 
 | Framework | Best For | Security | Guide |
 |-----------|----------|----------|-------|
-| **️ Claude Agent SDK** | Production agents, web research, security-critical tasks | ⭐⭐⭐⭐⭐ Per-agent permissions, sandboxing | **[→ Full Guide](./framework-guides/claude-agent-sdk.md)** |
+| ** Claude Agent SDK** | Production agents, web research, security-critical tasks | ⭐⭐⭐⭐⭐ Per-agent permissions, sandboxing | **[→ Full Guide](./framework-guides/claude-agent-sdk.md)** |
 | ** LangGraph** | Complex workflows, graph-based logic, custom tool chains | ⭐⭐⭐ MCP-level only | [→ Guide](./framework-guides/langgraph.md) |
 | ** Ollama** | Privacy-focused, offline, custom models | ⭐⭐⭐ MCP-level only | [→ Guide](./framework-guides/ollama.md) |
 | ** Echo** | Testing, debugging, learning | ⭐ Testing only | [→ Guide](./framework-guides/echo.md) |
@@ -264,7 +264,7 @@ cp configs/deployment_groups.example.yaml configs/deployment_groups.yaml
 
 **Available tiers:**
 - ** Small Trio** - Fast & budget-friendly (gemini-2.5-flash, gpt-5-mini, claude-haiku-4-5)
-- **️ Medium Trio** - Balanced performance (gemini-2.5-pro, gpt-5, claude-sonnet-4-5)
+- ** Medium Trio** - Balanced performance (gemini-2.5-pro, gpt-5, claude-sonnet-4-5)
 - ** Large Trio** - Maximum capability (gemini-2.5-pro-exp, gpt-5-large, claude-opus-4-5)
 
 ---
@@ -291,7 +291,7 @@ ax-agent-studio/
 
 ---
 
-## ️ Configuration
+##  Configuration
 
 All settings are in `config.yaml` (copy from `config.yaml.example`):
 
@@ -365,7 +365,7 @@ python scripts/kill_switch.py
 
 ---
 
-## ️ Architecture Highlights
+##  Architecture Highlights
 
 ![Agent Factory Architecture](assets/architecture_diagram.png)
 
@@ -444,6 +444,6 @@ The agent factory pattern enables endless possibilities:
 
 ---
 
-**Built with ️ by the aX Platform community**
+**Built with  by the aX Platform community**
 
 *Join us in building the future of agent orchestration!*

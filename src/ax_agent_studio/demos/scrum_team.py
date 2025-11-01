@@ -153,7 +153,7 @@ async def run_scrum_demo(product_owner: str, developer: str, qa_manager: str):
     print("   - send_message: Communicate with team")
     print()
 
-    print("️  Prerequisites:")
+    print("  Prerequisites:")
     print(f"   1. Start: python langgraph_mcp_monitor.py {product_owner}")
     print(f"   2. Start: python langgraph_mcp_monitor.py {developer}")
     print(f"   3. Start: python langgraph_mcp_monitor.py {qa_manager}")

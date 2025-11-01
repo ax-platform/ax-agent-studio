@@ -62,7 +62,7 @@ async def send_test_message(agent_name: str, message: str):
                         print(" Agent response detected!")
                         return True
                     else:
-                        print("️  No response from agent yet")
+                        print("  No response from agent yet")
                         return False
 
             return False
@@ -74,7 +74,7 @@ async def test_gemini_monitor():
     print("Gemini Monitor End-to-End Test")
     print("=" * 60 + "\n")
 
-    print("️  Make sure the Gemini monitor is running!")
+    print("  Make sure the Gemini monitor is running!")
     print("   Start it with:")
     print("   PYTHONPATH=src uv run python -m ax_agent_studio.monitors.langgraph_monitor orion_344 \\")
     print("     --config configs/agents/orion_344.json --model gemini-2.0-flash-exp --provider gemini\n")

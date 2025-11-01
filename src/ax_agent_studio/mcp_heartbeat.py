@@ -145,7 +145,7 @@ class HeartbeatManager:
             The heartbeat task
         """
         if name in self.tasks:
-            logger.warning(f"️  Heartbeat already running for {name}, stopping old one")
+            logger.warning(f"  Heartbeat already running for {name}, stopping old one")
             await self.stop(name)
 
         task = asyncio.create_task(

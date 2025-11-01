@@ -55,7 +55,7 @@ class TestMessageParser:
 
             # Skip status messages
             if "WAIT SUCCESS" in messages_data or "No mentions" in messages_data:
-                print(f"⏭️  Skipping status message: {messages_data[:100]}")
+                print(f"⏭  Skipping status message: {messages_data[:100]}")
                 return None
 
             # Extract message ID from [id:xxxxxxxx] tags
@@ -69,12 +69,12 @@ class TestMessageParser:
             # Verify there's an actual mention
             mention_match = re.search(r'• ([^:]+): (@\S+)\s+(.+)', messages_data)
             if not mention_match:
-                print("⏭️  No actual mentions in response")
+                print("⏭  No actual mentions in response")
                 return None
 
             # Verify THIS agent is mentioned
             if f"@{self.agent_name}" not in messages_data:
-                print(f"⏭️  Message doesn't mention @{self.agent_name}")
+                print(f"⏭  Message doesn't mention @{self.agent_name}")
                 return None
 
             # Extract sender
@@ -85,7 +85,7 @@ class TestMessageParser:
 
             # Skip self-mentions (agent mentioning themselves)
             if sender == self.agent_name:
-                print(f"⏭️  Skipping self-mention from {sender}")
+                print(f"⏭  Skipping self-mention from {sender}")
                 return None
 
             # Full content includes the mention pattern

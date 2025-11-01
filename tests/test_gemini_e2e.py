@@ -18,15 +18,15 @@ async def test_gemini_tool_schema():
     print(" Testing Gemini Tool Schema Generation\n")
 
     # 1. Connect to MCP servers
-    print("1️⃣ Connecting to MCP servers...")
+    print("1⃣ Connecting to MCP servers...")
     async with MCPServerManager("orion_344") as mgr:
         # 2. Create tools
-        print("2️⃣ Creating LangChain tools...")
+        print("2⃣ Creating LangChain tools...")
         tools = await mgr.create_langchain_tools()
         print(f"    Created {len(tools)} tools\n")
 
         # 3. Verify tool schemas
-        print("3️⃣ Checking tool schemas...")
+        print("3⃣ Checking tool schemas...")
         for tool in tools[:3]:  # Check first 3 tools
             # args_schema might be a Pydantic model or already a dict
             if hasattr(tool.args_schema, 'model_json_schema'):
@@ -52,9 +52,9 @@ async def test_gemini_tool_schema():
         print("\n All tool schemas look valid!\n")
 
         # 4. Test Gemini initialization
-        print("4️⃣ Creating Gemini LLM...")
+        print("4⃣ Creating Gemini LLM...")
         if not os.getenv("GOOGLE_API_KEY"):
-            print("   ️  GOOGLE_API_KEY not set, skipping LLM test")
+            print("     GOOGLE_API_KEY not set, skipping LLM test")
             return
 
         from ax_agent_studio.llm_factory import create_llm
@@ -63,7 +63,7 @@ async def test_gemini_tool_schema():
         print(f"    Created: {llm}\n")
 
         # 5. Test binding tools to LLM
-        print("5️⃣ Binding tools to Gemini...")
+        print("5⃣ Binding tools to Gemini...")
         try:
             llm_with_tools = llm.bind_tools(tools)
             print("    Tools bound successfully!\n")
@@ -72,7 +72,7 @@ async def test_gemini_tool_schema():
             raise
 
         # 6. Test simple invocation (without actually calling)
-        print("6️⃣ Testing tool schema validation...")
+        print("6⃣ Testing tool schema validation...")
         try:
             # This will validate schemas without actually making API call
             from langchain_core.messages import HumanMessage
@@ -93,17 +93,17 @@ async def test_gemini_simple_call():
     print(" Testing Simple Gemini Call (no tools)\n")
 
     if not os.getenv("GOOGLE_API_KEY"):
-        print("️  GOOGLE_API_KEY not set, skipping")
+        print("  GOOGLE_API_KEY not set, skipping")
         return
 
     from ax_agent_studio.llm_factory import create_llm
     from langchain_core.messages import HumanMessage
 
-    print("1️⃣ Creating Gemini LLM...")
+    print("1⃣ Creating Gemini LLM...")
     llm = create_llm("gemini", "gemini-2.0-flash-exp", temperature=0)
     print(f"    Created: {llm}\n")
 
-    print("2️⃣ Making simple call...")
+    print("2⃣ Making simple call...")
     response = await llm.ainvoke([HumanMessage(content="Say 'test passed' and nothing else")])
     print(f"    Response: {response.content}\n")
 

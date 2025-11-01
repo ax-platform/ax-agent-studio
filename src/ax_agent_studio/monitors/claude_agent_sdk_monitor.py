@@ -290,7 +290,7 @@ async def claude_agent_sdk_monitor(
                 "ANTHROPIC_API_KEY not set. Claude Agent SDK will attempt to use Claude CLI credentials. "
                 "Set USE_CLAUDE_SUBSCRIPTION=true to explicitly use subscription mode."
             )
-            print("️  Warning: ANTHROPIC_API_KEY not set - falling back to CLI credentials")
+            print("  Warning: ANTHROPIC_API_KEY not set - falling back to CLI credentials")
             print("    Set ANTHROPIC_API_KEY or USE_CLAUDE_SUBSCRIPTION=true\n")
         else:
             logger.info("Using Claude API key for authentication")

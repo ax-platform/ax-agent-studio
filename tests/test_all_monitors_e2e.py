@@ -44,7 +44,7 @@ class MonitorTester:
                 await self.client.delete(f"/api/monitors/{monitor_id}")
                 print(f"    Cleaned up {monitor_id}")
             except Exception as e:
-                print(f"   ️  Failed to clean up {monitor_id}: {e}")
+                print(f"     Failed to clean up {monitor_id}: {e}")
 
         await self.client.aclose()
 
@@ -156,7 +156,7 @@ async def test_ollama_monitor(tester: MonitorTester):
         models = response.json()["models"]
 
         if not models:
-            print("   ️  No Ollama models available, skipping test")
+            print("     No Ollama models available, skipping test")
             return None  # Skip test
 
         # Use first available model
@@ -258,7 +258,7 @@ async def test_langgraph_monitor(tester: MonitorTester):
             configured_provider = next((p for p in providers if p["configured"]), None)
 
         if not configured_provider:
-            print("   ️  No providers configured, skipping test")
+            print("     No providers configured, skipping test")
             return None
 
         provider_id = configured_provider["id"]
@@ -343,7 +343,7 @@ async def main():
         elif result is False:
             status = " FAIL"
         else:
-            status = "⏭️  SKIP"
+            status = "⏭  SKIP"
         print(f"{status}: {test_name}")
 
     # Check if all tests that ran passed
@@ -354,7 +354,7 @@ async def main():
         print("\n All monitor tests passed!")
         return 0
     else:
-        print("\n️  Some tests failed or were skipped")
+        print("\n  Some tests failed or were skipped")
         return 1
 
 

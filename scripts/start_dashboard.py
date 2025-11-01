@@ -41,7 +41,7 @@ def check_config_files(project_root: Path) -> bool:
 
     if copied_files:
         print(f" Created config files: {', '.join(copied_files)}\n")
-        print("️  IMPORTANT: Edit these files to add your credentials:")
+        print("  IMPORTANT: Edit these files to add your credentials:")
         print(f"   - .env: Add your LLM provider API keys")
         print(f"   - config.yaml: Review settings (defaults should work)")
         print()
@@ -67,7 +67,7 @@ def main():
 
     # Check dependencies
     if not venv_path.exists():
-        print("️  Virtual environment not found!")
+        print("  Virtual environment not found!")
         print(" Running 'uv sync' to install dependencies...\n")
     else:
         print(" Checking dependencies...\n")

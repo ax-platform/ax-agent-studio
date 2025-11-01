@@ -195,7 +195,7 @@ async def run_api_tests():
     print(" Dashboard API E2E Test Suite")
     print("="*60)
 
-    print("\nℹ️  Testing against:", DASHBOARD_URL)
+    print("\nℹ  Testing against:", DASHBOARD_URL)
     print("   Make sure the dashboard is running: uv run dashboard")
 
     # Check if dashboard is running

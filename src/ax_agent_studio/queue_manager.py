@@ -133,7 +133,7 @@ class QueueManager:
             # Extract message ID from [id:xxxxxxxx] tags
             message_id_match = re.search(r'\[id:([a-f0-9-]+)\]', messages_data)
             if not message_id_match:
-                logger.warning("️  No message ID found in response")
+                logger.warning("  No message ID found in response")
                 return None
 
             message_id = message_id_match.group(1)
@@ -141,12 +141,12 @@ class QueueManager:
             # Verify there's an actual mention (not just "no mentions found")
             mention_match = re.search(r'• ([^:]+): (@\S+)\s+(.+)', messages_data)
             if not mention_match:
-                logger.debug("⏭️  No actual mentions in response")
+                logger.debug("⏭  No actual mentions in response")
                 return None
 
             # Verify THIS agent is mentioned
             if f"@{self.agent_name}" not in messages_data:
-                logger.debug(f"⏭️  Message doesn't mention @{self.agent_name}")
+                logger.debug(f"⏭  Message doesn't mention @{self.agent_name}")
                 return None
 
             # Extract sender and content
@@ -154,7 +154,7 @@ class QueueManager:
 
             # Skip self-mentions (agent mentioning themselves)
             if sender == self.agent_name:
-                logger.warning(f"⏭️  SKIPPING SELF-MENTION: {sender} mentioned themselves (agent={self.agent_name})")
+                logger.warning(f"⏭  SKIPPING SELF-MENTION: {sender} mentioned themselves (agent={self.agent_name})")
                 return None
 
             # Full content includes the mention pattern
@@ -181,7 +181,7 @@ class QueueManager:
         3. Mark them as read via up_to_id to prevent reprocessing
         """
         if not self.startup_sweep:
-            logger.info("⏭️  Startup sweep disabled, starting poller...")
+            logger.info("⏭  Startup sweep disabled, starting poller...")
             return
 
         logger.info(f" Starting unread message sweep (limit: {self.startup_sweep_limit or 'unlimited'})")
@@ -239,7 +239,7 @@ class QueueManager:
                 await asyncio.sleep(0.7)
 
             if iteration >= max_iterations:
-                logger.warning(f"️  Hit max iterations ({max_iterations}) during sweep")
+                logger.warning(f"  Hit max iterations ({max_iterations}) during sweep")
 
         except Exception as e:
             logger.error(f" Startup sweep error: {e}")
@@ -288,7 +288,7 @@ class QueueManager:
                     backlog = self.store.get_backlog_count(self.agent_name)
                     logger.info(f" Stored message {msg_id[:8]} from {sender} (backlog: {backlog})")
                 else:
-                    logger.warning(f"️  Failed to store message {msg_id[:8]} (likely duplicate)")
+                    logger.warning(f"  Failed to store message {msg_id[:8]} (likely duplicate)")
 
             except asyncio.CancelledError:
                 logger.info(" Poller task cancelled")
@@ -306,7 +306,7 @@ class QueueManager:
         is sent, and message is marked complete. If queue is empty, we
         sleep briefly before checking again.
         """
-        logger.info("️  Processor task started")
+        logger.info("  Processor task started")
 
         from pathlib import Path
         kill_switch_file = Path("data/KILL_SWITCH")
@@ -330,7 +330,7 @@ class QueueManager:
                 msg = messages[0]
                 backlog = self.store.get_backlog_count(self.agent_name)
 
-                logger.info(f"️  Processing message {msg.id[:8]} from {msg.sender} (backlog: {backlog})")
+                logger.info(f"  Processing message {msg.id[:8]} from {msg.sender} (backlog: {backlog})")
 
                 # Mark as processing (prevents duplicate processing)
                 self.store.mark_processing_started(msg.id, self.agent_name)
@@ -371,10 +371,10 @@ class QueueManager:
                     # Mark as processed to prevent infinite retry loop
                     # TODO: Add retry limits and dead-letter queue for transient failures
                     self.store.mark_processed(msg.id, self.agent_name)
-                    logger.warning(f"️  Message {msg.id[:8]} marked as failed (won't retry)")
+                    logger.warning(f"  Message {msg.id[:8]} marked as failed (won't retry)")
 
             except asyncio.CancelledError:
-                logger.info("️  Processor task cancelled")
+                logger.info("  Processor task cancelled")
                 break
             except Exception as e:
                 logger.error(f" Processor error: {e}")
@@ -446,5 +446,5 @@ class QueueManager:
             Number of messages deleted
         """
         count = self.store.cleanup_old_messages(days)
-        logger.info(f"️  Cleaned up {count} messages older than {days} days")
+        logger.info(f"  Cleaned up {count} messages older than {days} days")
         return count

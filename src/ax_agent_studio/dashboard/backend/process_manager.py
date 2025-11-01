@@ -328,7 +328,7 @@ class ProcessManager:
             if local_cleared > 0:
                 print(f"   Cleared {local_cleared} local messages from SQLite queue")
         except Exception as e:
-            print(f"️  Warning: Failed to clear local queue: {e}")
+            print(f"  Warning: Failed to clear local queue: {e}")
 
         # CRITICAL: Also kill any orphaned system processes for this agent
         # This prevents the "competing monitors" problem
@@ -549,7 +549,7 @@ class ProcessManager:
             summary["errors"].append(f"remote: {e}")
 
         if summary["errors"]:
-            print(f"️  Reset backlog warnings for {agent_name}: {', '.join(summary['errors'])}")
+            print(f"  Reset backlog warnings for {agent_name}: {', '.join(summary['errors'])}")
 
         return summary
 

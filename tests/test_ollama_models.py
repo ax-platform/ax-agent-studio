@@ -93,7 +93,7 @@ async def test_dashboard_endpoint():
             response = await client.get("http://127.0.0.1:8000/api/providers/ollama/models")
 
             if response.status_code != 200:
-                print(f"  ️  SKIP: Dashboard not running (status {response.status_code})")
+                print(f"    SKIP: Dashboard not running (status {response.status_code})")
                 return True  # Not a failure, just can't test
 
             data = response.json()
@@ -107,7 +107,7 @@ async def test_dashboard_endpoint():
             return True
 
     except Exception as e:
-        print(f"  ️  SKIP: Dashboard not running ({e})")
+        print(f"    SKIP: Dashboard not running ({e})")
         return True  # Not a failure, just can't test
 
 

@@ -82,7 +82,7 @@ class DeploymentLoader:
                 if group:  # Only add if group was successfully parsed
                     self._groups[group_id] = group
             except Exception as e:
-                print(f"️  Skipping deployment group '{group_id}': {e}")
+                print(f"  Skipping deployment group '{group_id}': {e}")
 
     def _parse_group(
         self,
@@ -113,12 +113,12 @@ class DeploymentLoader:
                     agent_data: Dict[str, Any] = {}
                 elif isinstance(raw_agent, dict):
                     if "id" not in raw_agent:
-                        print(f"  ️  Skipping agent entry without 'id' in group '{group_id}'")
+                        print(f"    Skipping agent entry without 'id' in group '{group_id}'")
                         continue
                     agent_id = raw_agent["id"]
                     agent_data = {k: v for k, v in raw_agent.items() if k != "id"}
                 else:
-                    print(f"  ️  Skipping invalid agent entry in group '{group_id}'")
+                    print(f"    Skipping invalid agent entry in group '{group_id}'")
                     continue
 
                 # Validate agent exists, but don't fail - just skip
@@ -126,7 +126,7 @@ class DeploymentLoader:
                     if agent_id.startswith("YOUR_") or "EXAMPLE" in agent_id.upper():
                         print(f"   Placeholder agent '{agent_id}' - replace with your actual agent ID")
                     else:
-                        print(f"  ️  Agent '{agent_id}' not found in configs/agents/ - skipping")
+                        print(f"    Agent '{agent_id}' not found in configs/agents/ - skipping")
                         print(f"     Available agents: {', '.join(sorted(existing_agents))}")
                     skipped_agents.append(agent_id)
                     continue
@@ -143,7 +143,7 @@ class DeploymentLoader:
                     )
                 )
             except Exception as e:
-                print(f"  ️  Error processing agent in group '{group_id}': {e}")
+                print(f"    Error processing agent in group '{group_id}': {e}")
                 continue
 
         if skipped_agents:
@@ -154,7 +154,7 @@ class DeploymentLoader:
                 print(f"   Group '{group_id}': {len(agents)} agents loaded, {len(skipped_agents)} skipped")
 
         if not agents:
-            print(f"  ℹ️  Group '{group_id}' has no valid agents - check agent IDs in deployment_groups.yaml")
+            print(f"  ℹ  Group '{group_id}' has no valid agents - check agent IDs in deployment_groups.yaml")
             print(f"     Available agents: {', '.join(sorted(existing_agents))}")
             return None  # Return None instead of raising error
 

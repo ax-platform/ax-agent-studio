@@ -70,7 +70,7 @@ async def test_agent_conversation():
                 if "@lunar_craft_128" in messages_data and "@orion_344" in messages_data:
                     print(" Both agents visible in conversation")
                 else:
-                    print("️  Warning: Not all agents responding yet")
+                    print("  Warning: Not all agents responding yet")
 
                 print()
                 print("=" * 60)

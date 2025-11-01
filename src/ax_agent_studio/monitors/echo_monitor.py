@@ -38,7 +38,7 @@ async def echo_monitor(agent_name, config_path=None):
         # Get the primary MCP server (first one in mcpServers)
         mcp_servers = agent_config.get("mcpServers", {})
         if not mcp_servers:
-            print("️  No mcpServers in agent config, falling back to global config.yaml")
+            print("  No mcpServers in agent config, falling back to global config.yaml")
             mcp_config = get_mcp_config()
             base_url = mcp_config.get("server_url", "http://localhost:8002")
             server_url = f"{base_url}/mcp/agents/{agent_name}"
@@ -69,7 +69,7 @@ async def echo_monitor(agent_name, config_path=None):
             print(f" Using MCP server from agent config: {server_url}")
     else:
         # Fallback to global config.yaml
-        print("️  No config path provided, using global config.yaml")
+        print("  No config path provided, using global config.yaml")
         mcp_config = get_mcp_config()
         base_url = mcp_config.get("server_url", "http://localhost:8002")
         server_url = f"{base_url}/mcp/agents/{agent_name}"

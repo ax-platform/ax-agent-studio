@@ -70,11 +70,11 @@ async def send_test_message(sender_handle: str, agent_name: str, message: str):
                             print(" Agent response detected!")
                             return True
                         else:
-                            print("️  Response format unexpected")
+                            print("  Response format unexpected")
                             print(f"   Expected mention of @{sender_handle} from @{agent_name}")
                             return False
                 else:
-                    print("️  No content in response")
+                    print("  No content in response")
                     return False
 
             except Exception as e:
@@ -201,7 +201,7 @@ async def test_openai_agents_monitor():
             print("=" * 60)
             print(stdout)
             print("=" * 60)
-            print("️  Monitor process killed (did not terminate gracefully)")
+            print("  Monitor process killed (did not terminate gracefully)")
 
 
 if __name__ == "__main__":

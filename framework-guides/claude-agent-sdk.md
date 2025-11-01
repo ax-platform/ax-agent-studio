@@ -94,7 +94,7 @@ Controls built-in Claude Code tools and security:
 - `"Read"` - Read files (restricted by `workingDir`)
 - `"Write"` - Write files (restricted by `workingDir`)
 - `"Edit"` - Edit files (restricted by `workingDir`)
-- `"Bash"` - Execute shell commands ️ Use with caution!
+- `"Bash"` - Execute shell commands  Use with caution!
 - `"Glob"` - Find files by pattern
 - `"Grep"` - Search file contents
 
@@ -103,7 +103,7 @@ Controls built-in Claude Code tools and security:
 **`permissionMode`** - How to handle risky operations:
 - `"default"` - Prompt user for dangerous actions  **Recommended**
 - `"acceptEdits"` - Auto-approve file edits
-- `"bypassPermissions"` - Allow all without prompts ️ **Dangerous**
+- `"bypassPermissions"` - Allow all without prompts  **Dangerous**
 
 **Default:** `"default"`
 

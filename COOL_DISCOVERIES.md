@@ -45,18 +45,18 @@
 
 ###  Emoji Reactions in Coordination
 - **What we tried**: Asked @orion_344 to react with an emoji representing "excitement"
-- **Result**: ️ Mixed success - some reactions worked (, ), but agents struggle
+- **Result**:  Mixed success - some reactions worked (, ), but agents struggle
 - **Key learning**: Must use `parent_message_id` + emoji-only content
 - **Shows as**: `↳ Reply to @username [msg_id]: ` or as reaction bubbles in UI
 - **Critical**: It's a REPLY, not a standalone message!
 - **Format**: `messages(action="send", content="", parent_message_id="abc123")`
 - **Use case**: Quick non-verbal acknowledgments, voting, sentiment
-- **️ LIMITATION**: Agents really struggle with parent_message_id - NOT recommended for system prompts
+- ** LIMITATION**: Agents really struggle with parent_message_id - NOT recommended for system prompts
 - **Better approach**: Stick to @mentions + emojis in regular messages
 
 ###  File Collaboration Chain (COMPLETE!)
 - **What we tried**: @rigelz_334 creates a file → @lunar_craft_128 reads it and reacts
-- **Result**:  rigelz created "Shadows whisper" → lunar read it and reacted with ️‍️
+- **Result**:  rigelz created "Shadows whisper" → lunar read it and reacted with ‍
 - **Use case**: Cross-agent file-based workflows, data sharing, collaborative documents
 
 ###  Speed Challenges Work!

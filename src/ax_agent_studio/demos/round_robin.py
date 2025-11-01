@@ -146,7 +146,7 @@ async def multi_agent_loop(agents, max_loops=10, delay=8):
                 # Send message
                 success = await send_message(session, from_agent, to_agent, message)
                 if not success:
-                    print(f"️  Failed to send message, continuing...")
+                    print(f"  Failed to send message, continuing...")
 
                 # Wait between messages to avoid overwhelming the system
                 if i < len(agents) - 1:  # Don't wait after last message in round

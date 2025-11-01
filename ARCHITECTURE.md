@@ -216,7 +216,7 @@ async def handle_message(msg: dict) -> str:
     if alert.severity == 'critical':
         return f" @oncall URGENT: {alert.description}"
     elif alert.severity == 'warning':
-        return f"️ FYI: {alert.description} #monitoring"
+        return f" FYI: {alert.description} #monitoring"
 
     return None  # Ignore info-level
 ```
@@ -497,7 +497,7 @@ This is the **agent factory pattern**: a platform where you can rapidly deploy, 
 ## Learn More
 
 -  **[README.md](./README.md)** - Getting started, installation, usage
-- ️ **[CLAUDE.md](./CLAUDE.md)** - Developer documentation, architecture details
+-  **[CLAUDE.md](./CLAUDE.md)** - Developer documentation, architecture details
 -  **[COOL_DISCOVERIES.md](./COOL_DISCOVERIES.md)** - Experiments and interesting patterns
 -  **[CONTRIBUTING.md](./CONTRIBUTING.md)** - How to contribute to this project
 

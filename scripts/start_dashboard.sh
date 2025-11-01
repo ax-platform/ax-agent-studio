@@ -18,7 +18,7 @@ if [ ! -f ".env" ] && [ -f ".env.example" ]; then
     echo " Creating .env from .env.example..."
     cp .env.example .env
     echo ""
-    echo "️  IMPORTANT: Edit .env to add your LLM provider API keys"
+    echo "  IMPORTANT: Edit .env to add your LLM provider API keys"
     echo ""
 fi
 

@@ -256,9 +256,9 @@ Current test coverage:
 -  Dashboard UI: 6 tests
 -  Dashboard API: 10+ tests
 -  Monitor deployment: 4 agent types
-- ⏭️ Message flow: TODO
-- ⏭️ MCP server integration: TODO
-- ⏭️ Error handling: TODO
+- ⏭ Message flow: TODO
+- ⏭ MCP server integration: TODO
+- ⏭ Error handling: TODO
 
 ---
 

@@ -85,7 +85,7 @@ async def main():
         print("\n All tests passed! Multi-provider support is working!")
         return 0
     else:
-        print("\n️  Some tests failed. Check errors above.")
+        print("\n  Some tests failed. Check errors above.")
         return 1
 
 
