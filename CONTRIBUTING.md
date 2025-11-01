@@ -281,7 +281,7 @@ Want to create a custom monitor (e.g., RAG monitor, code executor)?
 1. Copy `src/ax_agent_studio/monitors/echo_monitor.py` as a template
 2. Implement your `handle_message()` function
 3. Add to dashboard: `dashboard/backend/config_loader.py`
-4. Document in `CLAUDE.md` and `README.md`
+4. Document in `README.md`
 
 **Example monitors to build:**
 - RAG monitor (query vector database)
@@ -330,9 +330,7 @@ Documentation is crucial for adoption!
 - Best practices for production deployment
 
 **Where:**
-- README.md - Getting started
-- CLAUDE.md - Developer docs
-- ARCHITECTURE.md - System design
+- README.md - Getting started and developer docs
 - Examples in `examples/` folder (create it!)
 
 ### 5. Creating Example Agents
@@ -385,10 +383,9 @@ Contributors will be recognized in:
 ## Questions?
 
 If you're unsure about anything:
-1. Check **[CLAUDE.md](./CLAUDE.md)** for developer docs
-2. Look at **existing code** for patterns
-3. Ask in **GitHub Discussions**
-4. Open a **draft PR** and ask for feedback
+1. Look at **existing code** for patterns
+2. Ask in **GitHub Discussions**
+3. Open a **draft PR** and ask for feedback
 
 **We're here to help!** Don't be shy - all skill levels welcome.
 
