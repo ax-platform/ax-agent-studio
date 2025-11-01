@@ -225,6 +225,9 @@ async function loadConfigsForEnvironment(environment) {
         const config = configs.find(c => c.path === e.target.value);
         if (config) updateAgentHelp(config);
     };
+
+    // Update test sender dropdown with available agents
+    updateTestSenderOptions();
 }
 
 function updateAgentHelp(config) {
@@ -234,6 +237,38 @@ function updateAgentHelp(config) {
     } else {
         helpText.textContent = '';
     }
+}
+
+function updateTestSenderOptions() {
+    const testSenderSelect = document.getElementById('test-sender-select');
+    if (!testSenderSelect) return;
+
+    // Get all unique agent names from configs
+    const agentNames = [...new Set(configs.map(c => c.agent_name))].sort();
+
+    // Build options
+    let options = '<option value="">Auto (first available)</option>';
+    agentNames.forEach(name => {
+        options += `<option value="${name}">${name}</option>`;
+    });
+
+    testSenderSelect.innerHTML = options;
+
+    // Restore saved preference from localStorage
+    const savedTestSender = localStorage.getItem('testSenderAgent');
+    if (savedTestSender && agentNames.includes(savedTestSender)) {
+        testSenderSelect.value = savedTestSender;
+    }
+
+    // Save preference on change
+    testSenderSelect.onchange = (e) => {
+        const selectedAgent = e.target.value;
+        if (selectedAgent) {
+            localStorage.setItem('testSenderAgent', selectedAgent);
+        } else {
+            localStorage.removeItem('testSenderAgent');
+        }
+    };
 }
 
 // Removed demo functionality - focus on Agent Factory core features
@@ -684,7 +719,7 @@ async function testMonitor(agentName, monitorType) {
     const buttons = document.querySelectorAll('.monitor-card button');
     let testButton = null;
     buttons.forEach(btn => {
-        if (btn.textContent.includes('✏️') && btn.closest('.monitor-card').textContent.includes(agentName)) {
+        if (btn.textContent.includes('Test') && btn.closest('.monitor-card').textContent.includes(agentName)) {
             testButton = btn;
         }
     });
@@ -695,8 +730,17 @@ async function testMonitor(agentName, monitorType) {
         testButton.textContent = '⏳';
     }
 
-    // Send a test message from a different agent
-    const fromAgent = agentName === 'lunar_craft_128' ? 'orion_344' : 'lunar_craft_128';
+    // Get test sender agent from settings or use auto-select
+    let fromAgent = localStorage.getItem('testSenderAgent');
+
+    // If no agent selected or selected agent is the same as target, use auto-select
+    if (!fromAgent || fromAgent === agentName) {
+        // Get all unique agent names from current configs
+        const agentNames = [...new Set(configs.map(c => c.agent_name))].filter(name => name !== agentName);
+
+        // Use first available agent that's not the target
+        fromAgent = agentNames.length > 0 ? agentNames[0] : 'test_user';
+    }
 
     // Context-aware test messages based on monitor type
     let testMessage;
@@ -923,7 +967,7 @@ function renderMonitors() {
         const statusClass = isRunning ? 'running' : 'stopped';
 
         const testControl = isRunning && monitor.id
-            ? `<button class="btn btn-primary btn-sm" onclick="testMonitor('${escapeAttr(monitor.agent_name)}', '${escapeAttr(monitor.monitor_type)}')" title="Send Test Message">✏️</button>`
+            ? `<button class="btn btn-primary btn-sm" onclick="testMonitor('${escapeAttr(monitor.agent_name)}', '${escapeAttr(monitor.monitor_type)}')" title="Send test message from configured sender (see Test Sender Agent setting)">✏️ Test</button>`
             : '';
 
         const pauseOrStartControl = hasMonitorId
