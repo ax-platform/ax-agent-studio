@@ -28,21 +28,20 @@ const escapeAttr = (value) => String(value)
 
 // Initialize dashboard
 document.addEventListener('DOMContentLoaded', async () => {
+    // Setup event listeners FIRST so they're ready when defaults load
+    setupEventListeners();
+
     await loadEnvironments();
     await loadConfigs();
-    await loadProviders();
+    await loadProviders(); // This will set default agent type and trigger UI update
     await loadPrompts();
     await loadDeploymentGroups();
     await loadMonitors();
     await updateKillSwitchButton(); // Check initial kill switch state
     initializeWebSocket();
-    setupEventListeners();
 
-    // Show provider/model groups by default (LangGraph is default)
-    document.getElementById('provider-group').style.display = 'block';
-    document.getElementById('model-group').style.display = 'block';
-    document.getElementById('system-prompt-group').style.display = 'block';
-    // history-limit-group disabled - needs server-side support
+    // Note: Don't manually show/hide groups here - let the monitor type change handler do it
+    // This ensures the UI is always in sync with the selected monitor type
 
     // Refresh monitors and kill switch state every 5 seconds
     setInterval(async () => {
@@ -272,12 +271,14 @@ async function loadProviders() {
             if (monitorTypeSelect) {
                 monitorTypeSelect.value = defaults.agent_type;
                 // Trigger the change event to update UI accordingly
+                // The change handler will load the appropriate models, so we skip the
+                // loadModelsForProvider call below to avoid overwriting them
                 monitorTypeSelect.dispatchEvent(new Event('change'));
             }
+        } else {
+            // No default agent type set, load models for default provider
+            await loadModelsForProvider(selectedProvider);
         }
-
-        // Load models for default provider
-        await loadModelsForProvider(selectedProvider);
 
     } catch (error) {
         console.error('Error loading providers:', error);
