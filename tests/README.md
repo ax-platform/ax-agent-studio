@@ -8,12 +8,12 @@ This directory contains comprehensive E2E tests for the aX Agent Studio dashboar
 Tests the dashboard frontend using Playwright to verify UI behavior for all agent types.
 
 **What it tests:**
-- ✅ Dashboard loads correctly
-- ✅ **Echo Agent**: No provider, no model (simple passthrough)
-- ✅ **Ollama Agent**: No provider (implicit), model dropdown visible
-- ✅ **Claude Agent SDK**: No provider (uses Anthropic SDK), Claude models only, Sonnet 4.5 default
-- ✅ **LangGraph Agent**: Provider and model dropdowns both visible
-- ✅ Default agent type loads from `DEFAULT_AGENT_TYPE` env var
+-  Dashboard loads correctly
+-  **Echo Agent**: No provider, no model (simple passthrough)
+-  **Ollama Agent**: No provider (implicit), model dropdown visible
+-  **Claude Agent SDK**: No provider (uses Anthropic SDK), Claude models only, Sonnet 4.5 default
+-  **LangGraph Agent**: Provider and model dropdowns both visible
+-  Default agent type loads from `DEFAULT_AGENT_TYPE` env var
 
 **Prerequisites:**
 - Dashboard must be running: `uv run dashboard`
@@ -110,9 +110,9 @@ pkill -f "dashboard.backend.main"
 
 | Test Suite | Tool | What It Tests | Speed |
 |------------|------|---------------|-------|
-| `test_dashboard_ui_e2e.py` | Playwright | Frontend UI behavior | Fast ⚡ |
-| `test_dashboard_api_e2e.py` | pytest + httpx | Backend API endpoints | Fast ⚡ |
-| `test_all_monitors_e2e.py` | httpx | Monitor deployment | Slow 🐌 |
+| `test_dashboard_ui_e2e.py` | Playwright | Frontend UI behavior | Fast  |
+| `test_dashboard_api_e2e.py` | pytest + httpx | Backend API endpoints | Fast  |
+| `test_all_monitors_e2e.py` | httpx | Monitor deployment | Slow  |
 
 ---
 
@@ -201,10 +201,10 @@ def test_new_feature_ui():
             # Your test logic
             expect(page.locator('#element')).to_be_visible()
 
-            print("✅ Test PASSED")
+            print(" Test PASSED")
             return True
         except Exception as e:
-            print(f"❌ Test FAILED: {e}")
+            print(f" Test FAILED: {e}")
             return False
         finally:
             browser.close()
@@ -253,12 +253,12 @@ uv run dashboard
 ## Coverage
 
 Current test coverage:
-- ✅ Dashboard UI: 6 tests
-- ✅ Dashboard API: 10+ tests
-- ✅ Monitor deployment: 4 agent types
-- ⏭️ Message flow: TODO
-- ⏭️ MCP server integration: TODO
-- ⏭️ Error handling: TODO
+-  Dashboard UI: 6 tests
+-  Dashboard API: 10+ tests
+-  Monitor deployment: 4 agent types
+- ⏭ Message flow: TODO
+- ⏭ MCP server integration: TODO
+- ⏭ Error handling: TODO
 
 ---
 

@@ -80,7 +80,7 @@ class QueueManager:
         self.heartbeat_interval = heartbeat_interval
         self._running = False
 
-        logger.info(f"🔧 QueueManager initialized for @{agent_name}")
+        logger.info(f" QueueManager initialized for @{agent_name}")
         logger.info(f"   Storage: {self.store.db_path}")
         logger.info(f"   Mark read: {self.mark_read}")
         logger.info(f"   Startup sweep: {self.startup_sweep} (limit: {self.startup_sweep_limit})")
@@ -91,7 +91,7 @@ class QueueManager:
         Parse MCP messages tool result to extract message ID, sender, and content.
 
         The MCP remote server returns messages in different formats:
-        - result.content: Status messages like "✅ WAIT SUCCESS: Found 1 mentions"
+        - result.content: Status messages like " WAIT SUCCESS: Found 1 mentions"
         - result.events: Actual message data (for some MCP implementations)
         - result.content with formatted text: Message data in text format (for others)
 
@@ -106,13 +106,13 @@ class QueueManager:
                 sender = event.get('sender_name', 'unknown')
                 content = event.get('content', '')
 
-                logger.info(f"📋 Found message via events: {msg_id[:8]} from {sender}")
+                logger.info(f" Found message via events: {msg_id[:8]} from {sender}")
                 return (msg_id, sender, content)
 
             # Try result.content (current format)
             content = result.content
             if not content:
-                logger.debug("📋 Empty content in result")
+                logger.debug(" Empty content in result")
                 return None
 
             # Extract message text
@@ -122,18 +122,18 @@ class QueueManager:
                 messages_data = str(content[0].text) if content else ""
 
             if not messages_data:
-                logger.debug("📋 Empty messages_data")
+                logger.debug(" Empty messages_data")
                 return None
 
             # Skip status messages like "WAIT SUCCESS"
             if "WAIT SUCCESS" in messages_data or "No mentions" in messages_data:
-                logger.debug(f"📋 Skipping status message: {messages_data[:100]}")
+                logger.debug(f" Skipping status message: {messages_data[:100]}")
                 return None
 
             # Extract message ID from [id:xxxxxxxx] tags
             message_id_match = re.search(r'\[id:([a-f0-9-]+)\]', messages_data)
             if not message_id_match:
-                logger.warning("⚠️  No message ID found in response")
+                logger.warning("  No message ID found in response")
                 return None
 
             message_id = message_id_match.group(1)
@@ -141,12 +141,12 @@ class QueueManager:
             # Verify there's an actual mention (not just "no mentions found")
             mention_match = re.search(r'• ([^:]+): (@\S+)\s+(.+)', messages_data)
             if not mention_match:
-                logger.debug("⏭️  No actual mentions in response")
+                logger.debug("⏭  No actual mentions in response")
                 return None
 
             # Verify THIS agent is mentioned
             if f"@{self.agent_name}" not in messages_data:
-                logger.debug(f"⏭️  Message doesn't mention @{self.agent_name}")
+                logger.debug(f"⏭  Message doesn't mention @{self.agent_name}")
                 return None
 
             # Extract sender and content
@@ -154,17 +154,17 @@ class QueueManager:
 
             # Skip self-mentions (agent mentioning themselves)
             if sender == self.agent_name:
-                logger.warning(f"⏭️  SKIPPING SELF-MENTION: {sender} mentioned themselves (agent={self.agent_name})")
+                logger.warning(f"⏭  SKIPPING SELF-MENTION: {sender} mentioned themselves (agent={self.agent_name})")
                 return None
 
             # Full content includes the mention pattern
             content = messages_data
 
-            logger.info(f"✅ VALID MESSAGE: from {sender} to {self.agent_name}")
+            logger.info(f" VALID MESSAGE: from {sender} to {self.agent_name}")
             return (message_id, sender, content)
 
         except Exception as e:
-            logger.error(f"❌ Error parsing message: {e}")
+            logger.error(f" Error parsing message: {e}")
             return None
 
     async def _startup_sweep(self):
@@ -181,10 +181,10 @@ class QueueManager:
         3. Mark them as read via up_to_id to prevent reprocessing
         """
         if not self.startup_sweep:
-            logger.info("⏭️  Startup sweep disabled, starting poller...")
+            logger.info("⏭  Startup sweep disabled, starting poller...")
             return
 
-        logger.info(f"🔍 Starting unread message sweep (limit: {self.startup_sweep_limit or 'unlimited'})")
+        logger.info(f" Starting unread message sweep (limit: {self.startup_sweep_limit or 'unlimited'})")
 
         fetched = 0
         last_id = None
@@ -196,7 +196,7 @@ class QueueManager:
             while iteration < max_iterations:
                 # Stop if we've reached the limit
                 if self.startup_sweep_limit > 0 and fetched >= self.startup_sweep_limit:
-                    logger.info(f"✅ Sweep limit reached ({fetched} messages)")
+                    logger.info(f" Sweep limit reached ({fetched} messages)")
                     break
 
                 # Fetch unread messages (non-blocking)
@@ -214,7 +214,7 @@ class QueueManager:
                 parsed = self._parse_message(result)
                 if not parsed:
                     # No more unread messages
-                    logger.info(f"✅ Sweep complete ({fetched} messages fetched)")
+                    logger.info(f" Sweep complete ({fetched} messages fetched)")
                     break
 
                 msg_id, sender, content = parsed
@@ -230,7 +230,7 @@ class QueueManager:
                 if success:
                     fetched += 1
                     last_id = msg_id
-                    logger.info(f"📥 Sweep [{fetched}]: {msg_id[:8]} from {sender}")
+                    logger.info(f" Sweep [{fetched}]: {msg_id[:8]} from {sender}")
 
                 iteration += 1
 
@@ -239,10 +239,10 @@ class QueueManager:
                 await asyncio.sleep(0.7)
 
             if iteration >= max_iterations:
-                logger.warning(f"⚠️  Hit max iterations ({max_iterations}) during sweep")
+                logger.warning(f"  Hit max iterations ({max_iterations}) during sweep")
 
         except Exception as e:
-            logger.error(f"❌ Startup sweep error: {e}")
+            logger.error(f" Startup sweep error: {e}")
             logger.info("   Continuing with normal polling...")
 
     async def poll_and_store(self):
@@ -254,7 +254,7 @@ class QueueManager:
         go back to waiting. This ensures no messages are lost while the
         processor is busy.
         """
-        logger.info("📥 Poller task started")
+        logger.info(" Poller task started")
         iteration = 0
 
         while self._running:
@@ -286,15 +286,15 @@ class QueueManager:
 
                 if success:
                     backlog = self.store.get_backlog_count(self.agent_name)
-                    logger.info(f"📥 Stored message {msg_id[:8]} from {sender} (backlog: {backlog})")
+                    logger.info(f" Stored message {msg_id[:8]} from {sender} (backlog: {backlog})")
                 else:
-                    logger.warning(f"⚠️  Failed to store message {msg_id[:8]} (likely duplicate)")
+                    logger.warning(f"  Failed to store message {msg_id[:8]} (likely duplicate)")
 
             except asyncio.CancelledError:
-                logger.info("📥 Poller task cancelled")
+                logger.info(" Poller task cancelled")
                 break
             except Exception as e:
-                logger.error(f"❌ Poller error: {e}")
+                logger.error(f" Poller error: {e}")
                 await asyncio.sleep(5)  # Brief pause on error
 
     async def process_queue(self):
@@ -306,16 +306,16 @@ class QueueManager:
         is sent, and message is marked complete. If queue is empty, we
         sleep briefly before checking again.
         """
-        logger.info("⚙️  Processor task started")
+        logger.info("  Processor task started")
 
         from pathlib import Path
         kill_switch_file = Path("data/KILL_SWITCH")
 
         while self._running:
             try:
-                # 🛑 KILL SWITCH: Check if processing should be paused
+                #  KILL SWITCH: Check if processing should be paused
                 if kill_switch_file.exists():
-                    logger.warning("🛑 KILL SWITCH ACTIVE - Processing paused")
+                    logger.warning(" KILL SWITCH ACTIVE - Processing paused")
                     await asyncio.sleep(2)  # Check every 2 seconds
                     continue
 
@@ -330,7 +330,7 @@ class QueueManager:
                 msg = messages[0]
                 backlog = self.store.get_backlog_count(self.agent_name)
 
-                logger.info(f"⚙️  Processing message {msg.id[:8]} from {msg.sender} (backlog: {backlog})")
+                logger.info(f"  Processing message {msg.id[:8]} from {msg.sender} (backlog: {backlog})")
 
                 # Mark as processing (prevents duplicate processing)
                 self.store.mark_processing_started(msg.id, self.agent_name)
@@ -357,27 +357,27 @@ class QueueManager:
                             "content": response,
                             "parent_message_id": msg.id  # Reply to the message we received
                         })
-                        logger.info(f"✅ Completed message {msg.id[:8]} (threaded reply): {response[:50]}...")
+                        logger.info(f" Completed message {msg.id[:8]} (threaded reply): {response[:50]}...")
                     else:
                         # Handler returned empty response (e.g., blocked self-mention)
-                        logger.info(f"✅ Completed message {msg.id[:8]}: (no response - handler blocked)")
+                        logger.info(f" Completed message {msg.id[:8]}: (no response - handler blocked)")
 
                     # Mark as processed (removes from queue)
                     self.store.mark_processed(msg.id, self.agent_name)
 
                 except Exception as e:
-                    logger.error(f"❌ Handler error for message {msg.id[:8]}: {e}")
+                    logger.error(f" Handler error for message {msg.id[:8]}: {e}")
                     logger.error(f"   Error details: {type(e).__name__}: {str(e)}")
                     # Mark as processed to prevent infinite retry loop
                     # TODO: Add retry limits and dead-letter queue for transient failures
                     self.store.mark_processed(msg.id, self.agent_name)
-                    logger.warning(f"⚠️  Message {msg.id[:8]} marked as failed (won't retry)")
+                    logger.warning(f"  Message {msg.id[:8]} marked as failed (won't retry)")
 
             except asyncio.CancelledError:
-                logger.info("⚙️  Processor task cancelled")
+                logger.info("  Processor task cancelled")
                 break
             except Exception as e:
-                logger.error(f"❌ Processor error: {e}")
+                logger.error(f" Processor error: {e}")
                 await asyncio.sleep(5)  # Brief pause on error
 
     async def heartbeat(self):
@@ -406,7 +406,7 @@ class QueueManager:
         try:
             # Show initial stats
             stats = self.store.get_stats(self.agent_name)
-            logger.info(f"📊 Queue stats: {stats['pending']} pending, {stats['completed']} completed")
+            logger.info(f" Queue stats: {stats['pending']} pending, {stats['completed']} completed")
 
             # Do startup sweep to catch up on missed messages
             await self._startup_sweep()
@@ -423,15 +423,15 @@ class QueueManager:
 
             await asyncio.gather(*tasks)
         except KeyboardInterrupt:
-            logger.info("🛑 QueueManager stopped by user")
+            logger.info(" QueueManager stopped by user")
         except Exception as e:
-            logger.error(f"❌ QueueManager error: {e}")
+            logger.error(f" QueueManager error: {e}")
         finally:
             self._running = False
 
             # Show final stats
             stats = self.store.get_stats(self.agent_name)
-            logger.info(f"📊 Final stats: {stats['pending']} pending, {stats['completed']} completed")
+            logger.info(f" Final stats: {stats['pending']} pending, {stats['completed']} completed")
             logger.info(f"   Avg processing time: {stats['avg_processing_time']:.2f}s")
             # Note: Heartbeat stats are logged by keep_alive() utility
 
@@ -446,5 +446,5 @@ class QueueManager:
             Number of messages deleted
         """
         count = self.store.cleanup_old_messages(days)
-        logger.info(f"🗑️  Cleaned up {count} messages older than {days} days")
+        logger.info(f"  Cleaned up {count} messages older than {days} days")
         return count

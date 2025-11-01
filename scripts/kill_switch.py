@@ -19,7 +19,7 @@ def activate():
     """Activate kill switch - all agents will pause processing"""
     KILL_SWITCH_FILE.parent.mkdir(exist_ok=True)
     KILL_SWITCH_FILE.touch()
-    print("🛑 KILL SWITCH ACTIVATED")
+    print(" KILL SWITCH ACTIVATED")
     print("   All agents are now PAUSED")
     print("   Run 'python kill_switch.py off' to resume")
     print("   Run 'python kill_switch.py kill' to STOP all processes")
@@ -28,14 +28,14 @@ def deactivate():
     """Deactivate kill switch - agents will resume processing"""
     if KILL_SWITCH_FILE.exists():
         KILL_SWITCH_FILE.unlink()
-        print("✅ KILL SWITCH DEACTIVATED")
+        print(" KILL SWITCH DEACTIVATED")
         print("   Agents will resume processing")
     else:
-        print("ℹ️  Kill switch was already off")
+        print("ℹ  Kill switch was already off")
 
 def kill_all_monitors():
     """Kill all monitor processes immediately"""
-    print("🔪 KILLING ALL MONITORS...")
+    print(" KILLING ALL MONITORS...")
 
     try:
         # Kill all monitor processes
@@ -53,29 +53,29 @@ def kill_all_monitors():
         )
 
         if check.stdout.strip():
-            print("⚠️  Some monitors may still be running:")
+            print("  Some monitors may still be running:")
             print(check.stdout)
         else:
-            print("✅ All monitors killed - no processes burning money!")
+            print(" All monitors killed - no processes burning money!")
 
         # Also activate the kill switch to prevent restarts
         KILL_SWITCH_FILE.parent.mkdir(exist_ok=True)
         KILL_SWITCH_FILE.touch()
-        print("🛑 Kill switch activated to prevent restarts")
+        print(" Kill switch activated to prevent restarts")
 
     except Exception as e:
-        print(f"❌ Error killing monitors: {e}")
-        print("💡 Try manually: pkill -9 -f ax_agent_studio.monitors")
+        print(f" Error killing monitors: {e}")
+        print(" Try manually: pkill -9 -f ax_agent_studio.monitors")
 
 def status():
     """Check kill switch status and show running monitors"""
     if KILL_SWITCH_FILE.exists():
-        print("🛑 KILL SWITCH: ACTIVE (agents paused)")
+        print(" KILL SWITCH: ACTIVE (agents paused)")
     else:
-        print("✅ KILL SWITCH: INACTIVE (agents running)")
+        print(" KILL SWITCH: INACTIVE (agents running)")
 
     # Show running monitors
-    print("\n📊 Running monitors:")
+    print("\n Running monitors:")
     try:
         result = subprocess.run(
             ["pgrep", "-fl", "ax_agent_studio.monitors"],

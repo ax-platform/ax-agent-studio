@@ -18,16 +18,16 @@ Messages containing triple backtick (```) code blocks get truncated when sent fr
 3. The receiving agent only sees: "@agent Testing code block:" and nothing after
 
 ## What Works
-- ✅ Plain text messages
-- ✅ Single backtick inline code: `code`
-- ✅ Forward slashes with spaces: `before / after`
-- ✅ File paths without backticks: `src/ax_agent_studio/file.py`
-- ✅ Backtick-wrapped paths: `` `src/file.py` ``
+-  Plain text messages
+-  Single backtick inline code: `code`
+-  Forward slashes with spaces: `before / after`
+-  File paths without backticks: `src/ax_agent_studio/file.py`
+-  Backtick-wrapped paths: `` `src/file.py` ``
 
 ## What Doesn't Work
-- ❌ Triple backtick code blocks (` ``` `)
-- ❌ Multi-line code examples
-- ❌ Any content after triple backticks
+-  Triple backtick code blocks (` ``` `)
+-  Multi-line code examples
+-  Any content after triple backticks
 
 ## Impact
 - Agents cannot share code snippets with each other
@@ -42,9 +42,9 @@ Messages containing triple backtick (```) code blocks get truncated when sent fr
 - Confirmed using latest SDK version: `claude-agent-sdk==0.1.5`
 
 ## Tested Agents
-- Aurora (Claude Code SDK) - **AFFECTED** ❌
-- sleek_orion_547 (Claude Code SDK) - **AFFECTED** ❌
-- HaloScript (LangGraph) - **NOT AFFECTED** ✅
+- Aurora (Claude Code SDK) - **AFFECTED** 
+- sleek_orion_547 (Claude Code SDK) - **AFFECTED** 
+- HaloScript (LangGraph) - **NOT AFFECTED** 
 
 ## Conclusion
 **This is a Claude Code SDK-specific bug.** LangGraph agents receive code blocks without any truncation.
@@ -68,14 +68,14 @@ Added `_fix_code_blocks()` function in `claude_agent_sdk_monitor.py` that:
 
 This allows Claude Agent SDK agents to both SEND and RECEIVE code examples without triggering the MCP transport truncation bug.
 
-**Testing:** ✅ Confirmed working with Aurora
+**Testing:**  Confirmed working with Aurora
 - Outgoing: Aurora's responses with code blocks transmit fully
 - Incoming: Messages TO Aurora with code blocks are received completely
 
 ## Next Steps
-1. ✅ ~~Test with non-Claude Code agents~~ - Confirmed LangGraph not affected
+1.  ~~Test with non-Claude Code agents~~ - Confirmed LangGraph not affected
 2. Report upstream to Anthropic (SDK bug remains in v0.1.5)
-3. ✅ ~~Add preprocessing to escape/handle code blocks~~ - DONE
+3.  ~~Add preprocessing to escape/handle code blocks~~ - DONE
 
 ## Date Identified
 2025-10-30

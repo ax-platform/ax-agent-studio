@@ -37,7 +37,7 @@ try:
     from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, ToolMessage, BaseMessage
     from langchain_core.tools import tool
 except ImportError:
-    print("❌ Missing dependencies. Install with:")
+    print(" Missing dependencies. Install with:")
     print("   pip install langgraph langchain-core")
     sys.exit(1)
 
@@ -79,10 +79,10 @@ class MCPTools:
                     "action": "send",
                     "content": content
                 })
-                logger.info(f"✅ Sent message: {content}")
+                logger.info(f" Sent message: {content}")
                 return "Message sent successfully"
             except Exception as e:
-                logger.error(f"❌ Failed to send message: {e}")
+                logger.error(f" Failed to send message: {e}")
                 return f"Error sending message: {str(e)}"
 
         @tool
@@ -102,10 +102,10 @@ class MCPTools:
                     "description": description,
                     "priority": priority
                 })
-                logger.info(f"✅ Created task: {title}")
+                logger.info(f" Created task: {title}")
                 return f"Task created: {title}"
             except Exception as e:
-                logger.error(f"❌ Failed to create task: {e}")
+                logger.error(f" Failed to create task: {e}")
                 return f"Error creating task: {str(e)}"
 
         @tool
@@ -131,10 +131,10 @@ class MCPTools:
                 else:
                     search_results = str(content[0].text) if content else "No results found"
 
-                logger.info(f"✅ Search completed: {query}")
+                logger.info(f" Search completed: {query}")
                 return search_results
             except Exception as e:
-                logger.error(f"❌ Search failed: {e}")
+                logger.error(f" Search failed: {e}")
                 return f"Error searching: {str(e)}"
 
         @tool
@@ -159,10 +159,10 @@ class MCPTools:
                 else:
                     tasks_data = str(content[0].text) if content else "No tasks found"
 
-                logger.info(f"✅ Listed tasks: {filter_by}")
+                logger.info(f" Listed tasks: {filter_by}")
                 return tasks_data
             except Exception as e:
-                logger.error(f"❌ Failed to list tasks: {e}")
+                logger.error(f" Failed to list tasks: {e}")
                 return f"Error listing tasks: {str(e)}"
 
         return [send_message, create_task, search_messages, list_tasks]
@@ -191,7 +191,7 @@ class OllamaLangGraphAgent:
                     api_key="ollama"  # Required but unused
                 )
             except ImportError:
-                print("❌ Missing openai package. Install with: pip install openai")
+                print(" Missing openai package. Install with: pip install openai")
                 sys.exit(1)
 
         # Generate system prompt: agent identity + base context + tool list
@@ -199,7 +199,7 @@ class OllamaLangGraphAgent:
 
         # Add agent identity if provided - make it VERY prominent
         if agent_name:
-            identity = f"""🤖 YOUR IDENTITY 🤖
+            identity = f""" YOUR IDENTITY 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 YOU ARE: @{agent_name}
 YOUR USERNAME: {agent_name}
@@ -210,7 +210,7 @@ CRITICAL: When someone sends you a message, they are NOT you!
 - NEVER reply to yourself (@{agent_name})
 - ALWAYS reply to the person who messaged you
 
-🚨 IF YOU SEE YOUR OWN NAME AS THE SENDER: 🚨
+ IF YOU SEE YOUR OWN NAME AS THE SENDER: 
 - DO NOT respond at all
 - DO NOT say "I will ignore this"
 - DO NOT post anything
@@ -264,7 +264,7 @@ Always respond helpfully and use tools when appropriate. Be concise but thorough
                     cleaned.append(msg)
                 else:
                     # Orphaned tool_use - skip it
-                    logger.warning(f"🔧 Bedrock: Removed orphaned tool_use message at position {i}")
+                    logger.warning(f" Bedrock: Removed orphaned tool_use message at position {i}")
                     i += 1
                     continue
             # Check if this is an orphaned ToolMessage
@@ -274,7 +274,7 @@ Always respond helpfully and use tools when appropriate. Be concise but thorough
                     cleaned.append(msg)
                 else:
                     # Orphaned tool_result - skip it
-                    logger.warning(f"🔧 Bedrock: Removed orphaned tool_result message at position {i}")
+                    logger.warning(f" Bedrock: Removed orphaned tool_result message at position {i}")
                     i += 1
                     continue
             else:
@@ -322,7 +322,7 @@ Always respond helpfully and use tools when appropriate. Be concise but thorough
                     # AI cannot follow: AIMessage (need Human in between)
                     if isinstance(last, AIMessage) and not (hasattr(last, 'tool_calls') and last.tool_calls):
                         # Two AI messages in a row with no tool calls - skip this one
-                        logger.debug(f"🔧 Skipping duplicate AI message at position {i}")
+                        logger.debug(f" Skipping duplicate AI message at position {i}")
                         i += 1
                         continue
 
@@ -346,7 +346,7 @@ Always respond helpfully and use tools when appropriate. Be concise but thorough
                         continue
                     else:
                         # Orphaned tool call - remove it
-                        logger.debug(f"🔧 Removed orphaned tool call at position {i}")
+                        logger.debug(f" Removed orphaned tool call at position {i}")
                         i += 1
                         continue
 
@@ -360,7 +360,7 @@ Always respond helpfully and use tools when appropriate. Be concise but thorough
                     cleaned.append(msg)
                 else:
                     # Orphaned tool result
-                    logger.debug(f"🔧 Removed orphaned tool result at position {i}")
+                    logger.debug(f" Removed orphaned tool result at position {i}")
                     i += 1
                     continue
 
@@ -373,7 +373,7 @@ Always respond helpfully and use tools when appropriate. Be concise but thorough
         # Final check: ensure we don't end with orphaned tool calls
         if cleaned and isinstance(cleaned[-1], AIMessage) and hasattr(cleaned[-1], 'tool_calls') and cleaned[-1].tool_calls:
             # Remove trailing AI with tool calls if no results
-            logger.debug("🔧 Removed trailing AI message with orphaned tool calls")
+            logger.debug(" Removed trailing AI message with orphaned tool calls")
             cleaned = cleaned[:-1]
 
         return cleaned
@@ -392,7 +392,7 @@ Always respond helpfully and use tools when appropriate. Be concise but thorough
             tool_specs = self._get_tool_specs()
 
             try:
-                logger.info("🤔 Agent thinking...")
+                logger.info(" Agent thinking...")
 
                 # Use LangChain LLM if provided, otherwise fall back to OpenAI client
                 if hasattr(self, 'llm') and self.llm:
@@ -400,7 +400,7 @@ Always respond helpfully and use tools when appropriate. Be concise but thorough
                     # This handles strict providers (Gemini, Bedrock) without breaking lenient ones
                     messages_to_send = self._ensure_message_alternation(messages, self.provider)
                     if len(messages_to_send) != len(messages):
-                        logger.info(f"🔧 {self.provider}: Cleaned {len(messages)} → {len(messages_to_send)} messages for proper alternation")
+                        logger.info(f" {self.provider}: Cleaned {len(messages)} → {len(messages_to_send)} messages for proper alternation")
 
                     # LangChain interface
                     llm_with_tools = self.llm.bind_tools(self.tools) if self.tools else self.llm
@@ -448,7 +448,7 @@ Always respond helpfully and use tools when appropriate. Be concise but thorough
                 }
 
             except Exception as e:
-                logger.error(f"❌ Model call failed: {e}")
+                logger.error(f" Model call failed: {e}")
                 error_msg = AIMessage(content=f"Error: {str(e)}")
                 return {
                     "messages": list(messages) + [error_msg],
@@ -491,7 +491,7 @@ Always respond helpfully and use tools when appropriate. Be concise but thorough
                 tool_name = tool_call["function"]["name"]
                 tool_args = json.loads(tool_call["function"]["arguments"])
 
-                logger.info(f"🔧 Calling tool: {tool_name}({tool_args})")
+                logger.info(f" Calling tool: {tool_name}({tool_args})")
 
                 # Find and execute the tool
                 tool_result = await self._execute_tool(tool_name, tool_args)
@@ -669,7 +669,7 @@ Always respond helpfully and use tools when appropriate. Be concise but thorough
                     result = await tool_func.ainvoke(tool_args)
                     return str(result)
                 except Exception as e:
-                    logger.error(f"❌ Tool execution failed: {e}")
+                    logger.error(f" Tool execution failed: {e}")
                     return f"Tool execution failed: {str(e)}"
 
         return f"Tool '{tool_name}' not found"
@@ -691,7 +691,7 @@ Always respond helpfully and use tools when appropriate. Be concise but thorough
         }
 
         # Run the graph
-        logger.info("🚀 Running LangGraph workflow...")
+        logger.info(" Running LangGraph workflow...")
         result_state = await self.graph.ainvoke(state)
 
         # Extract final response
@@ -699,7 +699,7 @@ Always respond helpfully and use tools when appropriate. Be concise but thorough
         ai_response = None
 
         # Debug: log all messages
-        logger.info(f"📋 Workflow returned {len(final_messages)} messages")
+        logger.info(f" Workflow returned {len(final_messages)} messages")
         for i, msg in enumerate(final_messages):
             logger.info(f"  Message {i}: {type(msg).__name__} - content={bool(msg.content)}")
             if isinstance(msg, AIMessage):
@@ -711,7 +711,7 @@ Always respond helpfully and use tools when appropriate. Be concise but thorough
                 break
 
         if not ai_response:
-            logger.warning("⚠️  No AIMessage with content found in workflow result")
+            logger.warning("  No AIMessage with content found in workflow result")
             ai_response = "I apologize, but I couldn't generate a response."
         else:
             # Normalize response format (handle both string and complex list formats)
@@ -764,7 +764,7 @@ async def langgraph_mcp_monitor(agent_name: str, model: str = "gpt-oss:latest", 
         history_limit: Number of recent messages to remember (default: 25)
     """
 
-    print(f"🤖 LangGraph MCP Monitor starting")
+    print(f" LangGraph MCP Monitor starting")
     print(f"   Agent: @{agent_name}")
     print(f"   Provider: {provider}")
     print(f"   Model: {model}")
@@ -776,14 +776,14 @@ async def langgraph_mcp_monitor(agent_name: str, model: str = "gpt-oss:latest", 
         import os
         if os.getenv("AGENT_SYSTEM_PROMPT"):
             base_prompt = os.getenv("AGENT_SYSTEM_PROMPT")
-            print("✅ Using custom system prompt from environment\n")
+            print(" Using custom system prompt from environment\n")
         elif hasattr(args, 'system_prompt') and args.system_prompt:
             base_prompt = args.system_prompt
-            print("✅ Using custom system prompt from command line\n")
+            print(" Using custom system prompt from command line\n")
         else:
             base_prompt = load_base_prompt()
             if base_prompt:
-                print("✅ Loaded base system prompt with AI self-awareness\n")
+                print(" Loaded base system prompt with AI self-awareness\n")
 
         # Use MCPServerManager to connect to all servers in config
         async with MCPServerManager(agent_name) as mcp_manager:
@@ -791,14 +791,14 @@ async def langgraph_mcp_monitor(agent_name: str, model: str = "gpt-oss:latest", 
             primary_session = mcp_manager.get_primary_session()
 
             # Create dynamic tools from all servers
-            print("🔧 Creating tools from all MCP servers...")
+            print(" Creating tools from all MCP servers...")
             tools = await mcp_manager.create_langchain_tools()
-            print(f"✅ Created {len(tools)} tools from {len(mcp_manager.sessions)} servers\n")
+            print(f" Created {len(tools)} tools from {len(mcp_manager.sessions)} servers\n")
 
             # Create LLM using provider factory
             from ax_agent_studio.llm_factory import create_llm
             llm = create_llm(provider=provider, model=model)
-            print(f"✅ Created {provider} LLM: {model}\n")
+            print(f" Created {provider} LLM: {model}\n")
 
             # Create LangGraph agent with all tools and base prompt
             agent = OllamaLangGraphAgent(
@@ -819,10 +819,10 @@ async def langgraph_mcp_monitor(agent_name: str, model: str = "gpt-oss:latest", 
 
                 # SAFETY CHECK: Block self-mentions at handler level
                 if sender == agent_name:
-                    logger.warning(f"⚠️  HANDLER BLOCKING SELF-MENTION: sender={sender}, agent={agent_name}")
+                    logger.warning(f"  HANDLER BLOCKING SELF-MENTION: sender={sender}, agent={agent_name}")
                     return ""  # Return empty string = don't post anything
 
-                logger.info(f"🤔 Processing message from {sender} with LangGraph + {provider}...")
+                logger.info(f" Processing message from {sender} with LangGraph + {provider}...")
 
                 # Include sender context and message ID in the message
                 # Message ID allows agents to react/thread without asking
@@ -836,10 +836,10 @@ async def langgraph_mcp_monitor(agent_name: str, model: str = "gpt-oss:latest", 
                 if f"@{agent_name}" in response:
                     # Remove @ from self-mentions only (keep @ for other mentions)
                     response = response.replace(f"@{agent_name}", agent_name)
-                    logger.info(f"✅ Stripped @ from self-mention: @{agent_name} → {agent_name}")
+                    logger.info(f" Stripped @ from self-mention: @{agent_name} → {agent_name}")
 
                 # Log the full response (VERBOSE)
-                logger.info(f"💬 RESPONSE:\n{response}")
+                logger.info(f" RESPONSE:\n{response}")
 
                 return response
 
@@ -857,13 +857,13 @@ async def langgraph_mcp_monitor(agent_name: str, model: str = "gpt-oss:latest", 
                 heartbeat_interval=monitor_config.get("heartbeat_interval", 240)
             )
 
-            print("🚀 Starting FIFO queue manager...\n")
+            print(" Starting FIFO queue manager...\n")
             await queue_mgr.run()
 
     except KeyboardInterrupt:
-        print("\n\n🛑 LangGraph monitor stopped by user")
+        print("\n\n LangGraph monitor stopped by user")
     except Exception as e:
-        logger.error(f"❌ Error: {e}")
+        logger.error(f" Error: {e}")
         import traceback
         traceback.print_exc()
 
@@ -897,9 +897,9 @@ if __name__ == "__main__":
             ollama_base_url = ollama_config.get("base_url", "http://localhost:11434/v1")
             client = OpenAI(base_url=ollama_base_url, api_key="ollama")
             models = client.models.list()
-            print(f"✅ Ollama is running at {ollama_base_url}")
+            print(f" Ollama is running at {ollama_base_url}")
         except Exception as e:
-            print("❌ Ollama not running or not accessible")
+            print(" Ollama not running or not accessible")
             print("   Start Ollama with: ollama serve")
             print(f"   Error: {e}")
             sys.exit(1)

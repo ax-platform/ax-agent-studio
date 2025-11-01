@@ -5,11 +5,11 @@ Run local, open-source LLMs with full privacy and MCP integration.
 ## Overview
 
 Ollama enables running LLMs locally:
-- ✅ Complete privacy (no external API calls)
-- ✅ Offline operation
-- ✅ Custom/fine-tuned models
-- ✅ MCP tool integration
-- ✅ OpenAI-compatible API
+-  Complete privacy (no external API calls)
+-  Offline operation
+-  Custom/fine-tuned models
+-  MCP tool integration
+-  OpenAI-compatible API
 
 **When to Use:**
 - Privacy-sensitive applications

@@ -286,7 +286,7 @@ if __name__ == "__main__":
             msg_id = "demo-msg"
             content = "@lunar @orion @rigelz Build an app!"
 
-            print("✅ Testing multi-agent message storage...")
+            print(" Testing multi-agent message storage...")
             store.store_message(msg_id, "lunar_craft_128", "coordinator", content)
             store.store_message(msg_id, "orion_344", "coordinator", content)
             store.store_message(msg_id, "rigelz_334", "coordinator", content)
@@ -299,10 +299,10 @@ if __name__ == "__main__":
             assert len(orion_msgs) == 1, f"Expected 1 message for orion, got {len(orion_msgs)}"
             assert len(rigelz_msgs) == 1, f"Expected 1 message for rigelz, got {len(rigelz_msgs)}"
 
-            print("✅ All 3 agents received the message!")
+            print(" All 3 agents received the message!")
 
             # Test processing independence
-            print("✅ Testing processing independence...")
+            print(" Testing processing independence...")
             store.mark_processing_started(msg_id, "lunar_craft_128")
             store.mark_processed(msg_id, "lunar_craft_128")
 
@@ -314,8 +314,8 @@ if __name__ == "__main__":
             assert len(orion_msgs) == 1, "orion should still have 1 message"
             assert len(rigelz_msgs) == 1, "rigelz should still have 1 message"
 
-            print("✅ Processing one agent doesn't affect others!")
-            print("\n🎉 All basic tests passed!")
+            print(" Processing one agent doesn't affect others!")
+            print("\n All basic tests passed!")
 
         finally:
             Path(db_path).unlink(missing_ok=True)

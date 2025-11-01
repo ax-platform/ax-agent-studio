@@ -50,18 +50,18 @@ class TestMessageParser:
                 messages_data = str(result.content[0])
 
             if not messages_data:
-                print("❌ Empty messages_data")
+                print(" Empty messages_data")
                 return None
 
             # Skip status messages
             if "WAIT SUCCESS" in messages_data or "No mentions" in messages_data:
-                print(f"⏭️  Skipping status message: {messages_data[:100]}")
+                print(f"⏭  Skipping status message: {messages_data[:100]}")
                 return None
 
             # Extract message ID from [id:xxxxxxxx] tags
             message_id_match = re.search(r'\[id:([a-f0-9-]+)\]', messages_data)
             if not message_id_match:
-                print("❌ No message ID found in response")
+                print(" No message ID found in response")
                 return None
 
             message_id = message_id_match.group(1)
@@ -69,23 +69,23 @@ class TestMessageParser:
             # Verify there's an actual mention
             mention_match = re.search(r'• ([^:]+): (@\S+)\s+(.+)', messages_data)
             if not mention_match:
-                print("⏭️  No actual mentions in response")
+                print("⏭  No actual mentions in response")
                 return None
 
             # Verify THIS agent is mentioned
             if f"@{self.agent_name}" not in messages_data:
-                print(f"⏭️  Message doesn't mention @{self.agent_name}")
+                print(f"⏭  Message doesn't mention @{self.agent_name}")
                 return None
 
             # Extract sender
             sender = mention_match.group(1)
 
             # DEBUG: Print what we extracted
-            print(f"🔍 DEBUG: Extracted sender='{sender}', agent_name='{self.agent_name}'")
+            print(f" DEBUG: Extracted sender='{sender}', agent_name='{self.agent_name}'")
 
             # Skip self-mentions (agent mentioning themselves)
             if sender == self.agent_name:
-                print(f"⏭️  Skipping self-mention from {sender}")
+                print(f"⏭  Skipping self-mention from {sender}")
                 return None
 
             # Full content includes the mention pattern
@@ -94,7 +94,7 @@ class TestMessageParser:
             return (message_id, sender, content)
 
         except Exception as e:
-            print(f"❌ Error parsing message: {e}")
+            print(f" Error parsing message: {e}")
             return None
 
 
@@ -115,13 +115,13 @@ def test_normal_message():
 
     if result:
         msg_id, sender, content = result
-        print(f"✅ PASS: Parsed message")
+        print(f" PASS: Parsed message")
         print(f"   Message ID: {msg_id}")
         print(f"   Sender: {sender}")
         print(f"   Expected sender: madtank")
         assert sender == "madtank", f"Expected sender 'madtank', got '{sender}'"
     else:
-        print("❌ FAIL: Message was None (should have been parsed)")
+        print(" FAIL: Message was None (should have been parsed)")
         assert False
 
 
@@ -141,10 +141,10 @@ def test_self_mention():
     result = parser._parse_message_from_result(mock_result)
 
     if result is None:
-        print("✅ PASS: Self-mention was correctly skipped")
+        print(" PASS: Self-mention was correctly skipped")
     else:
         msg_id, sender, content = result
-        print(f"❌ FAIL: Self-mention was NOT skipped!")
+        print(f" FAIL: Self-mention was NOT skipped!")
         print(f"   Sender: {sender}")
         assert False
 
@@ -166,12 +166,12 @@ def test_agent_to_agent():
 
     if result:
         msg_id, sender, content = result
-        print(f"✅ PASS: Parsed agent-to-agent message")
+        print(f" PASS: Parsed agent-to-agent message")
         print(f"   Sender: {sender}")
         print(f"   Expected sender: orion_344")
         assert sender == "orion_344", f"Expected sender 'orion_344', got '{sender}'"
     else:
-        print("❌ FAIL: Message was None (should have been parsed)")
+        print(" FAIL: Message was None (should have been parsed)")
         assert False
 
 
@@ -191,10 +191,10 @@ def test_wrong_agent_mentioned():
     result = parser._parse_message_from_result(mock_result)
 
     if result is None:
-        print("✅ PASS: Message for different agent was correctly skipped")
+        print(" PASS: Message for different agent was correctly skipped")
     else:
         msg_id, sender, content = result
-        print(f"❌ FAIL: Message for different agent was NOT skipped!")
+        print(f" FAIL: Message for different agent was NOT skipped!")
         print(f"   Content: {content}")
         assert False
 
@@ -220,20 +220,20 @@ def test_sender_extraction():
         if result:
             msg_id, sender, content = result
             if sender == expected_sender:
-                print(f"✅ PASS: Correctly extracted sender '{sender}'")
+                print(f" PASS: Correctly extracted sender '{sender}'")
             else:
-                print(f"❌ FAIL: Expected '{expected_sender}', got '{sender}'")
+                print(f" FAIL: Expected '{expected_sender}', got '{sender}'")
                 assert False
         else:
-            print(f"❌ FAIL: Failed to parse message: {message}")
+            print(f" FAIL: Failed to parse message: {message}")
             assert False
 
 
 def run_all_tests():
     """Run all tests"""
-    print("\n" + "🧪 "*20)
+    print("\n" + " "*20)
     print("MESSAGE PARSING E2E TESTS")
-    print("🧪 "*20)
+    print(" "*20)
 
     try:
         test_normal_message()
@@ -243,12 +243,12 @@ def run_all_tests():
         test_sender_extraction()
 
         print("\n" + "="*60)
-        print("✅ ALL TESTS PASSED!")
+        print(" ALL TESTS PASSED!")
         print("="*60)
 
     except AssertionError as e:
         print("\n" + "="*60)
-        print("❌ TESTS FAILED!")
+        print(" TESTS FAILED!")
         print("="*60)
         raise
 

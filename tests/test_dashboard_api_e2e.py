@@ -192,10 +192,10 @@ class TestAgentTypeRequirements:
 async def run_api_tests():
     """Run all dashboard API tests"""
     print("\n" + "="*60)
-    print("🧪 Dashboard API E2E Test Suite")
+    print(" Dashboard API E2E Test Suite")
     print("="*60)
 
-    print("\nℹ️  Testing against:", DASHBOARD_URL)
+    print("\nℹ  Testing against:", DASHBOARD_URL)
     print("   Make sure the dashboard is running: uv run dashboard")
 
     # Check if dashboard is running
@@ -203,14 +203,14 @@ async def run_api_tests():
         try:
             response = await client.get("/api/health")
             if response.status_code != 200:
-                print("\n❌ Dashboard is not responding. Start it with: uv run dashboard")
+                print("\n Dashboard is not responding. Start it with: uv run dashboard")
                 return 1
         except Exception as e:
-            print(f"\n❌ Cannot connect to dashboard: {e}")
+            print(f"\n Cannot connect to dashboard: {e}")
             print("   Start it with: uv run dashboard")
             return 1
 
-    print("\n✅ Dashboard is running\n")
+    print("\n Dashboard is running\n")
 
     # Run pytest programmatically
     import pytest
