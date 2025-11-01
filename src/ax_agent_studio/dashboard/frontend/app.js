@@ -376,6 +376,42 @@ async function startMonitor() {
         return;
     }
 
+    // Check if an agent with this name is already running
+    const existingMonitor = monitors.find(m => m.agent_name === config.agent_name && m.status === 'running');
+    if (existingMonitor) {
+        // Show confirmation dialog
+        const confirmed = confirm(
+            `⚠️ REPLACE EXISTING AGENT?\n\n` +
+            `An agent named "${config.agent_name}" is already running.\n\n` +
+            `Deploying this agent will:\n` +
+            `• Stop the current agent\n` +
+            `• Clear its state and history\n` +
+            `• Start a fresh instance with new settings\n\n` +
+            `Do you want to replace the existing agent?`
+        );
+
+        if (!confirmed) {
+            showNotification('Deployment cancelled - agent already running', 'info');
+            return;
+        }
+
+        // User confirmed - proceed with stopping the old one first
+        showNotification(`Stopping existing agent: ${config.agent_name}...`, 'info');
+        try {
+            await fetch(`${API_BASE}/api/monitors/stop`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ monitor_id: existingMonitor.id })
+            });
+            // Small delay to let the old monitor fully stop
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        } catch (error) {
+            console.error('Error stopping existing monitor:', error);
+            showNotification('Failed to stop existing agent', 'error');
+            return;
+        }
+    }
+
     // Get the actual prompt content from the selected prompt file
     let systemPromptContent = null;
     let systemPromptName = null;

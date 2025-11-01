@@ -304,6 +304,107 @@ def test_default_agent_type():
             browser.close()
 
 
+def test_duplicate_agent_warning():
+    """Test that deploying a duplicate agent shows a warning dialog"""
+    print("\n" + "="*60)
+    print("⚠️  Testing Duplicate Agent Warning")
+    print("="*60)
+    print("Expected: Confirmation dialog when deploying agent with same name")
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
+
+        try:
+            page.goto('http://localhost:8000')
+            page.wait_for_load_state('networkidle')
+            page.wait_for_timeout(1000)
+
+            # Set up dialog handler to capture the confirmation dialog
+            dialog_shown = {"value": False, "message": ""}
+
+            def handle_dialog(dialog):
+                dialog_shown["value"] = True
+                dialog_shown["message"] = dialog.message
+                # Dismiss the dialog (equivalent to clicking "No")
+                dialog.dismiss()
+
+            page.on("dialog", handle_dialog)
+
+            # Select Echo agent type (simplest - no model needed)
+            page.select_option('#monitor-type-select', 'echo')
+            page.wait_for_timeout(500)
+
+            # Select an agent to deploy
+            agent_select = page.locator('#agent-select')
+            agent_options = agent_select.locator('option').all_inner_texts()
+
+            if not agent_options or len(agent_options) == 0:
+                print("   ⚠️  No agents configured, skipping test")
+                return None
+
+            # Select first agent
+            page.select_option('#agent-select', index=0)
+            page.wait_for_timeout(500)
+
+            # Get the selected agent name
+            selected_value = agent_select.input_value()
+            print(f"   Selected agent: {selected_value}")
+
+            # Check if this agent is already running
+            import httpx
+            monitors_response = httpx.get("http://localhost:8000/api/monitors", timeout=5.0)
+            monitors_data = monitors_response.json()
+            running_monitors = [m for m in monitors_data["monitors"] if m["status"] == "running"]
+
+            # Get agent name from config
+            configs_response = httpx.get("http://localhost:8000/api/configs", timeout=5.0)
+            configs_data = configs_response.json()
+            selected_config = next((c for c in configs_data["configs"] if c["path"] == selected_value), None)
+
+            if not selected_config:
+                print("   ⚠️  Could not find agent config, skipping test")
+                return None
+
+            agent_name = selected_config["agent_name"]
+            is_running = any(m["agent_name"] == agent_name for m in running_monitors)
+
+            if is_running:
+                print(f"   Agent '{agent_name}' is already running - dialog should appear")
+
+                # Click deploy button - should trigger dialog
+                page.click('button:has-text("Deploy Agent")')
+                page.wait_for_timeout(500)
+
+                # Verify dialog was shown
+                assert dialog_shown["value"], "Confirmation dialog should be shown for duplicate agent"
+                assert "REPLACE EXISTING AGENT" in dialog_shown["message"], \
+                    "Dialog should mention replacing existing agent"
+                assert agent_name in dialog_shown["message"], \
+                    f"Dialog should mention the agent name: {agent_name}"
+
+                print(f"   ✓ Confirmation dialog shown")
+                print(f"   ✓ Dialog message mentions 'REPLACE EXISTING AGENT'")
+                print(f"   ✓ Dialog message includes agent name")
+
+            else:
+                print(f"   Agent '{agent_name}' is not running - no dialog expected (test skipped)")
+                return None
+
+            # Take screenshot
+            page.screenshot(path='/tmp/duplicate_agent_warning.png')
+
+            print("\n✅ Duplicate agent warning test PASSED")
+            return True
+
+        except Exception as e:
+            print(f"\n❌ Duplicate agent warning test FAILED: {e}")
+            page.screenshot(path='/tmp/duplicate_agent_warning_error.png')
+            return False
+        finally:
+            browser.close()
+
+
 def main():
     """Run all dashboard UI tests"""
     print("\n" + "="*60)
@@ -334,6 +435,7 @@ def main():
         "Claude Agent SDK UI": test_claude_agent_sdk_ui(),
         "LangGraph Agent UI": test_langgraph_agent_ui(),
         "Default Agent Type": test_default_agent_type(),
+        "Duplicate Agent Warning": test_duplicate_agent_warning(),
     }
 
     # Summary
@@ -356,9 +458,10 @@ def main():
         print("  - claude_sdk_agent.png")
         print("  - langgraph_agent.png")
         print("  - default_agent_type.png")
+        print("  - duplicate_agent_warning.png (if test ran)")
         return 0
     else:
-        print("\n⚠️  Some tests failed. Check screenshots in /tmp/")
+        print("\n⚠️  Some tests failed or were skipped. Check screenshots in /tmp/")
         return 1
 
 
