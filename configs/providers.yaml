@@ -68,15 +68,18 @@ providers:
     class: "ChatAnthropic"
     env_var: "ANTHROPIC_API_KEY"
     requires_api_key: true
-    default_model: "claude-haiku-4-5"
+    # Default model for Claude Agent SDK
+    # Options: claude-sonnet-4-5 (most capable) | claude-haiku-4-5 (faster, cheaper)
+    default_model: "claude-sonnet-4-5"
     models:
-      - id: "claude-haiku-4-5"
-        name: "Claude Haiku 4.5 ⚡"
-        description: "Latest fast model - $1/M in, $5/M out"
-        recommended: true
+      # Recommended for Claude Agent SDK
       - id: "claude-sonnet-4-5"
         name: "Claude Sonnet 4.5"
         description: "Most capable Claude model"
+        recommended: true
+      - id: "claude-haiku-4-5"
+        name: "Claude Haiku 4.5 ⚡"
+        description: "Latest fast model - $1/M in, $5/M out"
         recommended: true
       - id: "claude-3-5-haiku-latest"
         name: "Claude 3.5 Haiku (Legacy)"

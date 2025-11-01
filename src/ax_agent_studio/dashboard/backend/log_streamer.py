@@ -7,6 +7,7 @@ import asyncio
 from pathlib import Path
 from typing import Optional
 from fastapi import WebSocket
+from starlette.websockets import WebSocketDisconnect
 import aiofiles
 
 
@@ -17,50 +18,18 @@ class LogStreamer:
 
     async def stream_logs(self, websocket: WebSocket, monitor_id: str):
         """Stream logs for a specific monitor via WebSocket"""
-        log_file = self.log_dir / f"{monitor_id}.log"
-
-        if not log_file.exists():
-            await websocket.send_json({
-                "type": "error",
-                "message": f"Log file not found for monitor {monitor_id}"
-            })
-            return
-
-        # Send existing logs first
         try:
-            async with aiofiles.open(log_file, 'r') as f:
-                content = await f.read()
-                if content:
-                    await websocket.send_json({
-                        "type": "log",
-                        "monitor_id": monitor_id,
-                        "content": content
-                    })
-        except Exception as e:
-            await websocket.send_json({
-                "type": "error",
-                "message": f"Error reading log file: {e}"
-            })
-            return
+            log_file = self.log_dir / f"{monitor_id}.log"
 
-        # Tail new logs
-        await self._tail_log_file(websocket, log_file, monitor_id)
+            if not log_file.exists():
+                await websocket.send_json({
+                    "type": "error",
+                    "message": f"Log file not found for monitor {monitor_id}"
+                })
+                return
 
-    async def stream_all_logs(self, websocket: WebSocket):
-        """Stream logs from all monitors via WebSocket"""
-        # Get all log files
-        log_files = list(self.log_dir.glob("*.log"))
-
-        if not log_files:
-            await websocket.send_json({
-                "type": "info",
-                "message": "No log files found"
-            })
-
-        # Send existing logs from all files
-        for log_file in log_files:
+            # Send existing logs first
             try:
-                monitor_id = log_file.stem
                 async with aiofiles.open(log_file, 'r') as f:
                     content = await f.read()
                     if content:
@@ -70,15 +39,55 @@ class LogStreamer:
                             "content": content
                         })
             except Exception as e:
-                print(f"Error reading {log_file}: {e}")
+                await websocket.send_json({
+                    "type": "error",
+                    "message": f"Error reading log file: {e}"
+                })
+                return
 
-        # Tail all log files concurrently
-        tasks = [
-            self._tail_log_file(websocket, log_file, log_file.stem)
-            for log_file in log_files
-        ]
+            # Tail new logs
+            await self._tail_log_file(websocket, log_file, monitor_id)
+        except WebSocketDisconnect:
+            # Client disconnected - exit quietly
+            return
 
-        await asyncio.gather(*tasks, return_exceptions=True)
+    async def stream_all_logs(self, websocket: WebSocket):
+        """Stream logs from all monitors via WebSocket"""
+        try:
+            # Get all log files
+            log_files = list(self.log_dir.glob("*.log"))
+
+            if not log_files:
+                await websocket.send_json({
+                    "type": "info",
+                    "message": "No log files found"
+                })
+
+            # Send existing logs from all files
+            for log_file in log_files:
+                try:
+                    monitor_id = log_file.stem
+                    async with aiofiles.open(log_file, 'r') as f:
+                        content = await f.read()
+                        if content:
+                            await websocket.send_json({
+                                "type": "log",
+                                "monitor_id": monitor_id,
+                                "content": content
+                            })
+                except Exception as e:
+                    print(f"Error reading {log_file}: {e}")
+
+            # Tail all log files concurrently
+            tasks = [
+                self._tail_log_file(websocket, log_file, log_file.stem)
+                for log_file in log_files
+            ]
+
+            await asyncio.gather(*tasks, return_exceptions=True)
+        except WebSocketDisconnect:
+            # Client disconnected - exit quietly
+            return
 
     async def _tail_log_file(self, websocket: WebSocket, log_file: Path, monitor_id: str):
         """Tail a log file and send new lines via WebSocket"""
@@ -140,6 +149,9 @@ class LogStreamer:
             return
         except asyncio.CancelledError:
             # Task cancelled during shutdown - exit quietly
+            return
+        except WebSocketDisconnect:
+            # Client disconnected (browser closed, network issue) - exit quietly
             return
         except Exception as e:
             # Only print non-file-related errors

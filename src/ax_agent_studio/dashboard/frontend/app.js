@@ -28,21 +28,20 @@ const escapeAttr = (value) => String(value)
 
 // Initialize dashboard
 document.addEventListener('DOMContentLoaded', async () => {
+    // Setup event listeners FIRST so they're ready when defaults load
+    setupEventListeners();
+
     await loadEnvironments();
     await loadConfigs();
-    await loadProviders();
+    await loadProviders(); // This will set default agent type and trigger UI update
     await loadPrompts();
     await loadDeploymentGroups();
     await loadMonitors();
     await updateKillSwitchButton(); // Check initial kill switch state
     initializeWebSocket();
-    setupEventListeners();
 
-    // Show provider/model groups by default (LangGraph is default)
-    document.getElementById('provider-group').style.display = 'block';
-    document.getElementById('model-group').style.display = 'block';
-    document.getElementById('system-prompt-group').style.display = 'block';
-    // history-limit-group disabled - needs server-side support
+    // Note: Don't manually show/hide groups here - let the monitor type change handler do it
+    // This ensures the UI is always in sync with the selected monitor type
 
     // Refresh monitors and kill switch state every 5 seconds
     setInterval(async () => {
@@ -82,9 +81,11 @@ function setupEventListeners() {
 
         const selectedType = e.target.value;
 
-        // Only Echo monitor doesn't need any configuration
-        // - Ollama needs: model selection (uses Ollama provider implicitly)
-        // - LangGraph/Claude Agent SDK need: provider, model, and optional system prompt
+        // Each monitor type has different configuration needs:
+        // - Echo: no configuration (simple passthrough)
+        // - Ollama: model only (provider is implicit)
+        // - Claude Agent SDK: model only (uses Claude models directly, no provider)
+        // - LangGraph: provider + model (supports multiple LLM providers)
         if (selectedType === 'echo') {
             // Echo: simple pass-through, no AI configuration needed
             providerGroup.style.display = 'none';
@@ -97,23 +98,18 @@ function setupEventListeners() {
             systemPromptGroup.style.display = 'block';
             // Load Ollama models when Ollama monitor is selected
             await loadModelsForProvider('ollama');
+        } else if (selectedType === 'claude_agent_sdk') {
+            // Claude Agent SDK: needs model (Claude only), no provider selection
+            providerGroup.style.display = 'none';
+            modelGroup.style.display = 'block';
+            systemPromptGroup.style.display = 'block';
+            // Load Claude models (use anthropic provider backend)
+            await loadModelsForProvider('anthropic');
         } else {
-            // LangGraph/Claude Agent SDK: needs all options (provider, model, system prompt)
+            // LangGraph: needs provider + model selection
             providerGroup.style.display = 'block';
             modelGroup.style.display = 'block';
             systemPromptGroup.style.display = 'block';
-
-            // Claude Agent SDK prefers Anthropic provider
-            if (selectedType === 'claude_agent_sdk') {
-                const providerSelect = document.getElementById('provider-select');
-                const hasAnthropic = Array.from(providerSelect.options).some(opt => opt.value === 'anthropic');
-                if (hasAnthropic) {
-                    providerSelect.value = 'anthropic';
-                    selectedProvider = 'anthropic';
-                } else {
-                    selectedProvider = providerSelect.value;
-                }
-            }
 
             // Load models for currently selected provider
             await loadModelsForProvider(selectedProvider);
@@ -229,6 +225,9 @@ async function loadConfigsForEnvironment(environment) {
         const config = configs.find(c => c.path === e.target.value);
         if (config) updateAgentHelp(config);
     };
+
+    // Update test sender dropdown with available agents
+    updateTestSenderOptions();
 }
 
 function updateAgentHelp(config) {
@@ -238,6 +237,38 @@ function updateAgentHelp(config) {
     } else {
         helpText.textContent = '';
     }
+}
+
+function updateTestSenderOptions() {
+    const testSenderSelect = document.getElementById('test-sender-select');
+    if (!testSenderSelect) return;
+
+    // Get all unique agent names from configs
+    const agentNames = [...new Set(configs.map(c => c.agent_name))].sort();
+
+    // Build options
+    let options = '<option value="">Auto (first available)</option>';
+    agentNames.forEach(name => {
+        options += `<option value="${name}">${name}</option>`;
+    });
+
+    testSenderSelect.innerHTML = options;
+
+    // Restore saved preference from localStorage
+    const savedTestSender = localStorage.getItem('testSenderAgent');
+    if (savedTestSender && agentNames.includes(savedTestSender)) {
+        testSenderSelect.value = savedTestSender;
+    }
+
+    // Save preference on change
+    testSenderSelect.onchange = (e) => {
+        const selectedAgent = e.target.value;
+        if (selectedAgent) {
+            localStorage.setItem('testSenderAgent', selectedAgent);
+        } else {
+            localStorage.removeItem('testSenderAgent');
+        }
+    };
 }
 
 // Removed demo functionality - focus on Agent Factory core features
@@ -269,8 +300,20 @@ async function loadProviders() {
             select.value = defaults.provider;
         }
 
-        // Load models for default provider
-        await loadModelsForProvider(selectedProvider);
+        // Set default agent type (claude_agent_sdk, langgraph, ollama, or echo)
+        if (defaults.agent_type) {
+            const monitorTypeSelect = document.getElementById('monitor-type-select');
+            if (monitorTypeSelect) {
+                monitorTypeSelect.value = defaults.agent_type;
+                // Trigger the change event to update UI accordingly
+                // The change handler will load the appropriate models, so we skip the
+                // loadModelsForProvider call below to avoid overwriting them
+                monitorTypeSelect.dispatchEvent(new Event('change'));
+            }
+        } else {
+            // No default agent type set, load models for default provider
+            await loadModelsForProvider(selectedProvider);
+        }
 
     } catch (error) {
         console.error('Error loading providers:', error);
@@ -368,6 +411,48 @@ async function startMonitor() {
         return;
     }
 
+    // Check if an agent with this name is already running in the SAME environment with SAME type
+    // This prevents accidentally stopping production agents when deploying dev agents with same name
+    const existingMonitor = monitors.find(m =>
+        m.agent_name === config.agent_name &&
+        m.status === 'running' &&
+        m.environment === selectedEnvironment &&
+        m.monitor_type === monitorType
+    );
+    if (existingMonitor) {
+        // Show confirmation dialog
+        const confirmed = confirm(
+            `⚠️ REPLACE EXISTING AGENT?\n\n` +
+            `An agent named "${config.agent_name}" is already running in ${selectedEnvironment}.\n\n` +
+            `Deploying this agent will:\n` +
+            `• Stop the current ${monitorType} agent\n` +
+            `• Clear its state and history\n` +
+            `• Start a fresh instance with new settings\n\n` +
+            `Do you want to replace the existing agent?`
+        );
+
+        if (!confirmed) {
+            showNotification('Deployment cancelled - agent already running', 'info');
+            return;
+        }
+
+        // User confirmed - proceed with stopping the old one first
+        showNotification(`Stopping existing agent: ${config.agent_name}...`, 'info');
+        try {
+            await fetch(`${API_BASE}/api/monitors/stop`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ monitor_id: existingMonitor.id })
+            });
+            // Small delay to let the old monitor fully stop
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        } catch (error) {
+            console.error('Error stopping existing monitor:', error);
+            showNotification('Failed to stop existing agent', 'error');
+            return;
+        }
+    }
+
     // Get the actual prompt content from the selected prompt file
     let systemPromptContent = null;
     let systemPromptName = null;
@@ -379,6 +464,14 @@ async function startMonitor() {
         }
     }
 
+    // Determine which monitors need provider/model
+    // Echo: no provider, no model
+    // Ollama: no provider (implicit), yes model
+    // Claude Agent SDK: no provider (uses Anthropic implicitly), yes model
+    // LangGraph: yes provider, yes model
+    const needsProvider = monitorType === 'langgraph';
+    const needsModel = monitorType !== 'echo';
+
     try {
         const response = await fetch(`${API_BASE}/api/monitors/start`, {
             method: 'POST',
@@ -388,11 +481,11 @@ async function startMonitor() {
                     agent_name: config.agent_name,
                     config_path: configPath,
                     monitor_type: monitorType,
-                    provider: monitorType !== 'echo' ? provider : null,
-                    model: monitorType !== 'echo' ? model : null,
+                    provider: needsProvider ? provider : null,
+                    model: needsModel ? model : null,
                     system_prompt: systemPromptContent,
                     system_prompt_name: systemPromptName,
-                    history_limit: monitorType !== 'echo' ? historyLimit : null
+                    history_limit: needsModel ? historyLimit : null
                 }
             })
         });
@@ -632,7 +725,7 @@ async function testMonitor(agentName, monitorType) {
     const buttons = document.querySelectorAll('.monitor-card button');
     let testButton = null;
     buttons.forEach(btn => {
-        if (btn.textContent.includes('✏️') && btn.closest('.monitor-card').textContent.includes(agentName)) {
+        if (btn.textContent.includes('Test') && btn.closest('.monitor-card').textContent.includes(agentName)) {
             testButton = btn;
         }
     });
@@ -643,8 +736,17 @@ async function testMonitor(agentName, monitorType) {
         testButton.textContent = '⏳';
     }
 
-    // Send a test message from a different agent
-    const fromAgent = agentName === 'lunar_craft_128' ? 'orion_344' : 'lunar_craft_128';
+    // Get test sender agent from settings or use auto-select
+    let fromAgent = localStorage.getItem('testSenderAgent');
+
+    // If no agent selected or selected agent is the same as target, use auto-select
+    if (!fromAgent || fromAgent === agentName) {
+        // Get all unique agent names from current configs
+        const agentNames = [...new Set(configs.map(c => c.agent_name))].filter(name => name !== agentName);
+
+        // Use first available agent that's not the target
+        fromAgent = agentNames.length > 0 ? agentNames[0] : 'test_user';
+    }
 
     // Context-aware test messages based on monitor type
     let testMessage;
@@ -871,7 +973,7 @@ function renderMonitors() {
         const statusClass = isRunning ? 'running' : 'stopped';
 
         const testControl = isRunning && monitor.id
-            ? `<button class="btn btn-primary btn-sm" onclick="testMonitor('${escapeAttr(monitor.agent_name)}', '${escapeAttr(monitor.monitor_type)}')" title="Send Test Message">✏️</button>`
+            ? `<button class="btn btn-primary btn-sm" onclick="testMonitor('${escapeAttr(monitor.agent_name)}', '${escapeAttr(monitor.monitor_type)}')" title="Send test message from configured sender (see Test Sender Agent setting)">✏️ Test</button>`
             : '';
 
         const pauseOrStartControl = hasMonitorId
