@@ -82,9 +82,11 @@ function setupEventListeners() {
 
         const selectedType = e.target.value;
 
-        // Only Echo monitor doesn't need any configuration
-        // - Ollama needs: model selection (uses Ollama provider implicitly)
-        // - LangGraph/Claude Agent SDK need: provider, model, and optional system prompt
+        // Each monitor type has different configuration needs:
+        // - Echo: no configuration (simple passthrough)
+        // - Ollama: model only (provider is implicit)
+        // - Claude Agent SDK: model only (uses Claude models directly, no provider)
+        // - LangGraph: provider + model (supports multiple LLM providers)
         if (selectedType === 'echo') {
             // Echo: simple pass-through, no AI configuration needed
             providerGroup.style.display = 'none';
@@ -97,23 +99,18 @@ function setupEventListeners() {
             systemPromptGroup.style.display = 'block';
             // Load Ollama models when Ollama monitor is selected
             await loadModelsForProvider('ollama');
+        } else if (selectedType === 'claude_agent_sdk') {
+            // Claude Agent SDK: needs model (Claude only), no provider selection
+            providerGroup.style.display = 'none';
+            modelGroup.style.display = 'block';
+            systemPromptGroup.style.display = 'block';
+            // Load Claude models (use anthropic provider backend)
+            await loadModelsForProvider('anthropic');
         } else {
-            // LangGraph/Claude Agent SDK: needs all options (provider, model, system prompt)
+            // LangGraph: needs provider + model selection
             providerGroup.style.display = 'block';
             modelGroup.style.display = 'block';
             systemPromptGroup.style.display = 'block';
-
-            // Claude Agent SDK prefers Anthropic provider
-            if (selectedType === 'claude_agent_sdk') {
-                const providerSelect = document.getElementById('provider-select');
-                const hasAnthropic = Array.from(providerSelect.options).some(opt => opt.value === 'anthropic');
-                if (hasAnthropic) {
-                    providerSelect.value = 'anthropic';
-                    selectedProvider = 'anthropic';
-                } else {
-                    selectedProvider = providerSelect.value;
-                }
-            }
 
             // Load models for currently selected provider
             await loadModelsForProvider(selectedProvider);
@@ -379,6 +376,14 @@ async function startMonitor() {
         }
     }
 
+    // Determine which monitors need provider/model
+    // Echo: no provider, no model
+    // Ollama: no provider (implicit), yes model
+    // Claude Agent SDK: no provider (uses Anthropic implicitly), yes model
+    // LangGraph: yes provider, yes model
+    const needsProvider = monitorType === 'langgraph';
+    const needsModel = monitorType !== 'echo';
+
     try {
         const response = await fetch(`${API_BASE}/api/monitors/start`, {
             method: 'POST',
@@ -388,11 +393,11 @@ async function startMonitor() {
                     agent_name: config.agent_name,
                     config_path: configPath,
                     monitor_type: monitorType,
-                    provider: monitorType !== 'echo' ? provider : null,
-                    model: monitorType !== 'echo' ? model : null,
+                    provider: needsProvider ? provider : null,
+                    model: needsModel ? model : null,
                     system_prompt: systemPromptContent,
                     system_prompt_name: systemPromptName,
-                    history_limit: monitorType !== 'echo' ? historyLimit : null
+                    history_limit: needsModel ? historyLimit : null
                 }
             })
         });
