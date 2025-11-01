@@ -42,6 +42,19 @@ SKIP_DIRS = {'.git', 'node_modules', '__pycache__', '.venv', 'venv', 'data',
              'logs', 'dist', 'build', '.eggs', 'htmlcov', '.pytest_cache',
              '.tox', 'agent_files', 'agent_memory'}
 
+# Files to skip (allowed to have emojis)
+SKIP_FILES = {
+    'configs/prompts/_base.yaml',  # System prompts showing emoji reaction examples
+}
+
+
+def should_skip_file(filepath: str) -> bool:
+    """Check if file should be skipped."""
+    for skip_pattern in SKIP_FILES:
+        if skip_pattern in filepath:
+            return True
+    return False
+
 
 def find_files_with_emojis(root_dir: str = '.') -> List[Tuple[str, int]]:
     """Find all files containing emojis.
@@ -58,6 +71,11 @@ def find_files_with_emojis(root_dir: str = '.') -> List[Tuple[str, int]]:
         for file in files:
             if Path(file).suffix in EXTENSIONS:
                 filepath = os.path.join(root, file)
+
+                # Skip allowed files
+                if should_skip_file(filepath):
+                    continue
+
                 try:
                     with open(filepath, 'r', encoding='utf-8') as f:
                         content = f.read()

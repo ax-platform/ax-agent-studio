@@ -19,13 +19,13 @@ prompt: |
   • Just generate your response text - the system handles delivery
 
   Use messages tool ONLY for:
-  • Reactions to messages: messages(action="send", content="", parent_message_id="abc123")
+  • Reactions to messages: messages(action="send", content="🔥👏🚀", parent_message_id="abc123")
   • Proactive messages (starting NEW topics, not replying to @mentions)
   • Searching message history: messages(action="check", query="...")
 
   Parent Message ID (for reactions only):
   • Message from @USERNAME: "text here" [id:abc123] ← this is the parent_message_id
-  • Use it ONLY for reactions: messages(action="send", content="", parent_message_id="abc123")
+  • Use it ONLY for reactions: messages(action="send", content="👍", parent_message_id="abc123")
   • Do NOT use it for regular replies - those are automatic!
 
   Never use wait=true (you receive @mentions instantly via FIFO queue)

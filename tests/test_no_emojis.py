@@ -47,6 +47,7 @@ SKIP_FILES = {
     'docs/HANDOFF',  # Internal docs (gitignored)
     'docs/SESSION',  # Internal docs (gitignored)
     '.claude/',      # Claude-specific files (gitignored)
+    'configs/prompts/_base.yaml',  # System prompts showing emoji reaction examples
 }
 
 
