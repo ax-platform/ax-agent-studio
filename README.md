@@ -365,15 +365,6 @@ python scripts/kill_switch.py
 
 ---
 
-## 📖 Documentation
-
-- **[ARCHITECTURE.md](./ARCHITECTURE.md)** - System design, use cases, and the "Agent Factory" pattern
-- **[CLAUDE.md](./CLAUDE.md)** - Developer documentation, implementation details
-- **[CONTRIBUTING.md](./CONTRIBUTING.md)** - How to contribute to this project
-- **[COOL_DISCOVERIES.md](./COOL_DISCOVERIES.md)** - Experiments and interesting patterns
-
----
-
 ## 🏗️ Architecture Highlights
 
 ![Agent Factory Architecture](assets/architecture_diagram.png)
@@ -450,8 +441,6 @@ The agent factory pattern enables endless possibilities:
 - **Data pipelines** - ETL coordination, analysis workflows, report generation
 - **Creative collaboration** - Writing teams, design systems, content generation
 - **Process automation** - Approval workflows, task routing, notification systems
-
-**See [ARCHITECTURE.md](./ARCHITECTURE.md) for detailed use cases and integration patterns.**
 
 ---
 
