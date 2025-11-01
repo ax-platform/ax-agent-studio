@@ -257,18 +257,12 @@ When `workingDir` is set:
     "workingDir": "/Users/you/projects/my-project"
   },
   "mcpServers": {
-    "ax-gcp": { ... },
-    "filesystem": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-filesystem",
-        "/Users/you/projects/my-project"
-      ]
-    }
+    "ax-gcp": { ... }
   }
 }
 ```
+
+> **Note:** No need for the filesystem MCP server - Claude Agent SDK has native Read/Write/Edit tools that are more efficient!
 
 ### 4. Multi-Server Agent
 
@@ -277,7 +271,7 @@ When `workingDir` is set:
 ```json
 {
   "permissions": {
-    "allowedTools": ["WebFetch", "WebSearch"],
+    "allowedTools": ["WebFetch", "WebSearch", "Read", "Write"],
     "permissionMode": "default",
     "workingDir": "/tmp/agent_workspace"
   },
@@ -303,18 +297,12 @@ When `workingDir` is set:
       "env": {
         "MEMORY_FILE_PATH": "/tmp/agent_workspace/memory.jsonl"
       }
-    },
-    "filesystem": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-filesystem",
-        "/tmp/agent_workspace/files"
-      ]
     }
   }
 }
 ```
+
+> **Note:** Use native Read/Write tools for filesystem access. MCP servers like `memory` provide capabilities beyond built-in tools!
 
 ## Running Your Agent
 
