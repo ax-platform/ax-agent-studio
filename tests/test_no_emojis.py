@@ -13,7 +13,7 @@ import os
 from pathlib import Path
 import pytest
 
-# Emoji pattern - covers emoji ranges AND variation selectors
+# Emoji pattern - covers emoji ranges, variation selectors, and joiners
 EMOJI_PATTERN = re.compile(
     "["
     "\U0001F600-\U0001F64F"  # emoticons
@@ -28,6 +28,8 @@ EMOJI_PATTERN = re.compile(
     "\U00002600-\U000027BF"  # Miscellaneous Symbols
     "\U0001F1E6-\U0001F1FF"  # flags
     "\uFE0E\uFE0F"           # variation selectors (text/emoji style)
+    "\u200D"                 # zero-width joiner (combines emoji sequences)
+    "\u200B\u200C"           # zero-width space, zero-width non-joiner
     "]+",
     flags=re.UNICODE
 )
