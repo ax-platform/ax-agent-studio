@@ -243,18 +243,18 @@ function updateTestSenderOptions() {
     const testSenderSelect = document.getElementById('test-sender-select');
     if (!testSenderSelect) return;
 
-    // Get all unique agent names from configs
+    // Get all unique agent names from current environment configs
     const agentNames = [...new Set(configs.map(c => c.agent_name))].sort();
 
     // Build options
-    let options = '<option value="">Auto (first available)</option>';
+    let options = '<option value="">Auto (first available in same environment)</option>';
     agentNames.forEach(name => {
         options += `<option value="${name}">${name}</option>`;
     });
 
     testSenderSelect.innerHTML = options;
 
-    // Restore saved preference from localStorage
+    // Restore saved preference from localStorage (only if still in current environment)
     const savedTestSender = localStorage.getItem('testSenderAgent');
     if (savedTestSender && agentNames.includes(savedTestSender)) {
         testSenderSelect.value = savedTestSender;
@@ -720,7 +720,7 @@ async function resetAllAgents() {
     }
 }
 
-async function testMonitor(agentName, monitorType) {
+async function testMonitor(agentName, monitorType, environment) {
     // Find the test button and show immediate feedback
     const buttons = document.querySelectorAll('.monitor-card button');
     let testButton = null;
@@ -739,13 +739,16 @@ async function testMonitor(agentName, monitorType) {
     // Get test sender agent from settings or use auto-select
     let fromAgent = localStorage.getItem('testSenderAgent');
 
-    // If no agent selected or selected agent is the same as target, use auto-select
-    if (!fromAgent || fromAgent === agentName) {
-        // Get all unique agent names from current configs
-        const agentNames = [...new Set(configs.map(c => c.agent_name))].filter(name => name !== agentName);
+    // Get all agents in the SAME environment as the target agent
+    const sameEnvConfigs = Object.values(configsByEnvironment).flat()
+        .filter(c => c.environment === environment);
+    const sameEnvAgentNames = [...new Set(sameEnvConfigs.map(c => c.agent_name))]
+        .filter(name => name !== agentName);
 
-        // Use first available agent that's not the target
-        fromAgent = agentNames.length > 0 ? agentNames[0] : 'test_user';
+    // If no agent selected or selected agent is not in the same environment, use auto-select
+    if (!fromAgent || fromAgent === agentName || !sameEnvAgentNames.includes(fromAgent)) {
+        // Use first available agent in the same environment that's not the target
+        fromAgent = sameEnvAgentNames.length > 0 ? sameEnvAgentNames[0] : 'test_user';
     }
 
     // Context-aware test messages based on monitor type
@@ -973,7 +976,7 @@ function renderMonitors() {
         const statusClass = isRunning ? 'running' : 'stopped';
 
         const testControl = isRunning && monitor.id
-            ? `<button class="btn btn-primary btn-sm" onclick="testMonitor('${escapeAttr(monitor.agent_name)}', '${escapeAttr(monitor.monitor_type)}')" title="Send test message from configured sender (see Test Sender Agent setting)">✏️ Test</button>`
+            ? `<button class="btn btn-primary btn-sm" onclick="testMonitor('${escapeAttr(monitor.agent_name)}', '${escapeAttr(monitor.monitor_type)}', '${escapeAttr(monitor.environment)}')" title="Send test message from agent in same environment (see Test Sender Agent setting)">✏️ Test</button>`
             : '';
 
         const pauseOrStartControl = hasMonitorId
