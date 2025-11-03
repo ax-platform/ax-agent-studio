@@ -40,13 +40,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     initializeWebSocket();
     setupEventListeners();
 
-    // Show/hide provider/model groups based on default monitor type
+    // Show/hide provider/model groups AND load correct models for default monitor type
     const monitorType = document.getElementById('monitor-type-select').value;
     if (frameworkRegistry && frameworkRegistry.frameworks[monitorType]) {
         const framework = frameworkRegistry.frameworks[monitorType];
         document.getElementById('provider-group').style.display = framework.requires_provider ? 'block' : 'none';
         document.getElementById('model-group').style.display = framework.requires_model ? 'block' : 'none';
         document.getElementById('system-prompt-group').style.display = framework.requires_model ? 'block' : 'none';
+
+        // CRITICAL: Load models for the correct provider
+        if (framework.requires_model) {
+            const provider = framework.provider || selectedProvider;
+            await loadModelsForProvider(provider);
+        }
     }
 
     // Refresh monitors and kill switch state every 5 seconds
