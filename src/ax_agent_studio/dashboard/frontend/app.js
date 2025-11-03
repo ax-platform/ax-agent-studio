@@ -28,6 +28,7 @@ const escapeAttr = (value) => String(value)
 
 // Initialize dashboard
 document.addEventListener('DOMContentLoaded', async () => {
+    await loadSettings(); // Load settings first to set defaults
     await loadEnvironments();
     await loadConfigs();
     await loadProviders();
@@ -38,10 +39,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     initializeWebSocket();
     setupEventListeners();
 
-    // Show provider/model groups by default (LangGraph is default)
-    document.getElementById('provider-group').style.display = 'block';
-    document.getElementById('model-group').style.display = 'block';
-    document.getElementById('system-prompt-group').style.display = 'block';
+    // Show provider/model groups based on default monitor type
+    const monitorType = document.getElementById('monitor-type-select').value;
+    if (monitorType !== 'echo') {
+        document.getElementById('provider-group').style.display = 'block';
+        document.getElementById('model-group').style.display = 'block';
+        document.getElementById('system-prompt-group').style.display = 'block';
+    }
     // history-limit-group disabled - needs server-side support
 
     // Refresh monitors and kill switch state every 5 seconds
@@ -186,6 +190,25 @@ function setupEventListeners() {
 }
 
 // API Calls
+async function loadSettings() {
+    try {
+        const response = await fetch(`${API_BASE}/api/settings`);
+        const data = await response.json();
+
+        // Set default monitor type from environment variable
+        const defaultType = data.default_agent_type || 'echo';
+        const select = document.getElementById('monitor-type-select');
+        if (select) {
+            select.value = defaultType;
+            console.log(`Set default monitor type to: ${defaultType}`);
+        }
+    } catch (error) {
+        console.error('Error loading settings:', error);
+        // Fallback to echo if settings can't be loaded
+        document.getElementById('monitor-type-select').value = 'echo';
+    }
+}
+
 async function loadEnvironments() {
     try {
         const response = await fetch(`${API_BASE}/api/environments`);
@@ -400,8 +423,8 @@ async function startMonitor() {
                     agent_name: config.agent_name,
                     config_path: configPath,
                     monitor_type: monitorType,
-                    provider: monitorType !== 'echo' ? provider : null,
-                    model: monitorType !== 'echo' ? model : null,
+                    provider: (monitorType !== 'echo') ? provider : null,
+                    model: (monitorType !== 'echo') ? model : null,
                     system_prompt: systemPromptContent,
                     system_prompt_name: systemPromptName,
                     history_limit: monitorType !== 'echo' ? historyLimit : null
@@ -662,7 +685,7 @@ async function testMonitor(agentName, monitorType) {
     let testMessage;
     if (monitorType === 'echo') {
         testMessage = `Test echo at ${new Date().toLocaleTimeString()} 🧪`;
-    } else if (['ollama', 'langgraph', 'claude_agent_sdk'].includes(monitorType)) {
+    } else if (['ollama', 'langgraph', 'claude_agent_sdk', 'openai_agents_sdk'].includes(monitorType)) {
         const aiQuestions = [
             "What's a fun fact about AI?",
             "Tell me a quick joke!",
@@ -982,6 +1005,7 @@ function getMonitorEmoji(type) {
         'ollama': '🤖',
         'langgraph': '🧠',
         'claude_agent_sdk': '🛡',
+        'openai_agents_sdk': '🤖',
         'demo': '🎬'
     };
     return emojis[type] || '📡';

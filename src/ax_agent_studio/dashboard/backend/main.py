@@ -47,7 +47,7 @@ log_streamer = LogStreamer(PROJECT_ROOT / "logs")
 class MonitorConfig(BaseModel):
     agent_name: str
     config_path: str
-    monitor_type: Literal["echo", "ollama", "langgraph", "claude_agent_sdk"]
+    monitor_type: Literal["echo", "ollama", "langgraph", "claude_agent_sdk", "openai_agents_sdk"]
     model: Optional[str] = None
     provider: Optional[str] = None
     system_prompt: Optional[str] = None
@@ -109,6 +109,13 @@ async def health_check():
         "status": "healthy",
         "timestamp": datetime.now().isoformat(),
         "monitors_running": len(process_manager.get_running_monitors())
+    }
+
+@app.get("/api/settings")
+async def get_settings():
+    """Get dashboard settings from environment"""
+    return {
+        "default_agent_type": os.getenv("DEFAULT_AGENT_TYPE", "echo")
     }
 
 @app.get("/api/processes/health")
