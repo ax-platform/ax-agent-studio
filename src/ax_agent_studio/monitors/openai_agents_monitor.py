@@ -48,23 +48,63 @@ _HISTORY_LIMIT = 10  # Recent message pairs to keep
 
 
 def _resolve_config_path(agent_name: str, config_path: Optional[str], base_dir: Path) -> Path:
-    """Resolve the agent config path."""
+    """Resolve the agent config path.
+
+    If config_path is provided, use it directly.
+    Otherwise, search for a config file where the agent name in the URL matches agent_name.
+    This allows flexible filename conventions (e.g., 'prod-bot.json', 'my-agent.json').
+    """
     if config_path:
         resolved = Path(config_path).expanduser().resolve()
-    else:
-        resolved = base_dir / "configs" / "agents" / f"{agent_name}.json"
+        if not resolved.exists():
+            raise FileNotFoundError(f"Agent config not found: {resolved}")
+        return resolved
 
-    if not resolved.exists():
+    # Search configs/agents/ for a file with matching agent name in URL
+    agents_dir = base_dir / "configs" / "agents"
+    if not agents_dir.exists():
         raise FileNotFoundError(
-            f"Agent config not found: {resolved}\n"
-            "Create the file via the dashboard (configs/agents/<agent>.json)."
+            f"Agents directory not found: {agents_dir}\n"
+            "Create configs/agents/ and add agent configuration files."
         )
 
-    return resolved
+    for config_file in agents_dir.glob("*.json"):
+        try:
+            with open(config_file) as f:
+                data = json.load(f)
+
+            # Skip template files
+            if "_comment" in data or "_instructions" in data:
+                continue
+
+            # Extract agent name from MCP server URL
+            if "mcpServers" in data:
+                for server_config in data["mcpServers"].values():
+                    args = server_config.get("args", [])
+                    for arg in args:
+                        if isinstance(arg, str) and "/mcp/agents/" in arg:
+                            url_agent_name = arg.split("/mcp/agents/")[-1].strip()
+                            if url_agent_name == agent_name:
+                                return config_file
+        except Exception:
+            continue  # Skip invalid JSON files
+
+    # If no match found, suggest the issue
+    raise FileNotFoundError(
+        f"No agent config found with agent name '{agent_name}' in the URL.\n"
+        f"Searched in: {agents_dir}\n"
+        f"Make sure your config file contains:\n"
+        f'  "mcpServers": {{ "ax-gcp": {{ "args": ["...mcp/agents/{agent_name}", ...] }} }}'
+    )
 
 
 async def _create_mcp_servers_from_config(agent_config: Dict) -> List:
-    """Create OpenAI Agents SDK MCP server instances from agent config."""
+    """Create OpenAI Agents SDK MCP server instances from agent config.
+
+    IMPORTANT: Only creates stdio servers (filesystem, memory, etc).
+    Skips ax-docker/ax-gcp which are handled by MCPServerManager via mcp-remote OAuth proxy.
+    Direct HTTP connections fail with 401 because they bypass OAuth.
+    """
     mcp_servers_config = agent_config.get("mcpServers", {})
     servers = []
 
@@ -73,23 +113,27 @@ async def _create_mcp_servers_from_config(agent_config: Dict) -> List:
         args = server_cfg.get("args", [])
         env = server_cfg.get("env", {})
 
-        # Determine if this is an HTTP server or stdio
-        # Check if args contain URLs
+        # Check if this server uses mcp-remote (HTTP with OAuth)
+        # These must go through MCPServerManager, not OpenAI SDK direct connection
+        is_mcp_remote = "mcp-remote" in str(args)
         is_http = any("http://" in str(arg) or "https://" in str(arg) for arg in args)
 
-        if is_http:
-            # Extract URL from args (usually after mcp-remote package name)
+        if is_mcp_remote or (is_http and server_name in ["ax-docker", "ax-gcp"]):
+            # SKIP ax-docker/ax-gcp - handled by MCPServerManager with OAuth
+            logger.info(f"Skipping {server_name} (handled by MCPServerManager via mcp-remote OAuth)")
+            continue
+        elif is_http:
+            # Other HTTP servers (if any) - use StreamableHTTP
             url = next((arg for arg in args if "http" in str(arg)), None)
             if url:
-                # Use StreamableHTTP for remote MCP servers
                 server = MCPServerStreamableHttp(
                     name=server_name,
                     params={
                         "url": url,
-                        "headers": {},  # Add auth headers if needed
+                        "headers": {},
                         "timeout": 30,
                     },
-                    cache_tools_list=True,  # Cache for performance
+                    cache_tools_list=True,
                 )
                 servers.append(server)
                 logger.info(f"Configured HTTP MCP server: {server_name} ({url})")
@@ -177,20 +221,12 @@ async def openai_agents_monitor(
     print(f"\n✅ Configured {len(mcp_server_instances)} MCP servers for agent")
     print()
 
-    # Create a minimal config with ONLY ax-gcp for MCPServerManager (messaging layer)
-    # This is separate from the agent's MCP connections
-    messaging_config_path = Path("/tmp") / f"{agent_name}_messaging_config.json"
-    messaging_config = {
-        "mcpServers": {
-            "ax-gcp": agent_config["mcpServers"].get("ax-gcp", agent_config["mcpServers"].get("ax-docker", {}))
-        }
-    }
-    messaging_config_path.write_text(json.dumps(messaging_config))
-
-    # MCPServerManager connects ONLY to ax-gcp for messaging (input/output)
-    async with MCPServerManager(agent_name, base_dir=base_dir, config_path=messaging_config_path) as manager:
+    # Use MCPServerManager same way as LangGraph monitor - auto-loads full config
+    # This connects to ALL servers for QueueManager messaging
+    # (OpenAI SDK handles separate agent tool connections)
+    async with MCPServerManager(agent_name, base_dir=base_dir) as manager:
         primary_session = manager.get_primary_session()
-        print(f"✅ Connected messaging layer (ax-gcp for QueueManager)\n")
+        print(f"✅ Connected messaging layer for QueueManager\n")
 
         # Open all MCP server connections
         # We need to use AsyncExitStack to manage multiple async context managers

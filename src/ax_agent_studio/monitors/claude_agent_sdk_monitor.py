@@ -44,19 +44,54 @@ _HISTORY_LIMIT = 12  # Store 6 message/response pairs
 
 
 def _resolve_config_path(agent_name: str, config_path: Optional[str], base_dir: Path) -> Path:
-    """Resolve the agent config path, falling back to the standard location."""
+    """Resolve the agent config path.
+
+    If config_path is provided, use it directly.
+    Otherwise, search for a config file where the agent name in the URL matches agent_name.
+    This allows flexible filename conventions (e.g., 'prod-bot.json', 'my-agent.json').
+    """
     if config_path:
         resolved = Path(config_path).expanduser().resolve()
-    else:
-        resolved = base_dir / "configs" / "agents" / f"{agent_name}.json"
+        if not resolved.exists():
+            raise FileNotFoundError(f"Agent config not found: {resolved}")
+        return resolved
 
-    if not resolved.exists():
+    # Search configs/agents/ for a file with matching agent name in URL
+    agents_dir = base_dir / "configs" / "agents"
+    if not agents_dir.exists():
         raise FileNotFoundError(
-            f"Agent config not found: {resolved}\n"
-            "Create the file via the dashboard (configs/agents/<agent>.json)."
+            f"Agents directory not found: {agents_dir}\n"
+            "Create configs/agents/ and add agent configuration files."
         )
 
-    return resolved
+    for config_file in agents_dir.glob("*.json"):
+        try:
+            with open(config_file) as f:
+                data = json.load(f)
+
+            # Skip template files
+            if "_comment" in data or "_instructions" in data:
+                continue
+
+            # Extract agent name from MCP server URL
+            if "mcpServers" in data:
+                for server_config in data["mcpServers"].values():
+                    args = server_config.get("args", [])
+                    for arg in args:
+                        if isinstance(arg, str) and "/mcp/agents/" in arg:
+                            url_agent_name = arg.split("/mcp/agents/")[-1].strip()
+                            if url_agent_name == agent_name:
+                                return config_file
+        except Exception:
+            continue  # Skip invalid JSON files
+
+    # If no match found, suggest the issue
+    raise FileNotFoundError(
+        f"No agent config found with agent name '{agent_name}' in the URL.\n"
+        f"Searched in: {agents_dir}\n"
+        f"Make sure your config file contains:\n"
+        f'  "mcpServers": {{ "ax-gcp": {{ "args": ["...mcp/agents/{agent_name}", ...] }} }}'
+    )
 
 
 async def _discover_allowed_tools(manager: MCPServerManager) -> List[str]:
