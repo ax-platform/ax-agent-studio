@@ -28,7 +28,8 @@ const escapeAttr = (value) => String(value)
 
 // Initialize dashboard
 document.addEventListener('DOMContentLoaded', async () => {
-    await loadSettings(); // Load settings first to set defaults
+    await loadFrameworks(); // Load framework registry first
+    await loadSettings(); // Load settings (uses framework registry)
     await loadEnvironments();
     await loadConfigs();
     await loadProviders();
@@ -39,14 +40,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     initializeWebSocket();
     setupEventListeners();
 
-    // Show provider/model groups based on default monitor type
+    // Show/hide provider/model groups based on default monitor type
     const monitorType = document.getElementById('monitor-type-select').value;
-    if (monitorType !== 'echo') {
-        document.getElementById('provider-group').style.display = 'block';
-        document.getElementById('model-group').style.display = 'block';
-        document.getElementById('system-prompt-group').style.display = 'block';
+    if (frameworkRegistry && frameworkRegistry.frameworks[monitorType]) {
+        const framework = frameworkRegistry.frameworks[monitorType];
+        document.getElementById('provider-group').style.display = framework.requires_provider ? 'block' : 'none';
+        document.getElementById('model-group').style.display = framework.requires_model ? 'block' : 'none';
+        document.getElementById('system-prompt-group').style.display = framework.requires_model ? 'block' : 'none';
     }
-    // history-limit-group disabled - needs server-side support
 
     // Refresh monitors and kill switch state every 5 seconds
     setInterval(async () => {
@@ -86,53 +87,26 @@ function setupEventListeners() {
 
         const selectedType = e.target.value;
 
-        // Only Echo monitor doesn't need any configuration
-        // - Ollama needs: model selection (uses Ollama provider implicitly)
-        // - LangGraph/Claude Agent SDK need: provider, model, and optional system prompt
-        if (selectedType === 'echo') {
-            // Echo: simple pass-through, no AI configuration needed
+        // Use framework registry to determine UI requirements
+        if (frameworkRegistry && frameworkRegistry.frameworks[selectedType]) {
+            const framework = frameworkRegistry.frameworks[selectedType];
+
+            // Show/hide provider based on framework requirements
+            providerGroup.style.display = framework.requires_provider ? 'block' : 'none';
+            modelGroup.style.display = framework.requires_model ? 'block' : 'none';
+            systemPromptGroup.style.display = framework.requires_model ? 'block' : 'none';
+
+            // Load models for the appropriate provider
+            if (framework.requires_model) {
+                const provider = framework.provider || selectedProvider;
+                await loadModelsForProvider(provider);
+            }
+        } else {
+            // Fallback to hiding all if framework not found
+            console.warn(`Framework not found in registry: ${selectedType}`);
             providerGroup.style.display = 'none';
             modelGroup.style.display = 'none';
             systemPromptGroup.style.display = 'none';
-        } else if (selectedType === 'ollama') {
-            // Ollama: needs model, but provider is implicit (always Ollama)
-            providerGroup.style.display = 'none';
-            modelGroup.style.display = 'block';
-            systemPromptGroup.style.display = 'block';
-            // Load Ollama models when Ollama monitor is selected
-            await loadModelsForProvider('ollama');
-        } else {
-            // LangGraph/Claude Agent SDK/OpenAI Agents SDK: needs all options (provider, model, system prompt)
-            providerGroup.style.display = 'block';
-            modelGroup.style.display = 'block';
-            systemPromptGroup.style.display = 'block';
-
-            // Claude Agent SDK prefers Anthropic provider
-            if (selectedType === 'claude_agent_sdk') {
-                const providerSelect = document.getElementById('provider-select');
-                const hasAnthropic = Array.from(providerSelect.options).some(opt => opt.value === 'anthropic');
-                if (hasAnthropic) {
-                    providerSelect.value = 'anthropic';
-                    selectedProvider = 'anthropic';
-                } else {
-                    selectedProvider = providerSelect.value;
-                }
-            }
-
-            // OpenAI Agents SDK prefers OpenAI provider
-            if (selectedType === 'openai_agents') {
-                const providerSelect = document.getElementById('provider-select');
-                const hasOpenAI = Array.from(providerSelect.options).some(opt => opt.value === 'openai');
-                if (hasOpenAI) {
-                    providerSelect.value = 'openai';
-                    selectedProvider = 'openai';
-                } else {
-                    selectedProvider = providerSelect.value;
-                }
-            }
-
-            // Load models for currently selected provider
-            await loadModelsForProvider(selectedProvider);
         }
     });
 
@@ -189,23 +163,56 @@ function setupEventListeners() {
     });
 }
 
+// Global framework registry
+let frameworkRegistry = null;
+
 // API Calls
+async function loadFrameworks() {
+    try {
+        const response = await fetch(`${API_BASE}/api/frameworks`);
+        frameworkRegistry = await response.json();
+        console.log('Loaded framework registry:', frameworkRegistry);
+        return frameworkRegistry;
+    } catch (error) {
+        console.error('Error loading frameworks:', error);
+        return null;
+    }
+}
+
 async function loadSettings() {
     try {
         const response = await fetch(`${API_BASE}/api/settings`);
         const data = await response.json();
 
-        // Set default monitor type from environment variable
-        const defaultType = data.default_agent_type || 'echo';
-        const select = document.getElementById('monitor-type-select');
-        if (select) {
-            select.value = defaultType;
+        // Set defaults from environment (via frameworks.yaml)
+        const defaultType = data.default_agent_type || 'claude_agent_sdk';
+        const defaultProvider = data.default_provider || 'anthropic';
+        const defaultModel = data.default_model || 'claude-sonnet-4-5';
+
+        const monitorSelect = document.getElementById('monitor-type-select');
+        if (monitorSelect) {
+            monitorSelect.value = defaultType;
             console.log(`Set default monitor type to: ${defaultType}`);
         }
+
+        // Store defaults for later use
+        window.dashboardDefaults = {
+            agent_type: defaultType,
+            provider: defaultProvider,
+            model: defaultModel,
+            environment: data.default_environment || 'local'
+        };
+
     } catch (error) {
         console.error('Error loading settings:', error);
-        // Fallback to echo if settings can't be loaded
-        document.getElementById('monitor-type-select').value = 'echo';
+        // Fallback to hardcoded defaults if API fails
+        document.getElementById('monitor-type-select').value = 'claude_agent_sdk';
+        window.dashboardDefaults = {
+            agent_type: 'claude_agent_sdk',
+            provider: 'anthropic',
+            model: 'claude-sonnet-4-5',
+            environment: 'local'
+        };
     }
 }
 

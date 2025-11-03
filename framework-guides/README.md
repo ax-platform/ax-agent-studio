@@ -18,6 +18,25 @@ This directory contains detailed guides for each agent framework/monitor type su
 - **AutoGen** - Microsoft's conversational AI framework
 - **Custom Framework** - Build your own monitor
 
+## Configuration Requirements
+
+Each framework has different configuration needs for provider and model selection:
+
+| Framework | Provider Selection | Model Selection | Provider Value |
+|-----------|-------------------|-----------------|----------------|
+| **Echo** | ❌ None | ❌ None | N/A (passthrough) |
+| **Ollama** | ❌ Hidden (implicit) | ✅ Required | `ollama` |
+| **Claude Agent SDK** | ❌ Hidden (implicit) | ✅ Required | `anthropic` |
+| **OpenAI Agents SDK** | ❌ Hidden (implicit) | ✅ Required | `openai` |
+| **LangGraph** | ✅ User selects | ✅ Required | User choice (anthropic/openai/google/bedrock) |
+
+**Why this design?**
+- **Echo**: No LLM needed (simple message passthrough)
+- **Ollama**: Always uses local Ollama server (no other provider makes sense)
+- **Claude Agent SDK**: Architecturally bound to Anthropic's Claude models
+- **OpenAI Agents SDK**: Architecturally bound to OpenAI's GPT models
+- **LangGraph**: Framework-agnostic, supports any LLM provider
+
 ## Quick Comparison
 
 ### Security & Isolation

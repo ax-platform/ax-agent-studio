@@ -1,0 +1,99 @@
+# Framework Registry
+# Defines capabilities and requirements for each agent framework
+
+frameworks:
+  echo:
+    name: "Echo"
+    description: "Simple echo/test monitor"
+    emoji: "🔊"
+    requires_provider: false
+    requires_model: false
+    provider: null
+    default_model: null
+    best_for: "Testing, debugging, learning the platform"
+
+  ollama:
+    name: "Ollama"
+    description: "Local LLM integration"
+    emoji: "🤖"
+    requires_provider: false  # Provider is implicit (always ollama)
+    requires_model: true
+    provider: "ollama"  # Fixed provider
+    default_model: "gpt-oss"
+    best_for: "Privacy-focused, offline deployments, custom models"
+
+  claude_agent_sdk:
+    name: "Claude Agent SDK"
+    description: "Native Claude Code integration with SDK"
+    emoji: "🛡"
+    requires_provider: false  # Provider is implicit (always anthropic)
+    requires_model: true
+    provider: "anthropic"  # Fixed provider
+    default_model: "claude-sonnet-4-5"
+    best_for: "Production agents with Claude's full capabilities, security controls"
+    recommended: true  # Mark as recommended default
+
+  openai_agents_sdk:
+    name: "OpenAI Agents SDK"
+    description: "Official OpenAI agent framework with MCP"
+    emoji: "🤖"
+    requires_provider: false  # Provider is implicit (always openai)
+    requires_model: true
+    provider: "openai"  # Fixed provider
+    default_model: "gpt-5"
+    best_for: "GPT agents, OpenAI tooling, rapid prototyping"
+
+  langgraph:
+    name: "LangGraph"
+    description: "Advanced agentic workflows with graph-based routing"
+    emoji: "🧠"
+    requires_provider: true  # User selects provider
+    requires_model: true
+    provider: null  # User choice (anthropic, openai, google, bedrock, ollama)
+    default_model: null  # Depends on selected provider
+    best_for: "Complex multi-step workflows, custom tool chains"
+
+# Provider-specific default models
+provider_defaults:
+  anthropic:
+    default_model: "claude-sonnet-4-5"
+    available_models:
+      - "claude-sonnet-4-5"
+      - "claude-haiku-4-5"
+      - "claude-opus-4-5"
+
+  openai:
+    default_model: "gpt-5-mini"
+    available_models:
+      - "gpt-5"
+      - "gpt-5-mini"
+      - "gpt-5-nano"
+      - "o4-mini"
+
+  google:
+    default_model: "gemini-2.5-flash"
+    available_models:
+      - "gemini-2.5-pro"
+      - "gemini-2.5-flash"
+      - "gemini-2.5-flash-lite"
+
+  bedrock:
+    default_model: "us.anthropic.claude-sonnet-4-v1:0"
+    available_models:
+      - "us.anthropic.claude-sonnet-4-v1:0"
+      - "us.anthropic.claude-haiku-4-v1:0"
+
+  ollama:
+    default_model: "llama3.2"
+    available_models:
+      - "llama3.2"
+      - "qwen2.5"
+      - "mistral"
+      - "codellama"
+
+# UI configuration
+ui:
+  default_framework: "${DEFAULT_AGENT_TYPE:-claude_agent_sdk}"
+  default_provider: "${DEFAULT_PROVIDER:-anthropic}"
+  default_model: "${DEFAULT_MODEL:-claude-sonnet-4-5}"
+  default_environment: "${DEFAULT_ENVIRONMENT:-local}"

@@ -24,6 +24,12 @@ from ax_agent_studio.dashboard.backend.providers_loader import (
     get_models_for_provider,
     get_defaults
 )
+from ax_agent_studio.dashboard.backend.framework_loader import (
+    load_frameworks,
+    get_framework_info,
+    get_ui_defaults,
+    get_provider_defaults
+)
 
 app = FastAPI(title="MCP Monitor Dashboard", version="1.0.0")
 
@@ -113,10 +119,41 @@ async def health_check():
 
 @app.get("/api/settings")
 async def get_settings():
-    """Get dashboard settings from environment"""
-    return {
-        "default_agent_type": os.getenv("DEFAULT_AGENT_TYPE", "echo")
-    }
+    """Get dashboard settings from environment (via frameworks.yaml)"""
+    try:
+        ui_defaults = get_ui_defaults()
+        return {
+            "default_agent_type": ui_defaults.get("default_framework", "claude_agent_sdk"),
+            "default_provider": ui_defaults.get("default_provider", "anthropic"),
+            "default_model": ui_defaults.get("default_model", "claude-sonnet-4-5"),
+            "default_environment": ui_defaults.get("default_environment", "local")
+        }
+    except Exception as e:
+        # Fallback to hardcoded defaults if framework config fails
+        return {
+            "default_agent_type": os.getenv("DEFAULT_AGENT_TYPE", "claude_agent_sdk"),
+            "default_provider": os.getenv("DEFAULT_PROVIDER", "anthropic"),
+            "default_model": os.getenv("DEFAULT_MODEL", "claude-sonnet-4-5"),
+            "default_environment": os.getenv("DEFAULT_ENVIRONMENT", "local")
+        }
+
+@app.get("/api/frameworks")
+async def get_frameworks():
+    """Get framework registry with provider requirements"""
+    try:
+        return load_frameworks()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to load frameworks: {str(e)}")
+
+@app.get("/api/frameworks/{framework_type}")
+async def get_framework(framework_type: str):
+    """Get configuration for a specific framework"""
+    try:
+        return get_framework_info(framework_type)
+    except KeyError:
+        raise HTTPException(status_code=404, detail=f"Framework not found: {framework_type}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get framework info: {str(e)}")
 
 @app.get("/api/processes/health")
 async def processes_health():

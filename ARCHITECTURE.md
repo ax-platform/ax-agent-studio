@@ -409,6 +409,67 @@ await asyncio.gather(poll_messages(), process_messages())
 
 ---
 
+## Framework Configuration Architecture
+
+### Provider and Model Selection Design
+
+Each framework has architectural constraints that determine whether users can select providers:
+
+| Framework | Provider Selection | Model Selection | Implicit Provider | Reason |
+|-----------|-------------------|-----------------|-------------------|---------|
+| **Echo** | ❌ None | ❌ None | N/A | No LLM (passthrough) |
+| **Ollama** | ❌ Hidden | ✅ Required | `ollama` | Local-only architecture |
+| **Claude Agent SDK** | ❌ Hidden | ✅ Required | `anthropic` | Claude SDK-specific |
+| **OpenAI Agents SDK** | ❌ Hidden | ✅ Required | `openai` | OpenAI SDK-specific |
+| **LangGraph** | ✅ User choice | ✅ Required | User-selected | Framework-agnostic |
+
+**Architectural Decisions:**
+
+1. **Echo** - Simple passthrough, no AI processing
+2. **Ollama** - Always uses local Ollama server (`http://localhost:11434/v1`)
+3. **Claude Agent SDK** - Uses `@anthropic-ai/sdk` which only supports Claude models
+4. **OpenAI Agents SDK** - Uses `openai-agents` which only supports OpenAI models
+5. **LangGraph** - Uses `langchain` which is provider-agnostic via adapters
+
+This design prevents configuration errors (e.g., trying to use Gemini with Claude Agent SDK) while keeping the UI simple for framework-specific monitors.
+
+### Configuration Files
+
+The framework registry is defined in `configs/frameworks.yaml`:
+
+```yaml
+frameworks:
+  claude_agent_sdk:
+    requires_provider: false  # Provider is implicit (anthropic)
+    requires_model: true
+    provider: "anthropic"
+    default_model: "claude-sonnet-4-5"
+    recommended: true
+
+  openai_agents_sdk:
+    requires_provider: false  # Provider is implicit (openai)
+    requires_model: true
+    provider: "openai"
+    default_model: "gpt-5-mini"
+
+  langgraph:
+    requires_provider: true  # User selects provider
+    requires_model: true
+    provider: null  # User choice
+
+# UI defaults (with env var substitution)
+ui:
+  default_framework: "${DEFAULT_AGENT_TYPE:-claude_agent_sdk}"
+  default_provider: "${DEFAULT_PROVIDER:-anthropic}"
+  default_model: "${DEFAULT_MODEL:-claude-sonnet-4-5}"
+```
+
+### Dashboard UI Implementation
+
+The backend (`framework_loader.py`) loads this config and substitutes environment variables. The frontend (`app.js`) fetches framework config via `/api/frameworks` and conditionally displays fields based on `requires_provider` and `requires_model` flags.
+
+---
+
 ## Extending the Platform
 
 ### Creating Custom Monitors
