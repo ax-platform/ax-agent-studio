@@ -786,7 +786,7 @@ async def langgraph_mcp_monitor(agent_name: str, model: str = "gpt-oss:latest", 
                 print("✅ Loaded base system prompt with AI self-awareness\n")
 
         # Use MCPServerManager to connect to all servers in config
-        async with MCPServerManager(agent_name) as mcp_manager:
+        async with MCPServerManager(agent_name, config_path=resolved_config) as mcp_manager:
             # Get primary session for messaging (ax-gcp or ax-docker)
             primary_session = mcp_manager.get_primary_session()
 
@@ -887,8 +887,6 @@ if __name__ == "__main__":
                        help="Number of recent messages to remember (default: 25)")
 
     args = parser.parse_args()
-
-    # Note: --config is ignored since MCPServerManager auto-loads from agent_name
 
     # Check if Ollama is running (only if using Ollama provider)
     if args.provider == "ollama":
