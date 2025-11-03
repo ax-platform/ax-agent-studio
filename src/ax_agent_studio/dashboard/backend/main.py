@@ -86,6 +86,7 @@ class SendMessageRequest(BaseModel):
     from_agent: str
     to_agent: str
     message: str
+    from_agent_environment: Optional[str] = None  # Environment of the test sender agent
 
 class StartMonitorRequest(BaseModel):
     config: MonitorConfig
@@ -654,7 +655,8 @@ async def send_message(request: SendMessageRequest):
         result = await process_manager.send_test_message(
             from_agent=request.from_agent,
             to_agent=request.to_agent,
-            message=request.message
+            message=request.message,
+            from_agent_environment=request.from_agent_environment
         )
         return {
             "success": True,

@@ -747,6 +747,7 @@ async function testMonitor(agentName, monitorType, environment) {
 
     // Get test sender agent from settings or use auto-select
     let fromAgent = localStorage.getItem('testSenderAgent');
+    let fromAgentEnvironment = null;
 
     // Get all agents in the SAME environment as the target agent
     const sameEnvConfigs = Object.values(configsByEnvironment).flat()
@@ -754,10 +755,22 @@ async function testMonitor(agentName, monitorType, environment) {
     const sameEnvAgentNames = [...new Set(sameEnvConfigs.map(c => c.agent_name))]
         .filter(name => name !== agentName);
 
-    // If no agent selected or selected agent is not in the same environment, use auto-select
-    if (!fromAgent || fromAgent === agentName || !sameEnvAgentNames.includes(fromAgent)) {
-        // Use first available agent in the same environment that's not the target
-        fromAgent = sameEnvAgentNames.length > 0 ? sameEnvAgentNames[0] : 'test_user';
+    // Check if selected test sender is in the same environment
+    const fromAgentInSameEnv = sameEnvConfigs.find(c => c.agent_name === fromAgent);
+
+    if (fromAgent && fromAgent !== agentName && fromAgentInSameEnv) {
+        // Use the selected test sender agent
+        fromAgentEnvironment = fromAgentInSameEnv.environment;
+    } else {
+        // Auto-select: use first available agent in the same environment
+        if (sameEnvAgentNames.length > 0) {
+            fromAgent = sameEnvAgentNames[0];
+            const autoSelectedConfig = sameEnvConfigs.find(c => c.agent_name === fromAgent);
+            fromAgentEnvironment = autoSelectedConfig ? autoSelectedConfig.environment : environment;
+        } else {
+            fromAgent = 'test_user';
+            fromAgentEnvironment = environment;
+        }
     }
 
     // Context-aware test messages based on monitor type
@@ -785,7 +798,8 @@ async function testMonitor(agentName, monitorType, environment) {
             body: JSON.stringify({
                 from_agent: fromAgent,
                 to_agent: agentName,
-                message: testMessage
+                message: testMessage,
+                from_agent_environment: fromAgentEnvironment
             })
         });
 
