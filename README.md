@@ -58,9 +58,17 @@ Traditional agent frameworks treat agents as isolated workers. **aX Agent Studio
 -  **Smart Dashboard** - Web-based UI for managing agents, viewing logs, and deploying groups
 -  **Real-time Monitoring** - Track agent activity across multiple MCP servers with live log streaming
 -  **Multiple Monitor Types**:
-  - **LangGraph Monitor**: Advanced agentic workflows with multi-server MCP tool support
-  - **Ollama Monitor**: Local LLM integration (OpenAI-compatible)
-  - **Echo Monitor**: Simple testing monitor
+
+<!-- FRAMEWORKS_LIST_START -->
+<!-- AUTO-GENERATED from configs/frameworks.yaml -->
+<!-- Run scripts/generate_framework_list.py to update -->
+
+- **Claude Agent SDK**⭐ (Recommended): Native Claude Code integration with SDK - Production agents with Claude's full capabilities, security controls
+- **OpenAI Agents SDK**: Official OpenAI agent framework with MCP - GPT agents, OpenAI tooling, rapid prototyping
+- **LangGraph**: Advanced agentic workflows with graph-based routing - Complex multi-step workflows, custom tool chains
+- **Ollama**: Local LLM integration - Privacy-focused, offline deployments, custom models
+- **Echo**: Simple echo/test monitor - Testing, debugging, learning the platform
+<!-- FRAMEWORKS_LIST_END -->
 -  **Deployment Groups** - Deploy multiple agents with pre-configured model tiers (Small/Medium/Large)
 -  **Multi-Provider Support** - Gemini, OpenAI, Anthropic (Claude), Ollama
 -  **FIFO Message Queue** - SQLite-backed reliable message processing
@@ -116,7 +124,8 @@ aX Agent Studio supports multiple agent frameworks (monitors), each optimized fo
 
 | Framework | Best For | Security | Guide |
 |-----------|----------|----------|-------|
-| ** Claude Agent SDK** | Production agents, web research, security-critical tasks | ⭐⭐⭐⭐⭐ Per-agent permissions, sandboxing | **[→ Full Guide](./framework-guides/claude-agent-sdk.md)** |
+| **⭐ Claude Agent SDK** | Production agents, paired programming, security-critical tasks | ⭐⭐⭐⭐⭐ Per-agent permissions, sandboxing | **[→ Full Guide](./framework-guides/claude-agent-sdk.md)** |
+| ** OpenAI Agents SDK** | GPT agents, rapid prototyping, OpenAI tooling | ⭐⭐⭐ MCP-level only | **[→ Full Guide](./framework-guides/openai-agents-sdk.md)** |
 | ** LangGraph** | Complex workflows, graph-based logic, custom tool chains | ⭐⭐⭐ MCP-level only | [→ Guide](./framework-guides/langgraph.md) |
 | ** Ollama** | Privacy-focused, offline, custom models | ⭐⭐⭐ MCP-level only | [→ Guide](./framework-guides/ollama.md) |
 | ** Echo** | Testing, debugging, learning | ⭐ Testing only | [→ Guide](./framework-guides/echo.md) |
@@ -318,20 +327,16 @@ dashboard:
 
 ##  Monitor Types
 
-### LangGraph Monitor (Recommended)
-- Full agentic workflows with LangGraph
-- Multi-server MCP support (connect to multiple tool servers)
-- Access to all available tools (messages, tasks, search, filesystem, etc.)
-- Multi-step reasoning with tool use
+<!-- FRAMEWORKS_LIST_START -->
+<!-- AUTO-GENERATED from configs/frameworks.yaml -->
+<!-- Run scripts/generate_framework_list.py to update -->
 
-### Ollama Monitor
-- Local LLM integration via OpenAI-compatible API
-- Conversation history management
-- Configurable model selection
-
-### Echo Monitor
-- Simple message echo for testing
-- Minimal setup, instant response
+- **Claude Agent SDK**⭐ (Recommended): Native Claude Code integration with SDK - Production agents with Claude's full capabilities, security controls
+- **OpenAI Agents SDK**: Official OpenAI agent framework with MCP - GPT agents, OpenAI tooling, rapid prototyping
+- **LangGraph**: Advanced agentic workflows with graph-based routing - Complex multi-step workflows, custom tool chains
+- **Ollama**: Local LLM integration - Privacy-focused, offline deployments, custom models
+- **Echo**: Simple echo/test monitor - Testing, debugging, learning the platform
+<!-- FRAMEWORKS_LIST_END -->
 
 ---
 
