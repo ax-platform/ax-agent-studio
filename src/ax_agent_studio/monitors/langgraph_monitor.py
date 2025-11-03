@@ -752,7 +752,13 @@ def load_base_prompt() -> str:
         return ""
 
 
-async def langgraph_mcp_monitor(agent_name: str, model: str = "gpt-oss:latest", provider: str = "ollama", history_limit: int = 25):
+async def langgraph_mcp_monitor(
+    agent_name: str,
+    model: str = "gpt-oss:latest",
+    provider: str = "ollama",
+    history_limit: int = 25,
+    config_path: Optional[str] = None
+):
     """
     LangGraph monitor with multi-server MCP support and FIFO queue
     Loads agent config and connects to all defined MCP servers
@@ -762,6 +768,7 @@ async def langgraph_mcp_monitor(agent_name: str, model: str = "gpt-oss:latest", 
         model: Model ID to use
         provider: LLM provider (ollama, gemini, anthropic, openai, bedrock)
         history_limit: Number of recent messages to remember (default: 25)
+        config_path: Path to agent config file (optional, defaults to configs/agents/{agent_name}.json)
     """
 
     print(f" LangGraph MCP Monitor starting")
@@ -786,7 +793,7 @@ async def langgraph_mcp_monitor(agent_name: str, model: str = "gpt-oss:latest", 
                 print(" Loaded base system prompt with AI self-awareness\n")
 
         # Use MCPServerManager to connect to all servers in config
-        async with MCPServerManager(agent_name) as mcp_manager:
+        async with MCPServerManager(agent_name, config_path=config_path) as mcp_manager:
             # Get primary session for messaging (ax-gcp or ax-docker)
             primary_session = mcp_manager.get_primary_session()
 
@@ -888,8 +895,6 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    # Note: --config is ignored since MCPServerManager auto-loads from agent_name
-
     # Check if Ollama is running (only if using Ollama provider)
     if args.provider == "ollama":
         try:
@@ -904,4 +909,10 @@ if __name__ == "__main__":
             print(f"   Error: {e}")
             sys.exit(1)
 
-    asyncio.run(langgraph_mcp_monitor(args.agent_name, args.model, args.provider, args.history_limit))
+    asyncio.run(langgraph_mcp_monitor(
+        args.agent_name,
+        args.model,
+        args.provider,
+        args.history_limit,
+        args.config
+    ))

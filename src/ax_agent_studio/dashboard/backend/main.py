@@ -24,6 +24,12 @@ from ax_agent_studio.dashboard.backend.providers_loader import (
     get_models_for_provider,
     get_defaults
 )
+from ax_agent_studio.dashboard.backend.framework_loader import (
+    load_frameworks,
+    get_framework_info,
+    get_ui_defaults,
+    get_provider_defaults
+)
 
 app = FastAPI(title="MCP Monitor Dashboard", version="1.0.0")
 
@@ -47,7 +53,7 @@ log_streamer = LogStreamer(PROJECT_ROOT / "logs")
 class MonitorConfig(BaseModel):
     agent_name: str
     config_path: str
-    monitor_type: Literal["echo", "ollama", "langgraph", "claude_agent_sdk"]
+    monitor_type: Literal["echo", "ollama", "langgraph", "claude_agent_sdk", "openai_agents_sdk"]
     model: Optional[str] = None
     provider: Optional[str] = None
     system_prompt: Optional[str] = None
@@ -110,6 +116,44 @@ async def health_check():
         "timestamp": datetime.now().isoformat(),
         "monitors_running": len(process_manager.get_running_monitors())
     }
+
+@app.get("/api/settings")
+async def get_settings():
+    """Get dashboard settings from environment (via frameworks.yaml)"""
+    try:
+        ui_defaults = get_ui_defaults()
+        return {
+            "default_agent_type": ui_defaults.get("default_framework", "claude_agent_sdk"),
+            "default_provider": ui_defaults.get("default_provider", "anthropic"),
+            "default_model": ui_defaults.get("default_model", "claude-sonnet-4-5"),
+            "default_environment": ui_defaults.get("default_environment", "local")
+        }
+    except Exception as e:
+        # Fallback to hardcoded defaults if framework config fails
+        return {
+            "default_agent_type": os.getenv("DEFAULT_AGENT_TYPE", "claude_agent_sdk"),
+            "default_provider": os.getenv("DEFAULT_PROVIDER", "anthropic"),
+            "default_model": os.getenv("DEFAULT_MODEL", "claude-sonnet-4-5"),
+            "default_environment": os.getenv("DEFAULT_ENVIRONMENT", "local")
+        }
+
+@app.get("/api/frameworks")
+async def get_frameworks():
+    """Get framework registry with provider requirements"""
+    try:
+        return load_frameworks()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to load frameworks: {str(e)}")
+
+@app.get("/api/frameworks/{framework_type}")
+async def get_framework(framework_type: str):
+    """Get configuration for a specific framework"""
+    try:
+        return get_framework_info(framework_type)
+    except KeyError:
+        raise HTTPException(status_code=404, detail=f"Framework not found: {framework_type}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get framework info: {str(e)}")
 
 @app.get("/api/processes/health")
 async def processes_health():
@@ -469,7 +513,7 @@ async def activate_kill_switch():
     return {
         "success": True,
         "active": True,
-        "message": " Kill switch activated - all agents paused"
+        "message": "Kill switch activated - all agents paused"
     }
 
 @app.post("/api/kill-switch/deactivate")
@@ -482,7 +526,7 @@ async def deactivate_kill_switch():
     return {
         "success": True,
         "active": False,
-        "message": " Kill switch deactivated - agents resumed"
+        "message": "Kill switch deactivated - agents resumed"
     }
 
 @app.post("/api/monitors/kill-all")
@@ -507,7 +551,7 @@ async def kill_all_monitors():
 
         return {
             "success": True,
-            "message": f" Nuclear option: Killed {count} monitor(s), cleared {deleted_count} from list, activated kill switch",
+            "message": f"Nuclear option: Killed {count} monitor(s), cleared {deleted_count} from list, activated kill switch",
             "kill_switch_active": True,
             "killed_count": count,
             "cleared_count": deleted_count

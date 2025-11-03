@@ -28,20 +28,32 @@ const escapeAttr = (value) => String(value)
 
 // Initialize dashboard
 document.addEventListener('DOMContentLoaded', async () => {
-    // Setup event listeners FIRST so they're ready when defaults load
-    setupEventListeners();
-
+    await loadFrameworks(); // Load framework registry first
+    await loadSettings(); // Load settings (uses framework registry)
     await loadEnvironments();
     await loadConfigs();
-    await loadProviders(); // This will set default agent type and trigger UI update
+    await loadProviders();
     await loadPrompts();
     await loadDeploymentGroups();
     await loadMonitors();
     await updateKillSwitchButton(); // Check initial kill switch state
     initializeWebSocket();
+    setupEventListeners();
 
-    // Note: Don't manually show/hide groups here - let the monitor type change handler do it
-    // This ensures the UI is always in sync with the selected monitor type
+    // Show/hide provider/model groups AND load correct models for default monitor type
+    const monitorType = document.getElementById('monitor-type-select').value;
+    if (frameworkRegistry && frameworkRegistry.frameworks[monitorType]) {
+        const framework = frameworkRegistry.frameworks[monitorType];
+        document.getElementById('provider-group').style.display = framework.requires_provider ? 'block' : 'none';
+        document.getElementById('model-group').style.display = framework.requires_model ? 'block' : 'none';
+        document.getElementById('system-prompt-group').style.display = framework.requires_model ? 'block' : 'none';
+
+        // CRITICAL: Load models for the correct provider
+        if (framework.requires_model) {
+            const provider = framework.provider || selectedProvider;
+            await loadModelsForProvider(provider);
+        }
+    }
 
     // Refresh monitors and kill switch state every 5 seconds
     setInterval(async () => {
@@ -81,38 +93,31 @@ function setupEventListeners() {
 
         const selectedType = e.target.value;
 
-        // Each monitor type has different configuration needs:
-        // - Echo: no configuration (simple passthrough)
-        // - Ollama: model only (provider is implicit)
-        // - Claude Agent SDK: model only (uses Claude models directly, no provider)
-        // - LangGraph: provider + model (supports multiple LLM providers)
-        if (selectedType === 'echo') {
-            // Echo: simple pass-through, no AI configuration needed
+        // Use framework registry to determine UI requirements
+        if (frameworkRegistry && frameworkRegistry.frameworks[selectedType]) {
+            const framework = frameworkRegistry.frameworks[selectedType];
+
+            // PROVIDER dropdown: only show for frameworks that support multiple providers (e.g., LangGraph)
+            providerGroup.style.display = framework.requires_provider ? 'block' : 'none';
+
+            // MODEL dropdown: show for all frameworks except Echo
+            modelGroup.style.display = framework.requires_model ? 'block' : 'none';
+
+            // SYSTEM PROMPT: show for all frameworks except Echo
+            systemPromptGroup.style.display = framework.requires_model ? 'block' : 'none';
+
+            // Load models for the appropriate provider
+            if (framework.requires_model) {
+                // Use implicit provider if framework has one, otherwise use selected provider
+                const provider = framework.provider || selectedProvider;
+                await loadModelsForProvider(provider);
+            }
+        } else {
+            // Fallback to hiding all if framework not found
+            console.warn(`Framework not found in registry: ${selectedType}`);
             providerGroup.style.display = 'none';
             modelGroup.style.display = 'none';
             systemPromptGroup.style.display = 'none';
-        } else if (selectedType === 'ollama') {
-            // Ollama: needs model, but provider is implicit (always Ollama)
-            providerGroup.style.display = 'none';
-            modelGroup.style.display = 'block';
-            systemPromptGroup.style.display = 'block';
-            // Load Ollama models when Ollama monitor is selected
-            await loadModelsForProvider('ollama');
-        } else if (selectedType === 'claude_agent_sdk') {
-            // Claude Agent SDK: needs model (Claude only), no provider selection
-            providerGroup.style.display = 'none';
-            modelGroup.style.display = 'block';
-            systemPromptGroup.style.display = 'block';
-            // Load Claude models (use anthropic provider backend)
-            await loadModelsForProvider('anthropic');
-        } else {
-            // LangGraph: needs provider + model selection
-            providerGroup.style.display = 'block';
-            modelGroup.style.display = 'block';
-            systemPromptGroup.style.display = 'block';
-
-            // Load models for currently selected provider
-            await loadModelsForProvider(selectedProvider);
         }
     });
 
@@ -169,7 +174,59 @@ function setupEventListeners() {
     });
 }
 
+// Global framework registry
+let frameworkRegistry = null;
+
 // API Calls
+async function loadFrameworks() {
+    try {
+        const response = await fetch(`${API_BASE}/api/frameworks`);
+        frameworkRegistry = await response.json();
+        console.log('Loaded framework registry:', frameworkRegistry);
+        return frameworkRegistry;
+    } catch (error) {
+        console.error('Error loading frameworks:', error);
+        return null;
+    }
+}
+
+async function loadSettings() {
+    try {
+        const response = await fetch(`${API_BASE}/api/settings`);
+        const data = await response.json();
+
+        // Set defaults from environment (via frameworks.yaml)
+        const defaultType = data.default_agent_type || 'claude_agent_sdk';
+        const defaultProvider = data.default_provider || 'anthropic';
+        const defaultModel = data.default_model || 'claude-sonnet-4-5';
+
+        const monitorSelect = document.getElementById('monitor-type-select');
+        if (monitorSelect) {
+            monitorSelect.value = defaultType;
+            console.log(`Set default monitor type to: ${defaultType}`);
+        }
+
+        // Store defaults for later use
+        window.dashboardDefaults = {
+            agent_type: defaultType,
+            provider: defaultProvider,
+            model: defaultModel,
+            environment: data.default_environment || 'local'
+        };
+
+    } catch (error) {
+        console.error('Error loading settings:', error);
+        // Fallback to hardcoded defaults if API fails
+        document.getElementById('monitor-type-select').value = 'claude_agent_sdk';
+        window.dashboardDefaults = {
+            agent_type: 'claude_agent_sdk',
+            provider: 'anthropic',
+            model: 'claude-sonnet-4-5',
+            environment: 'local'
+        };
+    }
+}
+
 async function loadEnvironments() {
     try {
         const response = await fetch(`${API_BASE}/api/environments`);
@@ -226,7 +283,7 @@ async function loadConfigsForEnvironment(environment) {
         if (config) updateAgentHelp(config);
     };
 
-    // Update test sender dropdown with available agents
+    // Update test sender options when configs change
     updateTestSenderOptions();
 }
 
@@ -300,20 +357,8 @@ async function loadProviders() {
             select.value = defaults.provider;
         }
 
-        // Set default agent type (claude_agent_sdk, langgraph, ollama, or echo)
-        if (defaults.agent_type) {
-            const monitorTypeSelect = document.getElementById('monitor-type-select');
-            if (monitorTypeSelect) {
-                monitorTypeSelect.value = defaults.agent_type;
-                // Trigger the change event to update UI accordingly
-                // The change handler will load the appropriate models, so we skip the
-                // loadModelsForProvider call below to avoid overwriting them
-                monitorTypeSelect.dispatchEvent(new Event('change'));
-            }
-        } else {
-            // No default agent type set, load models for default provider
-            await loadModelsForProvider(selectedProvider);
-        }
+        // Load models for default provider
+        await loadModelsForProvider(selectedProvider);
 
     } catch (error) {
         console.error('Error loading providers:', error);
@@ -327,10 +372,24 @@ async function loadModelsForProvider(providerId) {
         const data = await response.json();
         models = data.models;
 
+        // Get current monitor type to check for framework-specific defaults
+        const monitorType = document.getElementById('monitor-type-select').value;
+        let frameworkDefaultModel = null;
+
+        if (frameworkRegistry && frameworkRegistry.frameworks[monitorType]) {
+            const framework = frameworkRegistry.frameworks[monitorType];
+            // If this framework has an implicit provider and a default model, use it
+            if (framework.provider === providerId && framework.default_model) {
+                frameworkDefaultModel = framework.default_model;
+            }
+        }
+
         const select = document.getElementById('model-select');
         const options = models.map(m => {
             const label = m.recommended ? `${m.name} ⭐` : m.name;
-            const selected = m.default ? ' selected' : '';
+            // Prefer framework default over provider default
+            const isDefault = frameworkDefaultModel ? (m.id === frameworkDefaultModel) : m.default;
+            const selected = isDefault ? ' selected' : '';
             return `<option value="${m.id}" title="${m.description}"${selected}>${label}</option>`;
         });
 
@@ -411,48 +470,6 @@ async function startMonitor() {
         return;
     }
 
-    // Check if an agent with this name is already running in the SAME environment with SAME type
-    // This prevents accidentally stopping production agents when deploying dev agents with same name
-    const existingMonitor = monitors.find(m =>
-        m.agent_name === config.agent_name &&
-        m.status === 'running' &&
-        m.environment === selectedEnvironment &&
-        m.monitor_type === monitorType
-    );
-    if (existingMonitor) {
-        // Show confirmation dialog
-        const confirmed = confirm(
-            `⚠️ REPLACE EXISTING AGENT?\n\n` +
-            `An agent named "${config.agent_name}" is already running in ${selectedEnvironment}.\n\n` +
-            `Deploying this agent will:\n` +
-            `• Stop the current ${monitorType} agent\n` +
-            `• Clear its state and history\n` +
-            `• Start a fresh instance with new settings\n\n` +
-            `Do you want to replace the existing agent?`
-        );
-
-        if (!confirmed) {
-            showNotification('Deployment cancelled - agent already running', 'info');
-            return;
-        }
-
-        // User confirmed - proceed with stopping the old one first
-        showNotification(`Stopping existing agent: ${config.agent_name}...`, 'info');
-        try {
-            await fetch(`${API_BASE}/api/monitors/stop`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ monitor_id: existingMonitor.id })
-            });
-            // Small delay to let the old monitor fully stop
-            await new Promise(resolve => setTimeout(resolve, 1000));
-        } catch (error) {
-            console.error('Error stopping existing monitor:', error);
-            showNotification('Failed to stop existing agent', 'error');
-            return;
-        }
-    }
-
     // Get the actual prompt content from the selected prompt file
     let systemPromptContent = null;
     let systemPromptName = null;
@@ -464,14 +481,6 @@ async function startMonitor() {
         }
     }
 
-    // Determine which monitors need provider/model
-    // Echo: no provider, no model
-    // Ollama: no provider (implicit), yes model
-    // Claude Agent SDK: no provider (uses Anthropic implicitly), yes model
-    // LangGraph: yes provider, yes model
-    const needsProvider = monitorType === 'langgraph';
-    const needsModel = monitorType !== 'echo';
-
     try {
         const response = await fetch(`${API_BASE}/api/monitors/start`, {
             method: 'POST',
@@ -481,11 +490,11 @@ async function startMonitor() {
                     agent_name: config.agent_name,
                     config_path: configPath,
                     monitor_type: monitorType,
-                    provider: needsProvider ? provider : null,
-                    model: needsModel ? model : null,
+                    provider: shouldShowProvider(monitorType) ? provider : null,
+                    model: (monitorType !== 'echo') ? model : null,
                     system_prompt: systemPromptContent,
                     system_prompt_name: systemPromptName,
-                    history_limit: needsModel ? historyLimit : null
+                    history_limit: monitorType !== 'echo' ? historyLimit : null
                 }
             })
         });
@@ -720,12 +729,12 @@ async function resetAllAgents() {
     }
 }
 
-async function testMonitor(agentName, monitorType) {
+async function testMonitor(agentName, monitorType, environment) {
     // Find the test button and show immediate feedback
     const buttons = document.querySelectorAll('.monitor-card button');
     let testButton = null;
     buttons.forEach(btn => {
-        if (btn.textContent.includes('Test') && btn.closest('.monitor-card').textContent.includes(agentName)) {
+        if (btn.textContent.includes('✏️') && btn.closest('.monitor-card').textContent.includes(agentName)) {
             testButton = btn;
         }
     });
@@ -739,20 +748,23 @@ async function testMonitor(agentName, monitorType) {
     // Get test sender agent from settings or use auto-select
     let fromAgent = localStorage.getItem('testSenderAgent');
 
-    // If no agent selected or selected agent is the same as target, use auto-select
-    if (!fromAgent || fromAgent === agentName) {
-        // Get all unique agent names from current configs
-        const agentNames = [...new Set(configs.map(c => c.agent_name))].filter(name => name !== agentName);
+    // Get all agents in the SAME environment as the target agent
+    const sameEnvConfigs = Object.values(configsByEnvironment).flat()
+        .filter(c => c.environment === environment);
+    const sameEnvAgentNames = [...new Set(sameEnvConfigs.map(c => c.agent_name))]
+        .filter(name => name !== agentName);
 
-        // Use first available agent that's not the target
-        fromAgent = agentNames.length > 0 ? agentNames[0] : 'test_user';
+    // If no agent selected or selected agent is not in the same environment, use auto-select
+    if (!fromAgent || fromAgent === agentName || !sameEnvAgentNames.includes(fromAgent)) {
+        // Use first available agent in the same environment that's not the target
+        fromAgent = sameEnvAgentNames.length > 0 ? sameEnvAgentNames[0] : 'test_user';
     }
 
     // Context-aware test messages based on monitor type
     let testMessage;
     if (monitorType === 'echo') {
         testMessage = `Test echo at ${new Date().toLocaleTimeString()} 🧪`;
-    } else if (['ollama', 'langgraph', 'claude_agent_sdk'].includes(monitorType)) {
+    } else if (['ollama', 'langgraph', 'claude_agent_sdk', 'openai_agents_sdk'].includes(monitorType)) {
         const aiQuestions = [
             "What's a fun fact about AI?",
             "Tell me a quick joke!",
@@ -973,7 +985,7 @@ function renderMonitors() {
         const statusClass = isRunning ? 'running' : 'stopped';
 
         const testControl = isRunning && monitor.id
-            ? `<button class="btn btn-primary btn-sm" onclick="testMonitor('${escapeAttr(monitor.agent_name)}', '${escapeAttr(monitor.monitor_type)}')" title="Send test message from configured sender (see Test Sender Agent setting)">✏️ Test</button>`
+            ? `<button class="btn btn-primary btn-sm" onclick="testMonitor('${escapeAttr(monitor.agent_name)}', '${escapeAttr(monitor.monitor_type)}', '${escapeAttr(monitor.environment)}')" title="Send test message from agent in same environment (see Test Sender Agent setting)">✏️</button>`
             : '';
 
         const pauseOrStartControl = hasMonitorId
@@ -1017,8 +1029,8 @@ function renderMonitors() {
             </div>
             <div class="monitor-info">
                 <div class="monitor-details">
-                    Type: ${monitor.monitor_type} |
-                    ${monitor.provider ? `Provider: ${providerName} | ` : ''}
+                    Type: ${getFriendlyMonitorTypeName(monitor.monitor_type)} |
+                    ${shouldShowProvider(monitor.monitor_type) && monitor.provider ? `Provider: ${providerName} | ` : ''}
                     ${monitor.model ? `Model: ${modelName}` : ''}
                     ${monitor.uptime_seconds && isRunning ? ` | Uptime: ${formatUptime(monitor.uptime_seconds)}` : ''}
                     <br>
@@ -1031,6 +1043,37 @@ function renderMonitors() {
         </div>
     `;
     }).join('');
+}
+
+// Helper function to determine if provider should be shown for a monitor type
+function shouldShowProvider(monitorType) {
+    // Framework-specific monitors (OpenAI SDK, Claude SDK) have implicit providers
+    // These should NOT show provider field in monitor card
+    const frameworkSpecificMonitors = ['openai_agents_sdk', 'openai_agents', 'claude_agent_sdk'];
+    return !frameworkSpecificMonitors.includes(monitorType);
+}
+
+// Helper function to get friendly monitor type name
+function getFriendlyMonitorTypeName(monitorType) {
+    // Check framework registry for friendly name
+    if (frameworkRegistry && frameworkRegistry.frameworks) {
+        const framework = frameworkRegistry.frameworks[monitorType];
+        if (framework) {
+            return `${framework.emoji} ${framework.name}`;
+        }
+    }
+
+    // Fallback mapping for older monitor types
+    const typeMap = {
+        'echo': '📢 Echo',
+        'ollama': '🦙 Ollama',
+        'langgraph': '🕸️ LangGraph',
+        'claude_agent_sdk': '🛡 Claude Agent SDK',
+        'openai_agents_sdk': '🤖 OpenAI Agents SDK',
+        'openai_agents': '🤖 OpenAI Agents SDK'  // Legacy name
+    };
+
+    return typeMap[monitorType] || monitorType;
 }
 
 // Helper function to get friendly provider name
@@ -1072,6 +1115,7 @@ function getMonitorEmoji(type) {
         'ollama': '🤖',
         'langgraph': '🧠',
         'claude_agent_sdk': '🛡',
+        'openai_agents_sdk': '🤖',
         'demo': '🎬'
     };
     return emojis[type] || '📡';

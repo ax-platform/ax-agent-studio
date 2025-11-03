@@ -302,7 +302,7 @@ class ProcessManager:
         self,
         agent_name: str,
         config_path: str,
-        monitor_type: Literal["echo", "ollama", "langgraph", "claude_agent_sdk"],
+        monitor_type: Literal["echo", "ollama", "langgraph", "claude_agent_sdk", "openai_agents_sdk"],
         model: Optional[str] = None,
         provider: Optional[str] = None,
         system_prompt: Optional[str] = None,
@@ -310,6 +310,15 @@ class ProcessManager:
         history_limit: Optional[int] = 25
     ) -> str:
         """Start a monitor process"""
+        # Resolve config_path to full path if it's just a filename
+        # API sends just filename, but monitors need full path
+        if not os.path.isabs(config_path) and not config_path.startswith("configs/"):
+            # Convert filename to full path
+            full_config_path = self.base_dir / "configs" / "agents" / config_path
+            if not full_config_path.exists():
+                raise FileNotFoundError(f"Config file not found: {config_path}")
+            config_path = str(full_config_path)
+
         # Sanitize agent_name to prevent shell injection and path traversal
         safe_agent_name = sanitize_agent_name(agent_name)
 
@@ -322,13 +331,13 @@ class ProcessManager:
 
         # Always clear local SQLite queue on startup
         # Queue is just a trigger - agent fetches last 25 messages for context each time
-        print(f" Starting {agent_name} - clearing local queue")
+        print(f"Starting {agent_name} - clearing local queue")
         try:
             local_cleared = self.message_store.clear_agent(agent_name)
             if local_cleared > 0:
                 print(f"   Cleared {local_cleared} local messages from SQLite queue")
         except Exception as e:
-            print(f"  Warning: Failed to clear local queue: {e}")
+            print(f"Warning: Failed to clear local queue: {e}")
 
         # CRITICAL: Also kill any orphaned system processes for this agent
         # This prevents the "competing monitors" problem
@@ -414,6 +423,18 @@ class ProcessManager:
                 "-u",
                 "-m",
                 "ax_agent_studio.monitors.claude_agent_sdk_monitor",
+                agent_name,
+                "--config",
+                config_path,
+            ]
+            if model:
+                cmd.extend(["--model", model])
+        elif monitor_type == "openai_agents_sdk":
+            cmd = [
+                str(venv_python),
+                "-u",
+                "-m",
+                "ax_agent_studio.monitors.openai_agents_monitor",
                 agent_name,
                 "--config",
                 config_path,
@@ -549,7 +570,7 @@ class ProcessManager:
             summary["errors"].append(f"remote: {e}")
 
         if summary["errors"]:
-            print(f"  Reset backlog warnings for {agent_name}: {', '.join(summary['errors'])}")
+            print(f"Reset backlog warnings for {agent_name}: {', '.join(summary['errors'])}")
 
         return summary
 
@@ -672,7 +693,7 @@ class ProcessManager:
             system_prompt, system_prompt_name = self._resolve_system_prompt(prompt_ref)
             start_delay_ms = agent.start_delay_ms or defaults.get("start_delay_ms", 0)
 
-            if monitor_type not in {"echo", "ollama", "langgraph", "claude_agent_sdk"}:
+            if monitor_type not in {"echo", "ollama", "langgraph", "claude_agent_sdk", "openai_agents_sdk"}:
                 raise ValueError(f"Unsupported monitor type '{monitor_type}' in group '{group_id}'")
 
             config_path = self._get_agent_config_path(agent.id)

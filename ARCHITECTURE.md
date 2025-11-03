@@ -409,6 +409,85 @@ await asyncio.gather(poll_messages(), process_messages())
 
 ---
 
+## Framework Configuration Architecture
+
+### Dashboard UI Configuration Matrix
+
+**What the user sees when deploying each framework:**
+
+| Framework | Provider Dropdown | Model Dropdown | System Prompt | How It Works |
+|-----------|------------------|----------------|---------------|--------------|
+| **Echo** | ❌ Hidden | ❌ Hidden | ❌ Hidden | No LLM needed - simple passthrough |
+| **Ollama** | ❌ Hidden | ✅ **SHOWN** | ✅ **SHOWN** | Provider fixed to `ollama`, user picks from Ollama models (llama3.2, qwen2.5, etc.) |
+| **Claude Agent SDK** | ❌ Hidden | ✅ **SHOWN** | ✅ **SHOWN** | Provider fixed to `anthropic`, user picks from Claude models (sonnet-4-5, haiku-4-5, etc.) |
+| **OpenAI Agents SDK** | ❌ Hidden | ✅ **SHOWN** | ✅ **SHOWN** | Provider fixed to `openai`, user picks from OpenAI models (gpt-5, gpt-5-mini, o4-mini, etc.) |
+| **LangGraph** | ✅ **SHOWN** | ✅ **SHOWN** | ✅ **SHOWN** | User picks provider (anthropic/openai/google/bedrock/ollama), then model for that provider |
+
+**Key Design Principles:**
+
+1. **Provider dropdown** only hidden when framework is architecturally locked to one provider
+2. **Model dropdown** ALWAYS shown (except Echo) so users can pick their preferred model within the provider
+3. **System prompt** ALWAYS shown (except Echo) so users can customize agent personality
+4. **Backend uses implicit provider** when dropdown is hidden (e.g., Claude Agent SDK always uses anthropic)
+
+**Why This Design:**
+
+- **Prevents errors**: Can't accidentally select Gemini for Claude Agent SDK (wrong provider)
+- **Provides choice**: Can still pick claude-sonnet-4-5 vs claude-haiku-4-5 (right models)
+- **Stays flexible**: LangGraph supports all providers because it's framework-agnostic
+- **Keeps UI clean**: Only show provider dropdown when it's actually a choice
+
+**Architectural Constraints:**
+
+1. **Echo** - No LLM processing, simple message passthrough
+2. **Ollama** - Locked to `http://localhost:11434/v1` but supports all Ollama models
+3. **Claude Agent SDK** - Uses `@anthropic-ai/sdk`, only talks to Anthropic API, supports all Claude models
+4. **OpenAI Agents SDK** - Uses `openai-agents`, only talks to OpenAI API, supports all OpenAI models
+5. **LangGraph** - Uses `langchain` with provider adapters, supports any LLM provider
+
+### Configuration Files
+
+The framework registry is defined in `configs/frameworks.yaml`:
+
+```yaml
+frameworks:
+  claude_agent_sdk:
+    requires_provider: false  # Provider is implicit (anthropic)
+    requires_model: true
+    provider: "anthropic" < could be bedrock too.
+    default_model: "claude-sonnet-4-5"
+    recommended: true
+    prompt: "user pick, default none"
+
+  openai_agents_sdk:
+    requires_provider: false  # Provider is implicit (openai)
+    requires_model: true
+    provider: "openai" < not editable
+    model: :depends on provider"
+    default_model: "gpt-5-mini"
+    prompt: "user pick, default none"
+
+  langgraph:
+    requires_provider: true  # User selects provider
+    requires_model: true
+    provider: "lots of options!"  # User choice
+    model: :depends on provider"
+    prompt: "user pick, default none"
+
+
+# UI defaults (with env var substitution)
+ui:
+  default_framework: "${DEFAULT_AGENT_TYPE:-claude_agent_sdk}"
+  default_provider: "${DEFAULT_PROVIDER:-anthropic}"
+  default_model: "${DEFAULT_MODEL:-claude-sonnet-4-5}"
+```
+
+### Dashboard UI Implementation
+
+The backend (`framework_loader.py`) loads this config and substitutes environment variables. The frontend (`app.js`) fetches framework config via `/api/frameworks` and conditionally displays fields based on `requires_provider` and `requires_model` flags.
+
+---
+
 ## Extending the Platform
 
 ### Creating Custom Monitors

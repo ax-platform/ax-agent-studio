@@ -62,11 +62,11 @@ class MCPServerManager:
         await self.disconnect_all()
 
     def load_config(self) -> Dict:
-        """Load agent configuration from configs/agents/{agent_name}.json"""
+        """Load agent configuration from the specified config_path"""
         if not self.config_path.exists():
             raise FileNotFoundError(
                 f"Agent config not found: {self.config_path}\n"
-                f"Create a config file at configs/agents/{self.agent_name}.json"
+                f"The config file does not exist at the specified path."
             )
 
         with open(self.config_path) as f:
