@@ -171,7 +171,7 @@ async def openai_agents_monitor(
     # Use MCPServerManager same way as LangGraph monitor - auto-loads full config
     # This connects to ALL servers for QueueManager messaging
     # (OpenAI SDK handles separate agent tool connections)
-    async with MCPServerManager(agent_name, config_path=resolved_config) as manager:
+    async with MCPServerManager(agent_name, config_path=config_path) as manager:
         primary_session = manager.get_primary_session()
         print(f"✅ Connected messaging layer for QueueManager\n")
 
