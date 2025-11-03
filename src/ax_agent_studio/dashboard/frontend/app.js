@@ -490,7 +490,7 @@ async function startMonitor() {
                     agent_name: config.agent_name,
                     config_path: configPath,
                     monitor_type: monitorType,
-                    provider: (monitorType !== 'echo') ? provider : null,
+                    provider: shouldShowProvider(monitorType) ? provider : null,
                     model: (monitorType !== 'echo') ? model : null,
                     system_prompt: systemPromptContent,
                     system_prompt_name: systemPromptName,
