@@ -27,6 +27,7 @@ dependencies = [
     "aiofiles>=24.1.0",
     "python-multipart>=0.0.9",
     "openai>=1.0.0",
+    "openai-agents>=0.1.0",
     "langgraph>=0.1.0",
     "pyyaml>=6.0.0",
     "langchain-aws>=1.0.0",
