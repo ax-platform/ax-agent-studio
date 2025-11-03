@@ -81,7 +81,11 @@ class ConfigLoader:
                         description = f"Agent using {len(data['mcpServers'])} MCP server(s): {', '.join(mcp_server_names)}"
                     else:
                         # Legacy format (backward compatibility)
-                        agent_name = data.get("agent_name", config_file.stem)
+                        # IMPORTANT: Never use filename as agent_name - always require explicit agent_name in config
+                        agent_name = data.get("agent_name", "")
+                        if not agent_name:
+                            print(f"⚠️  WARNING: {config_file.name} missing agent_name - skipping")
+                            continue
                         display_name = data.get("display_name", agent_name)
                         server_url = data.get("server_url", "")
                         oauth_url = data.get("oauth_url", "")
