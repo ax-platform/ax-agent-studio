@@ -282,6 +282,9 @@ async function loadConfigsForEnvironment(environment) {
         const config = configs.find(c => c.path === e.target.value);
         if (config) updateAgentHelp(config);
     };
+
+    // Update test sender options when configs change
+    updateTestSenderOptions();
 }
 
 function updateAgentHelp(config) {
@@ -291,6 +294,38 @@ function updateAgentHelp(config) {
     } else {
         helpText.textContent = '';
     }
+}
+
+function updateTestSenderOptions() {
+    const testSenderSelect = document.getElementById('test-sender-select');
+    if (!testSenderSelect) return;
+
+    // Get all unique agent names from configs
+    const agentNames = [...new Set(configs.map(c => c.agent_name))].sort();
+
+    // Build options
+    let options = '<option value="">Auto (first available)</option>';
+    agentNames.forEach(name => {
+        options += `<option value="${name}">${name}</option>`;
+    });
+
+    testSenderSelect.innerHTML = options;
+
+    // Restore saved preference from localStorage
+    const savedTestSender = localStorage.getItem('testSenderAgent');
+    if (savedTestSender && agentNames.includes(savedTestSender)) {
+        testSenderSelect.value = savedTestSender;
+    }
+
+    // Save preference on change
+    testSenderSelect.onchange = (e) => {
+        const selectedAgent = e.target.value;
+        if (selectedAgent) {
+            localStorage.setItem('testSenderAgent', selectedAgent);
+        } else {
+            localStorage.removeItem('testSenderAgent');
+        }
+    };
 }
 
 // Removed demo functionality - focus on Agent Factory core features
