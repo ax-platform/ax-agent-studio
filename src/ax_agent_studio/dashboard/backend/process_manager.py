@@ -420,7 +420,7 @@ class ProcessManager:
             ]
             if model:
                 cmd.extend(["--model", model])
-        elif monitor_type == "openai_agents":
+        elif monitor_type == "openai_agents_sdk":
             cmd = [
                 str(venv_python),
                 "-u",
