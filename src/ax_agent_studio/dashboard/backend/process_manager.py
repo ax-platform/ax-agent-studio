@@ -1103,13 +1103,39 @@ class ProcessManager:
 
         return demo_id
 
-    async def send_test_message(self, from_agent: str, to_agent: str, message: str) -> bool:
-        """Send a test message from one agent to another"""
+    async def send_test_message(self, from_agent: str, to_agent: str, message: str, from_agent_environment: Optional[str] = None) -> bool:
+        """Send a test message from one agent to another
+
+        Args:
+            from_agent: Name of the agent sending the message
+            to_agent: Name of the agent receiving the message
+            message: Message content
+            from_agent_environment: Environment of the from_agent (to find correct server URL)
+        """
         from mcp import ClientSession, StdioServerParameters
         from mcp.client.stdio import stdio_client
 
-        server_url = f"http://localhost:8002/mcp/agents/{from_agent}"
-        oauth_server = "http://localhost:8001"
+        # Find the from_agent's config to get the correct server URL
+        from_agent_config = None
+        if from_agent_environment:
+            # Look up agent in specific environment
+            configs = self.config_loader.list_configs(from_agent_environment)
+            from_agent_config = next((c for c in configs if c["agent_name"] == from_agent), None)
+        else:
+            # Fallback: search all environments
+            all_configs = self.config_loader.list_configs()
+            from_agent_config = next((c for c in all_configs if c["agent_name"] == from_agent), None)
+
+        if not from_agent_config:
+            raise ValueError(f"Test sender agent '{from_agent}' not found" +
+                           (f" in environment '{from_agent_environment}'" if from_agent_environment else ""))
+
+        # Get server URL and OAuth URL from the agent's config
+        server_url = from_agent_config.get("server_url")
+        oauth_url = from_agent_config.get("oauth_url")
+
+        if not server_url or not oauth_url:
+            raise ValueError(f"Agent '{from_agent}' config is missing server_url or oauth_url")
 
         server_params = StdioServerParameters(
             command="npx",
@@ -1118,7 +1144,7 @@ class ProcessManager:
                 server_url,
                 "--transport", "http-only",
                 "--allow-http",
-                "--oauth-server", oauth_server
+                "--oauth-server", oauth_url
             ]
         )
 
@@ -1137,5 +1163,5 @@ class ProcessManager:
 
                     return True
         except Exception as e:
-            print(f"Error sending message: {e}")
-            return False
+            print(f"Error sending message from {from_agent} ({from_agent_environment}): {e}")
+            raise
