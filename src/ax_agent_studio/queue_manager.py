@@ -127,7 +127,7 @@ class QueueManager:
 
             # Skip status messages like "WAIT SUCCESS"
             if "WAIT SUCCESS" in messages_data or "No mentions" in messages_data:
-                logger.debug(f" Skipping status message: {messages_data[:100]}")
+                logger.debug(f" Skipping status message: {messages_data}")
                 return None
 
             # Extract message ID from [id:xxxxxxxx] tags
@@ -357,7 +357,7 @@ class QueueManager:
                             "content": response,
                             "parent_message_id": msg.id  # Reply to the message we received
                         })
-                        logger.info(f" Completed message {msg.id[:8]} (threaded reply): {response[:50]}...")
+                        logger.info(f" Completed message {msg.id[:8]} (threaded reply): {response}")
                     else:
                         # Handler returned empty response (e.g., blocked self-mention)
                         logger.info(f" Completed message {msg.id[:8]}: (no response - handler blocked)")
