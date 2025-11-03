@@ -693,7 +693,7 @@ class ProcessManager:
             system_prompt, system_prompt_name = self._resolve_system_prompt(prompt_ref)
             start_delay_ms = agent.start_delay_ms or defaults.get("start_delay_ms", 0)
 
-            if monitor_type not in {"echo", "ollama", "langgraph", "claude_agent_sdk", "openai_agents"}:
+            if monitor_type not in {"echo", "ollama", "langgraph", "claude_agent_sdk", "openai_agents_sdk"}:
                 raise ValueError(f"Unsupported monitor type '{monitor_type}' in group '{group_id}'")
 
             config_path = self._get_agent_config_path(agent.id)
