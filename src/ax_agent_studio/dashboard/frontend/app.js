@@ -300,18 +300,18 @@ function updateTestSenderOptions() {
     const testSenderSelect = document.getElementById('test-sender-select');
     if (!testSenderSelect) return;
 
-    // Get all unique agent names from configs
+    // Get all unique agent names from current environment configs
     const agentNames = [...new Set(configs.map(c => c.agent_name))].sort();
 
     // Build options
-    let options = '<option value="">Auto (first available)</option>';
+    let options = '<option value="">Auto (first available in same environment)</option>';
     agentNames.forEach(name => {
         options += `<option value="${name}">${name}</option>`;
     });
 
     testSenderSelect.innerHTML = options;
 
-    // Restore saved preference from localStorage
+    // Restore saved preference from localStorage (only if still in current environment)
     const savedTestSender = localStorage.getItem('testSenderAgent');
     if (savedTestSender && agentNames.includes(savedTestSender)) {
         testSenderSelect.value = savedTestSender;

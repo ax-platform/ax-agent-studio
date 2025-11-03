@@ -126,11 +126,16 @@ class MCPServerManager:
                 # Store session
                 self.sessions[server_name] = session
 
-                # Start heartbeat for this session
-                await self.heartbeat_manager.start(
-                    session,
-                    name=f"{self.agent_name}/{server_name}"
-                )
+                # Start heartbeat ONLY for remote aX servers (not local filesystem/memory/etc)
+                # Local servers don't have Cloud Run timeouts, only remote aX server needs pings
+                if server_name.startswith("ax-") or "mcp-remote" in str(server_config.get("args", [])):
+                    await self.heartbeat_manager.start(
+                        session,
+                        name=f"{self.agent_name}/{server_name}"
+                    )
+                    logger.info(f"Started heartbeat for remote server: {server_name}")
+                else:
+                    logger.debug(f"Skipping heartbeat for local server: {server_name}")
 
                 # Get available tools
                 tools_response = await session.list_tools()

@@ -150,7 +150,7 @@ Example:
 
                 except Exception as e:
                     print(f"     Ollama error: {e}")
-                    return f"@{sender} Sorry, I'm having trouble thinking right now. Error: {str(e)[:50]}"
+                    return f"@{sender} Sorry, I'm having trouble thinking right now. Error: {str(e)}"
 
             # Use QueueManager for FIFO processing
             from ax_agent_studio.queue_manager import QueueManager

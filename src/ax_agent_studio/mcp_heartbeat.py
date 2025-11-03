@@ -75,10 +75,19 @@ async def keep_alive(
             ping_duration = (datetime.now() - ping_start).total_seconds()
 
             ping_count += 1
-            logger.info(
-                f" {prefix}PING #{ping_count}: {result.status} "
-                f"(took {ping_duration:.2f}s, server time: {result.timestamp})"
-            )
+
+            # Handle different result types (some MCP servers return EmptyResult)
+            if hasattr(result, 'status') and hasattr(result, 'timestamp'):
+                logger.info(
+                    f" {prefix}PING #{ping_count}: {result.status} "
+                    f"(took {ping_duration:.2f}s, server time: {result.timestamp})"
+                )
+            else:
+                # EmptyResult or minimal response - ping succeeded but no metadata
+                logger.info(
+                    f" {prefix}PING #{ping_count}: OK "
+                    f"(took {ping_duration:.2f}s)"
+                )
 
         except asyncio.CancelledError:
             logger.info(f" {prefix}Heartbeat cancelled")
