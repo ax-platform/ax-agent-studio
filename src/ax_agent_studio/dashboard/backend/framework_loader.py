@@ -40,7 +40,8 @@ def load_frameworks() -> Dict[str, Any]:
     Returns:
         Dict with framework definitions and UI defaults
     """
-    config_path = Path(__file__).parent.parent.parent.parent / "configs" / "frameworks.yaml"
+    # Path from src/ax_agent_studio/dashboard/backend/framework_loader.py -> configs/frameworks.yaml
+    config_path = Path(__file__).parent.parent.parent.parent.parent / "configs" / "frameworks.yaml"
 
     if not config_path.exists():
         raise FileNotFoundError(f"Framework registry not found: {config_path}")
