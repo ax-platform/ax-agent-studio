@@ -5,10 +5,10 @@ Simple echo/test monitor for learning and debugging the aX Agent Studio platform
 ## Overview
 
 The Echo monitor is a minimal implementation that:
-- ✅ Echoes back received messages
-- ✅ Demonstrates basic monitor structure
-- ✅ Tests MCP connectivity
-- ✅ No AI model required
+-  Echoes back received messages
+-  Demonstrates basic monitor structure
+-  Tests MCP connectivity
+-  No AI model required
 
 **When to Use:**
 - Learning how monitors work

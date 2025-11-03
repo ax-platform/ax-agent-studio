@@ -37,6 +37,14 @@ def is_provider_configured(provider_id: str, provider_data: Dict[str, Any]) -> b
     if provider_id == "ollama":
         return True
 
+    # Anthropic: Available if API key OR subscription mode
+    # When USE_CLAUDE_SUBSCRIPTION=true, the API key may be temporarily unset
+    # but Claude Agent SDK can still use subscription authentication
+    if provider_id == "anthropic":
+        has_api_key = bool(os.getenv("ANTHROPIC_API_KEY"))
+        has_subscription = os.getenv("USE_CLAUDE_SUBSCRIPTION", "").lower() == "true"
+        return has_api_key or has_subscription
+
     # Check for API key
     if provider_data.get("requires_api_key"):
         env_var = provider_data.get("env_var")
@@ -141,6 +149,13 @@ def get_provider_config(provider_id: str) -> Optional[Dict[str, Any]]:
 
 
 def get_defaults() -> Dict[str, str]:
-    """Get default provider and model"""
+    """Get default provider, model, and agent type"""
+    import os
     config = load_providers()
-    return config.get("defaults", {"provider": "gemini", "model": "gemini-2.5-flash"})
+    defaults = config.get("defaults", {"provider": "gemini", "model": "gemini-2.5-flash"})
+
+    # Add default agent type from environment (defaults to claude_agent_sdk)
+    default_agent_type = os.getenv("DEFAULT_AGENT_TYPE", "claude_agent_sdk")
+    defaults["agent_type"] = default_agent_type
+
+    return defaults

@@ -13,7 +13,7 @@
 # - tags: Categories for filtering groups
 # - environment: Target environment (any/local/production)
 #
-# 💡 TIP: If you only have 1-2 agents, just duplicate the same agent ID
+#  TIP: If you only have 1-2 agents, just duplicate the same agent ID
 #         across all slots - the system will handle it gracefully!
 #
 # Example with one agent:
@@ -31,7 +31,7 @@ deployment_groups:
   # Example 1: Simple group with placeholder agent names
   # IMPORTANT: Replace "YOUR_AGENT_NAME" with actual agent IDs from configs/agents/
   example_tiny_group:
-    name: "Tiny Group Example ⚡"
+    name: "Tiny Group Example "
     description: "Ultra-fast lightweight agents - lowest cost, highest speed."
     defaults:
       monitor: "langgraph"
@@ -73,7 +73,7 @@ deployment_groups:
   # Example 3: Flagship models for complex workflows
   # IMPORTANT: Replace agent IDs before using!
   example_large_group:
-    name: "Large Group Example 🚀"
+    name: "Large Group Example "
     description: "Flagship models - maximum capability for complex reasoning."
     defaults:
       monitor: "langgraph"

@@ -31,7 +31,6 @@ env/
 
 # uv
 .uv/
-uv.lock
 
 # IDE
 .vscode/
@@ -96,6 +95,9 @@ docs/
 HANDOFF_SUMMARY.md
 *_HANDOFF.md
 
+# Internal investigations (debugging, testing)
+investigations/
+
 # SQLite databases (generated at runtime)
 data/
 *.db
@@ -103,3 +105,4 @@ data/
 
 # Local documentation (internal)
 docs/
+CLAUDE.md

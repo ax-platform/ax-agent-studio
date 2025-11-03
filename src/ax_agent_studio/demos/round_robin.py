@@ -31,7 +31,7 @@ total_messages = 0
 
 def signal_handler(sig, frame):
     global running
-    print("\n\n🛑 Stopping multi-agent loop...")
+    print("\n\n Stopping multi-agent loop...")
     running = False
 
 signal.signal(signal.SIGINT, signal_handler)
@@ -45,22 +45,22 @@ async def send_message(session, from_agent, to_agent, content):
             "content": content
         })
         total_messages += 1
-        print(f"✅ @{from_agent} → @{to_agent}: {content[:60]}...")
+        print(f" @{from_agent} → @{to_agent}: {content[:60]}...")
         return True
     except Exception as e:
-        print(f"❌ Error sending from @{from_agent} to @{to_agent}: {e}")
+        print(f" Error sending from @{from_agent} to @{to_agent}: {e}")
         return False
 
 async def multi_agent_loop(agents, max_loops=10, delay=8):
     """Create a round-robin conversation loop between N agents"""
 
     if len(agents) < 2:
-        print("❌ Need at least 2 agents for a conversation loop")
+        print(" Need at least 2 agents for a conversation loop")
         return
 
     oauth_server = "http://localhost:8001"
 
-    print(f"🔄 Starting multi-agent loop")
+    print(f" Starting multi-agent loop")
     print(f"   Agents: {' → '.join([f'@{a}' for a in agents])} → @{agents[0]} (loop)")
     print(f"   Max loops: {max_loops}")
     print(f"   Delay: {delay}s")
@@ -110,7 +110,7 @@ async def multi_agent_loop(agents, max_loops=10, delay=8):
 
             connections.append((read, write))
             sessions.append(session)
-            print(f"✅ Connected to @{agent}")
+            print(f" Connected to @{agent}")
 
         print()
 
@@ -121,11 +121,11 @@ async def multi_agent_loop(agents, max_loops=10, delay=8):
         while running and loop_count < max_loops:
             loop_count += 1
             print(f"\n{'='*70}")
-            print(f"🔁 Loop {loop_count}/{max_loops} - {datetime.now().strftime('%H:%M:%S')}")
+            print(f" Loop {loop_count}/{max_loops} - {datetime.now().strftime('%H:%M:%S')}")
 
             # Pick a topic for this round
             topic = topics[topic_idx % len(topics)]
-            print(f"📋 Topic: {topic}")
+            print(f" Topic: {topic}")
             print(f"{'='*70}\n")
             topic_idx += 1
 
@@ -146,7 +146,7 @@ async def multi_agent_loop(agents, max_loops=10, delay=8):
                 # Send message
                 success = await send_message(session, from_agent, to_agent, message)
                 if not success:
-                    print(f"⚠️  Failed to send message, continuing...")
+                    print(f"  Failed to send message, continuing...")
 
                 # Wait between messages to avoid overwhelming the system
                 if i < len(agents) - 1:  # Don't wait after last message in round
@@ -158,14 +158,14 @@ async def multi_agent_loop(agents, max_loops=10, delay=8):
                 await asyncio.sleep(delay)
 
         print(f"\n{'='*70}")
-        print(f"🏁 Multi-agent loop completed!")
+        print(f" Multi-agent loop completed!")
         print(f"   Total loops: {loop_count}")
         print(f"   Total messages sent: {total_messages}")
         print(f"   Stopped: {'User interrupt' if not running else 'Max loops reached'}")
         print(f"{'='*70}\n")
 
     except Exception as e:
-        print(f"\n❌ Error in multi-agent loop: {e}")
+        print(f"\n Error in multi-agent loop: {e}")
         import traceback
         traceback.print_exc()
 
@@ -196,7 +196,7 @@ if __name__ == "__main__":
             i += 1
 
     if len(agents) < 2:
-        print("❌ Need at least 2 agents!")
+        print(" Need at least 2 agents!")
         sys.exit(1)
 
     asyncio.run(multi_agent_loop(agents, max_loops, delay))

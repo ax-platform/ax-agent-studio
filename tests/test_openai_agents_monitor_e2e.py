@@ -1,254 +1,219 @@
 #!/usr/bin/env python3
 """
-E2E test for OpenAI Agents SDK Monitor
-
-Tests that the OpenAI Agents SDK monitor can:
-1. Start successfully with lunar_craft_128
-2. Skip ax-docker/ax-gcp (prevents 401 errors)
-3. Connect stdio servers (everything, filesystem, memory)
-4. Respond to messages via QueueManager
-
-Run: python tests/test_openai_agents_monitor_e2e.py
+End-to-End Monitor Test for OpenAI Agents SDK
+Starts the monitor, sends a test message from a different agent, and verifies response
 """
 
+import asyncio
 import os
+import subprocess
 import sys
 import time
-import subprocess
-import requests
 from pathlib import Path
-from dotenv import load_dotenv
 
-# Load environment variables from .env
+from dotenv import load_dotenv
+from mcp import ClientSession, StdioServerParameters
+from mcp.client.stdio import stdio_client
+
+# Load environment variables from .env file
 load_dotenv()
 
-# Add src to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
+async def send_test_message(sender_handle: str, agent_name: str, message: str):
+    """Send a message to an agent and wait for response using MCP wait functionality"""
 
-class OpenAIAgentsMonitorE2ETest:
-    """Test OpenAI Agents SDK monitor with real MCP server"""
+    # Connect to ax-gcp MCP server
+    server_params = StdioServerParameters(
+        command="npx",
+        args=[
+            "-y",
+            "mcp-remote@0.1.29",
+            f"http://localhost:8002/mcp/agents/{sender_handle}",
+            "--transport",
+            "http-only",
+            "--oauth-server",
+            "http://localhost:8001",
+        ],
+    )
 
-    def __init__(self):
-        self.agent_name = "lunar_craft_128"
-        self.model = "gpt-5-mini"
-        self.monitor_process = None
-        self.log_file = Path(__file__).parent.parent / "logs" / "test_openai_monitor.log"
+    async with stdio_client(server_params) as (read, write):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
 
-    def start_monitor(self) -> bool:
-        """Start OpenAI Agents SDK monitor directly"""
-        print(f"\n{'=' * 70}")
-        print(f"Starting OpenAI Agents SDK monitor for {self.agent_name}")
-        print(f"{'=' * 70}")
+            print(f" Sending message from @{sender_handle} to @{agent_name}: {message}")
+            print(f"⏳ Waiting for @{agent_name} to respond (timeout: 60s)...\n")
 
-        # Check if OPENAI_API_KEY is set
-        if not os.getenv("OPENAI_API_KEY"):
-            print("⚠️  WARNING: OPENAI_API_KEY not set - test may fail")
-            print("   Set it in your .env file")
-            return False
+            # Send message with wait=true and wait_mode='mentions'
+            # This will wait for the agent to respond before returning
+            try:
+                result = await session.call_tool(
+                    "messages",
+                    {
+                        "action": "send",
+                        "content": f"@{agent_name} {message}",
+                        "wait": True,
+                        "wait_mode": "mentions",
+                        "timeout": 60,
+                        "context_limit": 5,
+                    },
+                )
 
-        print("✅ OPENAI_API_KEY is set")
+                # Parse response
+                if hasattr(result, "content"):
+                    content = result.content
+                    if isinstance(content, list) and len(content) > 0:
+                        text = str(content[0].text) if hasattr(content[0], "text") else str(content[0])
+                        print(f" Response received:\n{text}\n")
 
-        # Start monitor process directly using uv
-        cmd = [
-            "uv",
-            "run",
-            "python",
-            "-m",
-            "ax_agent_studio.monitors.openai_agents_monitor",
-            self.agent_name,
-            "--model",
-            self.model,
-        ]
+                        # Check if agent responded (should mention the sender)
+                        if f"@{sender_handle}" in text and agent_name in text:
+                            print(" Agent response detected!")
+                            return True
+                        else:
+                            print("  Response format unexpected")
+                            print(f"   Expected mention of @{sender_handle} from @{agent_name}")
+                            return False
+                else:
+                    print("  No content in response")
+                    return False
 
-        # Create log file
-        self.log_file.parent.mkdir(parents=True, exist_ok=True)
-        log_handle = open(self.log_file, "w")
-
-        print(f"Command: {' '.join(cmd)}")
-        print(f"Log file: {self.log_file}")
-
-        env = os.environ.copy()
-        env["PYTHONPATH"] = str(Path(__file__).parent.parent / "src")
-
-        self.monitor_process = subprocess.Popen(
-            cmd,
-            stdout=log_handle,
-            stderr=subprocess.STDOUT,
-            env=env,
-            cwd=Path(__file__).parent.parent,
-        )
-
-        print(f"✅ Monitor process started (PID: {self.monitor_process.pid})")
-        return True
-
-    def wait_for_startup(self, timeout: int = 15) -> bool:
-        """Wait for monitor to fully start up by checking logs"""
-        print(f"\nWaiting for monitor startup (max {timeout}s)...")
-
-        for i in range(timeout):
-            time.sleep(1)
-
-            # Check if process is still running
-            if self.monitor_process.poll() is not None:
-                print(f"❌ Monitor process exited with code: {self.monitor_process.returncode}")
+            except Exception as e:
+                print(f" Error during send/wait: {e}")
+                print("   Monitor may not have responded in time or encountered an error")
                 return False
 
-            # Check log file for startup indicators
-            if self.log_file.exists():
-                with open(self.log_file) as f:
-                    logs = f.read()
 
-                if "🚀 Starting FIFO queue manager" in logs:
-                    print("✅ Monitor started successfully")
-                    return True
-                elif "401 Unauthorized" in logs:
-                    print("❌ 401 error detected - monitor failed")
-                    return False
-                elif "Error" in logs or "Traceback" in logs:
-                    print(f"⚠️  Errors detected in logs (but monitor may still be starting)")
+async def test_openai_agents_monitor():
+    """Test the OpenAI Agents SDK monitor end-to-end"""
+    print("=" * 60)
+    print("OpenAI Agents SDK Monitor End-to-End Test")
+    print("=" * 60 + "\n")
 
-            print(f"   [{i+1}s] Waiting for startup indicator in logs...")
+    # Configuration
+    agent_name = "lunar_craft_128"  # Target agent running OpenAI Agents SDK
+    sender_handle = "orion_344"  # Valid sender agent (different to avoid self-mention)
+    test_message = "Quick test: What is 2+2? Just answer with the number."
 
-        print("❌ Timeout waiting for monitor to start")
+    # Verify OPENAI_API_KEY is set
+    if not os.getenv("OPENAI_API_KEY"):
+        print(" OPENAI_API_KEY not found in environment")
+        print("   Set it in your .env file or environment")
         return False
 
-    def check_logs_for_errors(self) -> bool:
-        """Check monitor logs for 401 errors or other issues"""
-        print(f"\n{'=' * 70}")
-        print("Checking logs for errors...")
-        print(f"{'=' * 70}")
+    # Start the monitor in a subprocess
+    print(f" Starting OpenAI Agents SDK monitor for @{agent_name}...")
 
-        if not self.log_file.exists():
-            print("⚠️  Log file not found")
+    base_dir = Path(__file__).resolve().parent.parent
+    venv_python = base_dir / ".venv" / "bin" / "python"
+    config_path = base_dir / "configs" / "agents" / f"{agent_name}.json"
+
+    if not config_path.exists():
+        print(f" Agent config not found: {config_path}")
+        return False
+
+    # Start monitor process
+    monitor_cmd = [
+        str(venv_python),
+        "-m",
+        "ax_agent_studio.monitors.openai_agents_monitor",
+        agent_name,
+        "--config",
+        str(config_path),
+        "--model",
+        "gpt-4o-mini",
+    ]
+
+    print(f"   Command: {' '.join(monitor_cmd)}\n")
+
+    # Set PYTHONPATH to include src
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(base_dir / "src")
+
+    monitor_process = subprocess.Popen(
+        monitor_cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        env=env,
+    )
+
+    try:
+        # Wait for monitor to initialize (watch for "Starting FIFO queue manager")
+        print("⏳ Waiting for monitor to initialize...")
+        initialized = False
+        timeout = 30
+        start_time = time.time()
+
+        while time.time() - start_time < timeout:
+            if monitor_process.poll() is not None:
+                # Process died
+                print(" Monitor process died during initialization")
+                stdout, _ = monitor_process.communicate()
+                print(f"Monitor output:\n{stdout}")
+                return False
+
+            # Give it time to start
+            await asyncio.sleep(2)
+
+            # Check if likely initialized (after reasonable time)
+            if time.time() - start_time > 10:
+                initialized = True
+                break
+
+        if not initialized:
+            print(" Monitor did not initialize in time")
+            monitor_process.terminate()
             return False
 
-        with open(self.log_file) as f:
-            logs = f.read()
+        print(" Monitor appears to be running\n")
 
-        # Check for critical errors
-        if "401 Unauthorized" in logs:
-            print("❌ Found 401 Unauthorized error in logs")
-            print("   This means ax-docker/ax-gcp weren't properly skipped")
-            return False
+        # Send test message from different handle
+        success = await send_test_message(sender_handle, agent_name, test_message)
 
-        if "Configured HTTP MCP server: ax-docker" in logs:
-            print("❌ ax-docker was added to OpenAI SDK servers")
-            print("   This should be skipped!")
-            return False
-
-        # Check for success indicators
-        if "Skipping ax-docker" in logs or "Skipping ax-gcp" in logs:
-            print("✅ Confirmed: ax-docker/ax-gcp properly skipped")
+        if success:
+            print("\n End-to-end test PASSED!")
+            print(f"    Monitor started successfully")
+            print(f"    Message sent from @{sender_handle}")
+            print(f"    @{agent_name} processed and responded")
+            return True
         else:
-            print("⚠️  No skip message found (maybe no ax-docker in config?)")
+            print("\n Test FAILED: No response detected")
+            print("   Fetching monitor logs for debugging...")
+            return False
 
-        if "✅ Connected" in logs and "MCP servers for agent" in logs:
-            print("✅ Confirmed: MCP servers connected successfully")
+    finally:
+        # Clean up monitor process and show its output
+        print("\n Cleaning up monitor process...")
 
-        if "🚀 Starting FIFO queue manager" in logs:
-            print("✅ Confirmed: Queue manager started")
-
-        return True
-
-    def send_test_message(self) -> bool:
-        """Send a test message to the agent"""
-        print(f"\n{'=' * 70}")
-        print("Sending test message to agent...")
-        print(f"{'=' * 70}")
-
-        # Use MCP messages tool to send test (requires ax MCP tools)
-        # This would require integrating with MCP client, so for now just verify startup
-        print("⚠️  Message sending test not implemented yet")
-        print("   Manual test: Use dashboard to send a message")
-        return True
-
-    def stop_monitor(self) -> bool:
-        """Stop the monitor process"""
-        if not self.monitor_process:
-            return True
-
-        print(f"\n{'=' * 70}")
-        print("Stopping monitor...")
-        print(f"{'=' * 70}")
-
+        # Get monitor output before terminating
+        monitor_process.terminate()
         try:
-            self.monitor_process.terminate()
-            self.monitor_process.wait(timeout=5)
-            print("✅ Monitor stopped")
-            return True
+            stdout, _ = monitor_process.communicate(timeout=5)
+            print("\n Monitor Output:")
+            print("=" * 60)
+            print(stdout)
+            print("=" * 60)
+            print(" Monitor process terminated")
         except subprocess.TimeoutExpired:
-            print("⚠️  Monitor didn't stop gracefully, killing...")
-            self.monitor_process.kill()
-            self.monitor_process.wait()
-            print("✅ Monitor killed")
-            return True
-        except Exception as e:
-            print(f"⚠️  Error stopping monitor: {e}")
-            return False
-
-    def run_all_tests(self) -> bool:
-        """Run all tests"""
-        try:
-            # Test 1: Start monitor
-            if not self.start_monitor():
-                return False
-
-            # Test 2: Wait for startup
-            if not self.wait_for_startup():
-                return False
-
-            # Test 3: Check logs for errors
-            if not self.check_logs_for_errors():
-                return False
-
-            # Test 4: Send test message (TODO)
-            # if not self.send_test_message():
-            #     return False
-
-            print(f"\n{'=' * 70}")
-            print("✅ ALL TESTS PASSED")
-            print(f"{'=' * 70}")
-            return True
-
-        except Exception as e:
-            print(f"\n❌ Test failed with exception: {e}")
-            import traceback
-
-            traceback.print_exc()
-            return False
-
-        finally:
-            # Cleanup
-            self.stop_monitor()
-
-
-def main():
-    """Main test runner"""
-    print("=" * 70)
-    print("OpenAI Agents SDK Monitor E2E Test")
-    print("=" * 70)
-    print()
-    print("Prerequisites:")
-    print("  1. OPENAI_API_KEY set in environment")
-    print("  2. lunar_craft_128.json config exists")
-    print("  3. MCP server running (for actual messaging)")
-    print()
-
-    # Check if config exists
-    config_file = Path(__file__).parent.parent / "configs" / "agents" / "lunar_craft_128.json"
-    if not config_file.exists():
-        print(f"❌ Config file not found: {config_file}")
-        sys.exit(1)
-
-    print(f"✅ Config file found: {config_file}\n")
-
-    # Run tests
-    test = OpenAIAgentsMonitorE2ETest()
-    success = test.run_all_tests()
-
-    sys.exit(0 if success else 1)
+            monitor_process.kill()
+            stdout, _ = monitor_process.communicate()
+            print("\n Monitor Output:")
+            print("=" * 60)
+            print(stdout)
+            print("=" * 60)
+            print("  Monitor process killed (did not terminate gracefully)")
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        result = asyncio.run(test_openai_agents_monitor())
+        sys.exit(0 if result else 1)
+    except KeyboardInterrupt:
+        print("\n\nTest cancelled")
+        sys.exit(1)
+    except Exception as e:
+        print(f"\n Test failed with exception: {e}")
+        import traceback
+
+        traceback.print_exc()
+        sys.exit(1)

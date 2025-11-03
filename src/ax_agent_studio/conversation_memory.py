@@ -82,11 +82,11 @@ async def fetch_conversation_context(
                 "id": msg_id
             })
 
-        logger.info(f"📚 Fetched {len(messages)} messages for conversation context")
+        logger.info(f" Fetched {len(messages)} messages for conversation context")
         return messages
 
     except Exception as e:
-        logger.error(f"❌ Failed to fetch conversation context: {e}")
+        logger.error(f" Failed to fetch conversation context: {e}")
         return []
 
 

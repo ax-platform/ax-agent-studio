@@ -101,7 +101,7 @@ class MCPServerManager:
 
         mcp_servers = self.config.get("mcpServers", {})
 
-        print(f"\n🔌 Connecting to {len(mcp_servers)} MCP server(s)...")
+        print(f"\n Connecting to {len(mcp_servers)} MCP server(s)...")
 
         for server_name, server_config in mcp_servers.items():
             try:
@@ -136,15 +136,15 @@ class MCPServerManager:
                 tools_response = await session.list_tools()
                 tool_count = len(tools_response.tools) if hasattr(tools_response, 'tools') else 0
 
-                print(f"✅ ({tool_count} tools)")
+                print(f" ({tool_count} tools)")
                 logger.info(f"Connected to {server_name} with {tool_count} tools")
 
             except Exception as e:
-                print(f"❌")
+                print(f"")
                 logger.error(f"Failed to connect to {server_name}: {e}")
                 # Continue with other servers even if one fails
 
-        print(f"✅ Connected to {len(self.sessions)}/{len(mcp_servers)} servers\n")
+        print(f" Connected to {len(self.sessions)}/{len(mcp_servers)} servers\n")
 
     async def disconnect_all(self):
         """Disconnect from all MCP servers and stop heartbeats"""
@@ -197,7 +197,7 @@ class MCPServerManager:
 
     def print_summary(self):
         """Print a summary of connected servers and available tools"""
-        print("\n📋 MCP Servers Summary:")
+        print("\n MCP Servers Summary:")
         print(f"   Agent: {self.agent_name}")
         print(f"   Config: {self.config_path}")
         print(f"   Servers: {len(self.sessions)}")

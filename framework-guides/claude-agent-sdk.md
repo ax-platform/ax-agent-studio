@@ -5,11 +5,11 @@ Run agents powered by Anthropic's Claude Code SDK with full security controls an
 ## Overview
 
 The Claude Agent SDK monitor spawns real Claude Code CLI instances programmatically, giving each agent:
-- ✅ Full Claude Code capabilities (same AI you're using now!)
-- ✅ Native MCP tool integration (auto-discovered)
-- ✅ Granular security permissions per agent
-- ✅ Filesystem sandboxing
-- ✅ Streaming responses
+-  Full Claude Code capabilities (same AI you're using now!)
+-  Native MCP tool integration (auto-discovered)
+-  Granular security permissions per agent
+-  Filesystem sandboxing
+-  Streaming responses
 
 **When to Use:**
 - Production agents requiring Claude's best reasoning
@@ -94,16 +94,16 @@ Controls built-in Claude Code tools and security:
 - `"Read"` - Read files (restricted by `workingDir`)
 - `"Write"` - Write files (restricted by `workingDir`)
 - `"Edit"` - Edit files (restricted by `workingDir`)
-- `"Bash"` - Execute shell commands ⚠️ Use with caution!
+- `"Bash"` - Execute shell commands  Use with caution!
 - `"Glob"` - Find files by pattern
 - `"Grep"` - Search file contents
 
 **Default:** `[]` (no built-in tools enabled)
 
 **`permissionMode`** - How to handle risky operations:
-- `"default"` - Prompt user for dangerous actions ✅ **Recommended**
+- `"default"` - Prompt user for dangerous actions  **Recommended**
 - `"acceptEdits"` - Auto-approve file edits
-- `"bypassPermissions"` - Allow all without prompts ⚠️ **Dangerous**
+- `"bypassPermissions"` - Allow all without prompts  **Dangerous**
 
 **Default:** `"default"`
 
@@ -158,14 +158,14 @@ Final Allowlist = MCP Tools (auto) + Built-in Tools (explicit)
 
 **Result:**
 ```
-✅ Allowed:
+ Allowed:
   - mcp__ax-gcp__messages     (from MCP server)
   - mcp__ax-gcp__tasks        (from MCP server)
   - mcp__ax-gcp__agents       (from MCP server)
   - WebFetch                  (built-in - explicit)
   - WebSearch                 (built-in - explicit)
 
-❌ Blocked:
+ Blocked:
   - Read, Write, Edit, Bash   (not in allowedTools)
   - All other built-in tools
 ```
@@ -173,10 +173,10 @@ Final Allowlist = MCP Tools (auto) + Built-in Tools (explicit)
 ### Filesystem Sandboxing
 
 When `workingDir` is set:
-- ✅ Agent can read/write within the directory
-- ✅ Agent can create subdirectories
-- ❌ Agent **cannot** access parent directories
-- ❌ Agent **cannot** access other paths (e.g., `/etc/`, `~/.ssh/`)
+-  Agent can read/write within the directory
+-  Agent can create subdirectories
+-  Agent **cannot** access parent directories
+-  Agent **cannot** access other paths (e.g., `/etc/`, `~/.ssh/`)
 
 **Example:**
 ```json
@@ -186,10 +186,10 @@ When `workingDir` is set:
   }
 }
 ```
-- ✅ Can access: `/tmp/my_agent/data.txt`
-- ✅ Can create: `/tmp/my_agent/reports/output.csv`
-- ❌ Cannot access: `/tmp/other_dir/file.txt`
-- ❌ Cannot access: `/etc/passwd`
+-  Can access: `/tmp/my_agent/data.txt`
+-  Can create: `/tmp/my_agent/reports/output.csv`
+-  Cannot access: `/tmp/other_dir/file.txt`
+-  Cannot access: `/etc/passwd`
 
 ## Configuration Examples
 
@@ -257,18 +257,12 @@ When `workingDir` is set:
     "workingDir": "/Users/you/projects/my-project"
   },
   "mcpServers": {
-    "ax-gcp": { ... },
-    "filesystem": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-filesystem",
-        "/Users/you/projects/my-project"
-      ]
-    }
+    "ax-gcp": { ... }
   }
 }
 ```
+
+> **Note:** No need for the filesystem MCP server - Claude Agent SDK has native Read/Write/Edit tools that are more efficient!
 
 ### 4. Multi-Server Agent
 
@@ -277,7 +271,7 @@ When `workingDir` is set:
 ```json
 {
   "permissions": {
-    "allowedTools": ["WebFetch", "WebSearch"],
+    "allowedTools": ["WebFetch", "WebSearch", "Read", "Write"],
     "permissionMode": "default",
     "workingDir": "/tmp/agent_workspace"
   },
@@ -303,18 +297,12 @@ When `workingDir` is set:
       "env": {
         "MEMORY_FILE_PATH": "/tmp/agent_workspace/memory.jsonl"
       }
-    },
-    "filesystem": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-filesystem",
-        "/tmp/agent_workspace/files"
-      ]
     }
   }
 }
 ```
+
+> **Note:** Use native Read/Write tools for filesystem access. MCP servers like `memory` provide capabilities beyond built-in tools!
 
 ## Running Your Agent
 
@@ -353,7 +341,7 @@ The monitor outputs:
 **Example output:**
 ```
 ============================================================
-🛡 CLAUDE AGENT SDK MONITOR: research_bot
+ CLAUDE AGENT SDK MONITOR: research_bot
 ============================================================
 Config: configs/agents/research_bot.json
 Model: claude-sonnet-4-5
@@ -380,7 +368,7 @@ Final Tool Allowlist:
 - WebFetch
 - WebSearch
 
-🚀 Starting FIFO queue manager...
+ Starting FIFO queue manager...
 ```
 
 ## Troubleshooting

@@ -26,7 +26,7 @@ async def ollama_monitor(
     """Monitor for mentions and respond with Ollama AI using FIFO queue"""
 
     print(f"\n{'='*60}")
-    print(f"🤖 OLLAMA AI MONITOR: {agent_name}")
+    print(f" OLLAMA AI MONITOR: {agent_name}")
     print(f"{'='*60}")
     print(f"Server: {server_url}")
     print(f"Model: {model}")
@@ -38,7 +38,7 @@ async def ollama_monitor(
     ollama = OpenAI(base_url=ollama_url, api_key="ollama")
 
     # System prompt for the AI - make identity VERY clear
-    system_prompt = f"""🤖 YOUR IDENTITY 🤖
+    system_prompt = f""" YOUR IDENTITY 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 YOU ARE: @{agent_name}
 YOUR USERNAME: {agent_name}
@@ -77,7 +77,7 @@ Example:
     async with stdio_client(server_params) as (read, write):
         async with ClientSession(read, write) as session:
             await session.initialize()
-            print("✅ Connected!\n")
+            print(" Connected!\n")
 
             # Import conversation memory utilities
             from ax_agent_studio.conversation_memory import (
@@ -98,7 +98,7 @@ Example:
                 content = msg.get("content", "")
                 msg_id = msg.get("id", "")
 
-                print(f"🤖 AI: Processing message from @{sender}...")
+                print(f" AI: Processing message from @{sender}...")
 
                 # Fetch last 25 messages for conversation context (chirpy-style!)
                 context_messages = await fetch_conversation_context(
@@ -109,7 +109,7 @@ Example:
 
                 # Log conversation context
                 summary = get_conversation_summary(context_messages)
-                print(f"📚 Context: {summary}")
+                print(f" Context: {summary}")
 
                 # Format conversation for LLM (includes context + current message)
                 current_message = {
@@ -142,14 +142,14 @@ Example:
                     # Agent can say its name, but without @ it won't trigger
                     if f"@{agent_name}" in ai_reply:
                         ai_reply = ai_reply.replace(f"@{agent_name}", agent_name)
-                        print(f"   ✅ Stripped @ from self-mention: @{agent_name} → {agent_name}")
+                        print(f"    Stripped @ from self-mention: @{agent_name} → {agent_name}")
 
-                    print(f"💬 RESPONSE:\n{ai_reply}")
+                    print(f" RESPONSE:\n{ai_reply}")
 
                     return ai_reply
 
                 except Exception as e:
-                    print(f"   ⚠️  Ollama error: {e}")
+                    print(f"     Ollama error: {e}")
                     return f"@{sender} Sorry, I'm having trouble thinking right now. Error: {str(e)[:50]}"
 
             # Use QueueManager for FIFO processing
@@ -166,7 +166,7 @@ Example:
                 heartbeat_interval=monitor_config.get("heartbeat_interval", 240)
             )
 
-            print("🚀 Starting FIFO queue manager...\n")
+            print(" Starting FIFO queue manager...\n")
             await queue_mgr.run()
 
 
@@ -190,7 +190,7 @@ if __name__ == "__main__":
 
     # Determine server URL from config file or args
     if args.config:
-        print(f"📁 Loading agent config from: {args.config}")
+        print(f" Loading agent config from: {args.config}")
         with open(args.config) as f:
             agent_config = json.load(f)
 
@@ -214,19 +214,19 @@ if __name__ == "__main__":
             if not server_url:
                 raise ValueError(f"Could not find server URL in config: {args.config}")
 
-            print(f"✅ Using MCP server from agent config: {server_url}")
+            print(f" Using MCP server from agent config: {server_url}")
         else:
-            print("⚠️  No mcpServers in agent config, falling back to global config")
+            print("  No mcpServers in agent config, falling back to global config")
             mcp_config = get_mcp_config()
             server_url = f"{mcp_config.get('server_url', 'http://localhost:8002')}/mcp/agents/{args.agent_name}"
     elif args.server:
         server_url = f"{args.server}/mcp/agents/{args.agent_name}"
     else:
-        print("⚠️  No config or server provided, using global config.yaml")
+        print("  No config or server provided, using global config.yaml")
         mcp_config = get_mcp_config()
         server_url = f"{mcp_config.get('server_url', 'http://localhost:8002')}/mcp/agents/{args.agent_name}"
 
     try:
         asyncio.run(ollama_monitor(args.agent_name, server_url, args.model, args.ollama_url, args.history_limit))
     except KeyboardInterrupt:
-        print("\n\n👋 AI Monitor stopped")
+        print("\n\n AI Monitor stopped")

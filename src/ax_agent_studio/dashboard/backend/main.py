@@ -513,7 +513,7 @@ async def activate_kill_switch():
     return {
         "success": True,
         "active": True,
-        "message": "🛑 Kill switch activated - all agents paused"
+        "message": "Kill switch activated - all agents paused"
     }
 
 @app.post("/api/kill-switch/deactivate")
@@ -526,7 +526,7 @@ async def deactivate_kill_switch():
     return {
         "success": True,
         "active": False,
-        "message": "✅ Kill switch deactivated - agents resumed"
+        "message": "Kill switch deactivated - agents resumed"
     }
 
 @app.post("/api/monitors/kill-all")
@@ -551,7 +551,7 @@ async def kill_all_monitors():
 
         return {
             "success": True,
-            "message": f"☠️ Nuclear option: Killed {count} monitor(s), cleared {deleted_count} from list, activated kill switch",
+            "message": f"Nuclear option: Killed {count} monitor(s), cleared {deleted_count} from list, activated kill switch",
             "kill_switch_active": True,
             "killed_count": count,
             "cleared_count": deleted_count
