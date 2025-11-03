@@ -43,7 +43,7 @@ if not logging.getLogger().hasHandlers():
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_MODEL = "gpt-4o"  # OpenAI's latest model
+DEFAULT_MODEL = "gpt-5-mini"  # OpenAI's latest efficient model
 _HISTORY_LIMIT = 10  # Recent message pairs to keep
 
 
@@ -132,7 +132,8 @@ async def openai_agents_monitor(
 ) -> None:
     """Run the OpenAI Agents SDK monitor for an MCP agent."""
 
-    base_dir = Path(__file__).resolve().parent.parent.parent
+    # Get project root (3 levels up from this file: monitors/ -> ax_agent_studio/ -> src/ -> project_root/)
+    base_dir = Path(__file__).resolve().parent.parent.parent.parent
     resolved_config = _resolve_config_path(agent_name, config_path, base_dir)
 
     print(f"\n{'=' * 60}")
@@ -170,16 +171,26 @@ async def openai_agents_monitor(
     system_prompt_override = os.getenv("AGENT_SYSTEM_PROMPT")
     conversation_history: List[Dict] = []
 
-    # Create MCP servers using OpenAI Agents SDK MCP classes
+    # Create MCP servers using OpenAI Agents SDK MCP classes (for agent tool access)
     mcp_server_instances = await _create_mcp_servers_from_config(agent_config)
 
-    print(f"\n✅ Configured {len(mcp_server_instances)} MCP servers")
+    print(f"\n✅ Configured {len(mcp_server_instances)} MCP servers for agent")
     print()
 
-    # Enter all MCP server context managers
-    # This connects them so they're ready to use
-    async with MCPServerManager(agent_name, base_dir=base_dir, config_path=resolved_config) as manager:
+    # Create a minimal config with ONLY ax-gcp for MCPServerManager (messaging layer)
+    # This is separate from the agent's MCP connections
+    messaging_config_path = Path("/tmp") / f"{agent_name}_messaging_config.json"
+    messaging_config = {
+        "mcpServers": {
+            "ax-gcp": agent_config["mcpServers"].get("ax-gcp", agent_config["mcpServers"].get("ax-docker", {}))
+        }
+    }
+    messaging_config_path.write_text(json.dumps(messaging_config))
+
+    # MCPServerManager connects ONLY to ax-gcp for messaging (input/output)
+    async with MCPServerManager(agent_name, base_dir=base_dir, config_path=messaging_config_path) as manager:
         primary_session = manager.get_primary_session()
+        print(f"✅ Connected messaging layer (ax-gcp for QueueManager)\n")
 
         # Open all MCP server connections
         # We need to use AsyncExitStack to manage multiple async context managers
@@ -192,8 +203,7 @@ async def openai_agents_monitor(
                 connected_server = await stack.enter_async_context(server)
                 mcp_servers.append(connected_server)
 
-            print(f"✅ Connected to {len(mcp_servers)} MCP servers")
-            print()
+            print(f"✅ Connected {len(mcp_servers)} MCP servers for agent tool access\n")
 
             # Build agent instructions
             base_instructions = (

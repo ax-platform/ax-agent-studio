@@ -57,7 +57,7 @@ async def test_openai_agents_mcp_initialization():
         agent = Agent(
             name="test_agent",
             instructions="You are a test agent.",
-            model="gpt-4o-mini",
+            model="gpt-5-mini",
             mcp_servers=[],  # Empty for quick test
         )
         print(f"   Agent created: {agent.name}\n")
@@ -83,12 +83,12 @@ async def test_openai_agents_simple_call():
         print("openai-agents package not installed")
         return False
 
-    print("1. Creating OpenAI Agent (gpt-4o-mini)...")
+    print("1. Creating OpenAI Agent (gpt-5-mini)...")
     try:
         agent = Agent(
             name="test_agent",
             instructions="You are a helpful assistant. Keep responses very brief.",
-            model="gpt-4o-mini",  # Use mini model for cost efficiency
+            model="gpt-5-mini",  # Use latest mini model for cost efficiency
         )
         print(f"   Agent created: {agent.name}\n")
     except Exception as e:
