@@ -72,14 +72,18 @@ class DashboardFrameworkE2ETest:
         assert claude_sdk["requires_model"] == True, "Claude SDK should require model"
         assert claude_sdk["provider"] == "anthropic", "Claude SDK should have implicit anthropic provider"
         assert claude_sdk.get("recommended") == True, "Claude SDK should be marked as recommended"
-        print("✅ Claude Agent SDK configuration correct")
+        assert claude_sdk["default_model"] == "claude-sonnet-4-5", \
+            f"Claude SDK default should be claude-sonnet-4-5, got {claude_sdk.get('default_model')}"
+        print("✅ Claude Agent SDK configuration correct (default: claude-sonnet-4-5)")
 
         # Test OpenAI Agents SDK
         openai_sdk = frameworks["openai_agents_sdk"]
         assert openai_sdk["requires_provider"] == False, "OpenAI SDK should not require provider selection"
         assert openai_sdk["requires_model"] == True, "OpenAI SDK should require model"
         assert openai_sdk["provider"] == "openai", "OpenAI SDK should have implicit openai provider"
-        print("✅ OpenAI Agents SDK configuration correct")
+        assert openai_sdk["default_model"] == "gpt-5-mini", \
+            f"OpenAI SDK default should be gpt-5-mini, got {openai_sdk.get('default_model')}"
+        print("✅ OpenAI Agents SDK configuration correct (default: gpt-5-mini)")
 
         # Test LangGraph
         langgraph = frameworks["langgraph"]
@@ -103,18 +107,22 @@ class DashboardFrameworkE2ETest:
         # Test Anthropic models
         anthropic = provider_defaults["anthropic"]
         assert "default_model" in anthropic, "Anthropic missing default_model"
+        assert anthropic["default_model"] == "claude-sonnet-4-5", \
+            f"Anthropic default should be claude-sonnet-4-5, got {anthropic['default_model']}"
         assert "available_models" in anthropic, "Anthropic missing available_models"
         assert "claude-sonnet-4-5" in anthropic["available_models"], "Missing claude-sonnet-4-5"
         assert "claude-haiku-4-5" in anthropic["available_models"], "Missing claude-haiku-4-5"
-        print(f"✅ Anthropic has {len(anthropic['available_models'])} Claude models")
+        print(f"✅ Anthropic has {len(anthropic['available_models'])} Claude models (default: {anthropic['default_model']})")
 
         # Test OpenAI models
         openai = provider_defaults["openai"]
         assert "default_model" in openai, "OpenAI missing default_model"
+        assert openai["default_model"] == "gpt-5-mini", \
+            f"OpenAI default should be gpt-5-mini, got {openai['default_model']}"
         assert "available_models" in openai, "OpenAI missing available_models"
-        assert "gpt-5" in openai["available_models"] or "gpt-5-mini" in openai["available_models"], \
-            "Missing GPT-5 models"
-        print(f"✅ OpenAI has {len(openai['available_models'])} GPT models")
+        assert "gpt-5" in openai["available_models"], "Missing gpt-5"
+        assert "gpt-5-mini" in openai["available_models"], "Missing gpt-5-mini"
+        print(f"✅ OpenAI has {len(openai['available_models'])} GPT models (default: {openai['default_model']})")
 
         # Test Google models
         google = provider_defaults["google"]

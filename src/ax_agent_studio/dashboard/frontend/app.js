@@ -337,10 +337,24 @@ async function loadModelsForProvider(providerId) {
         const data = await response.json();
         models = data.models;
 
+        // Get current monitor type to check for framework-specific defaults
+        const monitorType = document.getElementById('monitor-type-select').value;
+        let frameworkDefaultModel = null;
+
+        if (frameworkRegistry && frameworkRegistry.frameworks[monitorType]) {
+            const framework = frameworkRegistry.frameworks[monitorType];
+            // If this framework has an implicit provider and a default model, use it
+            if (framework.provider === providerId && framework.default_model) {
+                frameworkDefaultModel = framework.default_model;
+            }
+        }
+
         const select = document.getElementById('model-select');
         const options = models.map(m => {
             const label = m.recommended ? `${m.name} ⭐` : m.name;
-            const selected = m.default ? ' selected' : '';
+            // Prefer framework default over provider default
+            const isDefault = frameworkDefaultModel ? (m.id === frameworkDefaultModel) : m.default;
+            const selected = isDefault ? ' selected' : '';
             return `<option value="${m.id}" title="${m.description}"${selected}>${label}</option>`;
         });
 
@@ -680,7 +694,7 @@ async function resetAllAgents() {
     }
 }
 
-async function testMonitor(agentName, monitorType) {
+async function testMonitor(agentName, monitorType, environment) {
     // Find the test button and show immediate feedback
     const buttons = document.querySelectorAll('.monitor-card button');
     let testButton = null;
@@ -696,8 +710,20 @@ async function testMonitor(agentName, monitorType) {
         testButton.textContent = '⏳';
     }
 
-    // Send a test message from a different agent
-    const fromAgent = agentName === 'lunar_craft_128' ? 'orion_344' : 'lunar_craft_128';
+    // Get test sender agent from settings or use auto-select
+    let fromAgent = localStorage.getItem('testSenderAgent');
+
+    // Get all agents in the SAME environment as the target agent
+    const sameEnvConfigs = Object.values(configsByEnvironment).flat()
+        .filter(c => c.environment === environment);
+    const sameEnvAgentNames = [...new Set(sameEnvConfigs.map(c => c.agent_name))]
+        .filter(name => name !== agentName);
+
+    // If no agent selected or selected agent is not in the same environment, use auto-select
+    if (!fromAgent || fromAgent === agentName || !sameEnvAgentNames.includes(fromAgent)) {
+        // Use first available agent in the same environment that's not the target
+        fromAgent = sameEnvAgentNames.length > 0 ? sameEnvAgentNames[0] : 'test_user';
+    }
 
     // Context-aware test messages based on monitor type
     let testMessage;
@@ -924,7 +950,7 @@ function renderMonitors() {
         const statusClass = isRunning ? 'running' : 'stopped';
 
         const testControl = isRunning && monitor.id
-            ? `<button class="btn btn-primary btn-sm" onclick="testMonitor('${escapeAttr(monitor.agent_name)}', '${escapeAttr(monitor.monitor_type)}')" title="Send Test Message">✏️</button>`
+            ? `<button class="btn btn-primary btn-sm" onclick="testMonitor('${escapeAttr(monitor.agent_name)}', '${escapeAttr(monitor.monitor_type)}', '${escapeAttr(monitor.environment)}')" title="Send test message from agent in same environment (see Test Sender Agent setting)">✏️</button>`
             : '';
 
         const pauseOrStartControl = hasMonitorId
