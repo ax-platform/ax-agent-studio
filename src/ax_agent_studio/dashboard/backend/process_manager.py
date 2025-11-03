@@ -302,7 +302,7 @@ class ProcessManager:
         self,
         agent_name: str,
         config_path: str,
-        monitor_type: Literal["echo", "ollama", "langgraph", "claude_agent_sdk"],
+        monitor_type: Literal["echo", "ollama", "langgraph", "claude_agent_sdk", "openai_agents_sdk"],
         model: Optional[str] = None,
         provider: Optional[str] = None,
         system_prompt: Optional[str] = None,
@@ -310,6 +310,15 @@ class ProcessManager:
         history_limit: Optional[int] = 25
     ) -> str:
         """Start a monitor process"""
+        # Resolve config_path to full path if it's just a filename
+        # API sends just filename, but monitors need full path
+        if not os.path.isabs(config_path) and not config_path.startswith("configs/"):
+            # Convert filename to full path
+            full_config_path = self.base_dir / "configs" / "agents" / config_path
+            if not full_config_path.exists():
+                raise FileNotFoundError(f"Config file not found: {config_path}")
+            config_path = str(full_config_path)
+
         # Sanitize agent_name to prevent shell injection and path traversal
         safe_agent_name = sanitize_agent_name(agent_name)
 
