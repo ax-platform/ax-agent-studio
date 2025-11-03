@@ -19,7 +19,7 @@ from typing import Dict, List, Optional
 
 from dotenv import load_dotenv
 
-from ax_agent_studio.config import get_monitor_config
+from ax_agent_studio.config import get_monitor_config, resolve_agent_config
 from ax_agent_studio.mcp_manager import MCPServerManager
 from ax_agent_studio.queue_manager import QueueManager
 
@@ -47,55 +47,6 @@ DEFAULT_MODEL = "gpt-5-mini"  # OpenAI's latest efficient model
 _HISTORY_LIMIT = 10  # Recent message pairs to keep
 
 
-def _resolve_config_path(agent_name: str, config_path: Optional[str], base_dir: Path) -> Path:
-    """Resolve the agent config path.
-
-    If config_path is provided, use it directly.
-    Otherwise, search for a config file where the agent name in the URL matches agent_name.
-    This allows flexible filename conventions (e.g., 'prod-bot.json', 'my-agent.json').
-    """
-    if config_path:
-        resolved = Path(config_path).expanduser().resolve()
-        if not resolved.exists():
-            raise FileNotFoundError(f"Agent config not found: {resolved}")
-        return resolved
-
-    # Search configs/agents/ for a file with matching agent name in URL
-    agents_dir = base_dir / "configs" / "agents"
-    if not agents_dir.exists():
-        raise FileNotFoundError(
-            f"Agents directory not found: {agents_dir}\n"
-            "Create configs/agents/ and add agent configuration files."
-        )
-
-    for config_file in agents_dir.glob("*.json"):
-        try:
-            with open(config_file) as f:
-                data = json.load(f)
-
-            # Skip template files
-            if "_comment" in data or "_instructions" in data:
-                continue
-
-            # Extract agent name from MCP server URL
-            if "mcpServers" in data:
-                for server_config in data["mcpServers"].values():
-                    args = server_config.get("args", [])
-                    for arg in args:
-                        if isinstance(arg, str) and "/mcp/agents/" in arg:
-                            url_agent_name = arg.split("/mcp/agents/")[-1].strip()
-                            if url_agent_name == agent_name:
-                                return config_file
-        except Exception:
-            continue  # Skip invalid JSON files
-
-    # If no match found, suggest the issue
-    raise FileNotFoundError(
-        f"No agent config found with agent name '{agent_name}' in the URL.\n"
-        f"Searched in: {agents_dir}\n"
-        f"Make sure your config file contains:\n"
-        f'  "mcpServers": {{ "ax-gcp": {{ "args": ["...mcp/agents/{agent_name}", ...] }} }}'
-    )
 
 
 async def _create_mcp_servers_from_config(agent_config: Dict) -> List:
@@ -176,18 +127,13 @@ async def openai_agents_monitor(
 ) -> None:
     """Run the OpenAI Agents SDK monitor for an MCP agent."""
 
-    # Get project root (3 levels up from this file: monitors/ -> ax_agent_studio/ -> src/ -> project_root/)
-    base_dir = Path(__file__).resolve().parent.parent.parent.parent
-    resolved_config = _resolve_config_path(agent_name, config_path, base_dir)
+    # Use shared DRY config resolver
+    agent_config = resolve_agent_config(agent_name, config_path)
 
     print(f"\n{'=' * 60}")
     print(f"🤖 OPENAI AGENTS SDK MONITOR: {agent_name}")
     print(f"{'=' * 60}")
-    print(f"Config: {resolved_config}")
     print(f"Model: {model}")
-
-    with resolved_config.open() as f:
-        agent_config = json.load(f)
 
     mcp_servers_config = agent_config.get("mcpServers", {})
     if not mcp_servers_config:
@@ -224,7 +170,7 @@ async def openai_agents_monitor(
     # Use MCPServerManager same way as LangGraph monitor - auto-loads full config
     # This connects to ALL servers for QueueManager messaging
     # (OpenAI SDK handles separate agent tool connections)
-    async with MCPServerManager(agent_name, base_dir=base_dir) as manager:
+    async with MCPServerManager(agent_name) as manager:
         primary_session = manager.get_primary_session()
         print(f"✅ Connected messaging layer for QueueManager\n")
 
@@ -245,7 +191,7 @@ async def openai_agents_monitor(
             base_instructions = (
                 f"You are @{agent_name}, an AI agent deployed in the aX Agent Studio.\n"
                 "Follow these rules:\n"
-                "1. Always start replies with @{{sender}} but never mention yourself.\n"
+                "1. Always start replies with @{sender} but never mention yourself.\n"
                 "2. Keep responses helpful, friendly, and concise.\n"
                 "3. Use MCP tools to complete tasks.\n"
                 "4. Reference message IDs when supplied (format: id:XXXXXXXX)."
@@ -302,18 +248,10 @@ async def openai_agents_monitor(
                     # Run the agent with the message
                     result = await Runner.run(agent, full_prompt)
 
-                    # Extract response text
+                    # Extract response text from final_output
                     response_text = ""
-                    if hasattr(result, "messages") and result.messages:
-                        # Get the last assistant message
-                        for msg in reversed(result.messages):
-                            if msg.role == "assistant" and hasattr(msg, "content"):
-                                for content in msg.content:
-                                    if hasattr(content, "text"):
-                                        response_text = content.text
-                                        break
-                                if response_text:
-                                    break
+                    if hasattr(result, "final_output") and result.final_output:
+                        response_text = str(result.final_output)
 
                     if not response_text:
                         response_text = "I processed your request but have no text response."

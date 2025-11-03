@@ -19,7 +19,7 @@ import sys
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional
 
-from ax_agent_studio.config import get_monitor_config
+from ax_agent_studio.config import get_monitor_config, resolve_agent_config
 from ax_agent_studio.mcp_manager import MCPServerManager
 from ax_agent_studio.queue_manager import QueueManager
 
@@ -43,55 +43,6 @@ DEFAULT_MODEL = "claude-sonnet-4-5"
 _HISTORY_LIMIT = 12  # Store 6 message/response pairs
 
 
-def _resolve_config_path(agent_name: str, config_path: Optional[str], base_dir: Path) -> Path:
-    """Resolve the agent config path.
-
-    If config_path is provided, use it directly.
-    Otherwise, search for a config file where the agent name in the URL matches agent_name.
-    This allows flexible filename conventions (e.g., 'prod-bot.json', 'my-agent.json').
-    """
-    if config_path:
-        resolved = Path(config_path).expanduser().resolve()
-        if not resolved.exists():
-            raise FileNotFoundError(f"Agent config not found: {resolved}")
-        return resolved
-
-    # Search configs/agents/ for a file with matching agent name in URL
-    agents_dir = base_dir / "configs" / "agents"
-    if not agents_dir.exists():
-        raise FileNotFoundError(
-            f"Agents directory not found: {agents_dir}\n"
-            "Create configs/agents/ and add agent configuration files."
-        )
-
-    for config_file in agents_dir.glob("*.json"):
-        try:
-            with open(config_file) as f:
-                data = json.load(f)
-
-            # Skip template files
-            if "_comment" in data or "_instructions" in data:
-                continue
-
-            # Extract agent name from MCP server URL
-            if "mcpServers" in data:
-                for server_config in data["mcpServers"].values():
-                    args = server_config.get("args", [])
-                    for arg in args:
-                        if isinstance(arg, str) and "/mcp/agents/" in arg:
-                            url_agent_name = arg.split("/mcp/agents/")[-1].strip()
-                            if url_agent_name == agent_name:
-                                return config_file
-        except Exception:
-            continue  # Skip invalid JSON files
-
-    # If no match found, suggest the issue
-    raise FileNotFoundError(
-        f"No agent config found with agent name '{agent_name}' in the URL.\n"
-        f"Searched in: {agents_dir}\n"
-        f"Make sure your config file contains:\n"
-        f'  "mcpServers": {{ "ax-gcp": {{ "args": ["...mcp/agents/{agent_name}", ...] }} }}'
-    )
 
 
 async def _discover_allowed_tools(manager: MCPServerManager) -> List[str]:
@@ -214,17 +165,14 @@ async def claude_agent_sdk_monitor(
 ) -> None:
     """Run the Claude Agent SDK monitor for an MCP agent."""
 
+    # Use shared DRY config resolver
+    agent_config = resolve_agent_config(agent_name, config_path)
     base_dir = Path(__file__).resolve().parent.parent.parent
-    resolved_config = _resolve_config_path(agent_name, config_path, base_dir)
 
     print(f"\n{'=' * 60}")
     print(f"🛡 CLAUDE AGENT SDK MONITOR: {agent_name}")
     print(f"{'=' * 60}")
-    print(f"Config: {resolved_config}")
     print(f"Model: {model}")
-
-    with resolved_config.open() as f:
-        agent_config = json.load(f)
 
     mcp_servers: Dict[str, Dict] = agent_config.get("mcpServers", {})
     if not mcp_servers:
@@ -261,7 +209,7 @@ async def claude_agent_sdk_monitor(
     system_prompt_override = os.getenv("AGENT_SYSTEM_PROMPT")
     conversation_history: List[str] = []
 
-    async with MCPServerManager(agent_name, base_dir=base_dir, config_path=resolved_config) as manager:
+    async with MCPServerManager(agent_name, base_dir=base_dir, config_path=config_path) as manager:
         primary_session = manager.get_primary_session()
         allowlist = await _discover_allowed_tools(manager)
 
