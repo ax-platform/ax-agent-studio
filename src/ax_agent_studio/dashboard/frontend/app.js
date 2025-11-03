@@ -1029,8 +1029,8 @@ function renderMonitors() {
             </div>
             <div class="monitor-info">
                 <div class="monitor-details">
-                    Type: ${monitor.monitor_type} |
-                    ${monitor.provider ? `Provider: ${providerName} | ` : ''}
+                    Type: ${getFriendlyMonitorTypeName(monitor.monitor_type)} |
+                    ${shouldShowProvider(monitor.monitor_type) && monitor.provider ? `Provider: ${providerName} | ` : ''}
                     ${monitor.model ? `Model: ${modelName}` : ''}
                     ${monitor.uptime_seconds && isRunning ? ` | Uptime: ${formatUptime(monitor.uptime_seconds)}` : ''}
                     <br>
@@ -1043,6 +1043,37 @@ function renderMonitors() {
         </div>
     `;
     }).join('');
+}
+
+// Helper function to determine if provider should be shown for a monitor type
+function shouldShowProvider(monitorType) {
+    // Framework-specific monitors (OpenAI SDK, Claude SDK) have implicit providers
+    // These should NOT show provider field in monitor card
+    const frameworkSpecificMonitors = ['openai_agents_sdk', 'openai_agents', 'claude_agent_sdk'];
+    return !frameworkSpecificMonitors.includes(monitorType);
+}
+
+// Helper function to get friendly monitor type name
+function getFriendlyMonitorTypeName(monitorType) {
+    // Check framework registry for friendly name
+    if (frameworkRegistry && frameworkRegistry.frameworks) {
+        const framework = frameworkRegistry.frameworks[monitorType];
+        if (framework) {
+            return `${framework.emoji} ${framework.name}`;
+        }
+    }
+
+    // Fallback mapping for older monitor types
+    const typeMap = {
+        'echo': '📢 Echo',
+        'ollama': '🦙 Ollama',
+        'langgraph': '🕸️ LangGraph',
+        'claude_agent_sdk': '🛡 Claude Agent SDK',
+        'openai_agents_sdk': '🤖 OpenAI Agents SDK',
+        'openai_agents': '🤖 OpenAI Agents SDK'  // Legacy name
+    };
+
+    return typeMap[monitorType] || monitorType;
 }
 
 // Helper function to get friendly provider name
