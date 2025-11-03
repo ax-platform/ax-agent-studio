@@ -411,27 +411,39 @@ await asyncio.gather(poll_messages(), process_messages())
 
 ## Framework Configuration Architecture
 
-### Provider and Model Selection Design
+### Dashboard UI Configuration Matrix
 
-Each framework has architectural constraints that determine whether users can select providers:
+**What the user sees when deploying each framework:**
 
-| Framework | Provider Selection | Model Selection | Implicit Provider | Reason |
-|-----------|-------------------|-----------------|-------------------|---------|
-| **Echo** | ❌ None | ❌ None | N/A | No LLM (passthrough) |
-| **Ollama** | ❌ Hidden | ✅ Required | `ollama` | Local-only architecture |
-| **Claude Agent SDK** | ❌ Hidden | ✅ Required | `anthropic` | Claude SDK-specific |
-| **OpenAI Agents SDK** | ❌ Hidden | ✅ Required | `openai` | OpenAI SDK-specific |
-| **LangGraph** | ✅ User choice | ✅ Required | User-selected | Framework-agnostic |
+| Framework | Provider Dropdown | Model Dropdown | System Prompt | How It Works |
+|-----------|------------------|----------------|---------------|--------------|
+| **Echo** | ❌ Hidden | ❌ Hidden | ❌ Hidden | No LLM needed - simple passthrough |
+| **Ollama** | ❌ Hidden | ✅ **SHOWN** | ✅ **SHOWN** | Provider fixed to `ollama`, user picks from Ollama models (llama3.2, qwen2.5, etc.) |
+| **Claude Agent SDK** | ❌ Hidden | ✅ **SHOWN** | ✅ **SHOWN** | Provider fixed to `anthropic`, user picks from Claude models (sonnet-4-5, haiku-4-5, etc.) |
+| **OpenAI Agents SDK** | ❌ Hidden | ✅ **SHOWN** | ✅ **SHOWN** | Provider fixed to `openai`, user picks from OpenAI models (gpt-5, gpt-5-mini, o4-mini, etc.) |
+| **LangGraph** | ✅ **SHOWN** | ✅ **SHOWN** | ✅ **SHOWN** | User picks provider (anthropic/openai/google/bedrock/ollama), then model for that provider |
 
-**Architectural Decisions:**
+**Key Design Principles:**
 
-1. **Echo** - Simple passthrough, no AI processing
-2. **Ollama** - Always uses local Ollama server (`http://localhost:11434/v1`)
-3. **Claude Agent SDK** - Uses `@anthropic-ai/sdk` which only supports Claude models
-4. **OpenAI Agents SDK** - Uses `openai-agents` which only supports OpenAI models
-5. **LangGraph** - Uses `langchain` which is provider-agnostic via adapters
+1. **Provider dropdown** only hidden when framework is architecturally locked to one provider
+2. **Model dropdown** ALWAYS shown (except Echo) so users can pick their preferred model within the provider
+3. **System prompt** ALWAYS shown (except Echo) so users can customize agent personality
+4. **Backend uses implicit provider** when dropdown is hidden (e.g., Claude Agent SDK always uses anthropic)
 
-This design prevents configuration errors (e.g., trying to use Gemini with Claude Agent SDK) while keeping the UI simple for framework-specific monitors.
+**Why This Design:**
+
+- **Prevents errors**: Can't accidentally select Gemini for Claude Agent SDK (wrong provider)
+- **Provides choice**: Can still pick claude-sonnet-4-5 vs claude-haiku-4-5 (right models)
+- **Stays flexible**: LangGraph supports all providers because it's framework-agnostic
+- **Keeps UI clean**: Only show provider dropdown when it's actually a choice
+
+**Architectural Constraints:**
+
+1. **Echo** - No LLM processing, simple message passthrough
+2. **Ollama** - Locked to `http://localhost:11434/v1` but supports all Ollama models
+3. **Claude Agent SDK** - Uses `@anthropic-ai/sdk`, only talks to Anthropic API, supports all Claude models
+4. **OpenAI Agents SDK** - Uses `openai-agents`, only talks to OpenAI API, supports all OpenAI models
+5. **LangGraph** - Uses `langchain` with provider adapters, supports any LLM provider
 
 ### Configuration Files
 
@@ -442,20 +454,26 @@ frameworks:
   claude_agent_sdk:
     requires_provider: false  # Provider is implicit (anthropic)
     requires_model: true
-    provider: "anthropic"
+    provider: "anthropic" < could be bedrock too.
     default_model: "claude-sonnet-4-5"
     recommended: true
+    prompt: "user pick, default none"
 
   openai_agents_sdk:
     requires_provider: false  # Provider is implicit (openai)
     requires_model: true
-    provider: "openai"
+    provider: "openai" < not editable
+    model: :depends on provider"
     default_model: "gpt-5-mini"
+    prompt: "user pick, default none"
 
   langgraph:
     requires_provider: true  # User selects provider
     requires_model: true
-    provider: null  # User choice
+    provider: "lots of options!"  # User choice
+    model: :depends on provider"
+    prompt: "user pick, default none"
+
 
 # UI defaults (with env var substitution)
 ui:

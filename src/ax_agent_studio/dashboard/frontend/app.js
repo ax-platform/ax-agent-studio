@@ -91,13 +91,18 @@ function setupEventListeners() {
         if (frameworkRegistry && frameworkRegistry.frameworks[selectedType]) {
             const framework = frameworkRegistry.frameworks[selectedType];
 
-            // Show/hide provider based on framework requirements
+            // PROVIDER dropdown: only show for frameworks that support multiple providers (e.g., LangGraph)
             providerGroup.style.display = framework.requires_provider ? 'block' : 'none';
+
+            // MODEL dropdown: show for all frameworks except Echo
             modelGroup.style.display = framework.requires_model ? 'block' : 'none';
+
+            // SYSTEM PROMPT: show for all frameworks except Echo
             systemPromptGroup.style.display = framework.requires_model ? 'block' : 'none';
 
             // Load models for the appropriate provider
             if (framework.requires_model) {
+                // Use implicit provider if framework has one, otherwise use selected provider
                 const provider = framework.provider || selectedProvider;
                 await loadModelsForProvider(provider);
             }

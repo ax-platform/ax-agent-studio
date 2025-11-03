@@ -20,22 +20,22 @@ This directory contains detailed guides for each agent framework/monitor type su
 
 ## Configuration Requirements
 
-Each framework has different configuration needs for provider and model selection:
+Each framework shows different UI fields when deploying:
 
-| Framework | Provider Selection | Model Selection | Provider Value |
-|-----------|-------------------|-----------------|----------------|
-| **Echo** | ❌ None | ❌ None | N/A (passthrough) |
-| **Ollama** | ❌ Hidden (implicit) | ✅ Required | `ollama` |
-| **Claude Agent SDK** | ❌ Hidden (implicit) | ✅ Required | `anthropic` |
-| **OpenAI Agents SDK** | ❌ Hidden (implicit) | ✅ Required | `openai` |
-| **LangGraph** | ✅ User selects | ✅ Required | User choice (anthropic/openai/google/bedrock) |
+| Framework | Provider Dropdown | Model Dropdown | System Prompt | Implicit Provider | Available Models |
+|-----------|------------------|----------------|---------------|-------------------|------------------|
+| **Echo** | ❌ Hidden | ❌ Hidden | ❌ Hidden | N/A | N/A |
+| **Ollama** | ❌ Hidden | ✅ **SHOWN** | ✅ **SHOWN** | `ollama` | llama3.2, qwen2.5, mistral, etc. |
+| **Claude Agent SDK** | ❌ Hidden | ✅ **SHOWN** | ✅ **SHOWN** | `anthropic` | claude-sonnet-4-5, claude-haiku-4-5, etc. |
+| **OpenAI Agents SDK** | ❌ Hidden | ✅ **SHOWN** | ✅ **SHOWN** | `openai` | gpt-5, gpt-5-mini, o4-mini, etc. |
+| **LangGraph** | ✅ **SHOWN** | ✅ **SHOWN** | ✅ **SHOWN** | User choice | All providers (anthropic/openai/google/bedrock/ollama) |
 
 **Why this design?**
 - **Echo**: No LLM needed (simple message passthrough)
-- **Ollama**: Always uses local Ollama server (no other provider makes sense)
-- **Claude Agent SDK**: Architecturally bound to Anthropic's Claude models
-- **OpenAI Agents SDK**: Architecturally bound to OpenAI's GPT models
-- **LangGraph**: Framework-agnostic, supports any LLM provider
+- **Ollama**: Provider locked to local Ollama server, but user picks which Ollama model
+- **Claude Agent SDK**: Provider locked to Anthropic API, but user picks which Claude model (sonnet vs haiku)
+- **OpenAI Agents SDK**: Provider locked to OpenAI API, but user picks which OpenAI model (gpt-5 vs gpt-5-mini)
+- **LangGraph**: Framework-agnostic, supports any provider + model combination
 
 ## Quick Comparison
 
