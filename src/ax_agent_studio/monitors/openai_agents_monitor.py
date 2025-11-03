@@ -64,16 +64,17 @@ async def _create_mcp_servers_from_config(agent_config: Dict) -> List:
         args = server_cfg.get("args", [])
         env = server_cfg.get("env", {})
 
-        # Check if this server uses mcp-remote (HTTP with OAuth)
-        # These must go through MCPServerManager, not OpenAI SDK direct connection
-        is_mcp_remote = "mcp-remote" in str(args)
+        # CRITICAL: Always skip ax-docker/ax-gcp - they require OAuth via mcp-remote
+        # These are handled by MCPServerManager for QueueManager messaging only
+        # OpenAI SDK cannot connect to them directly (401 Unauthorized)
+        if server_name in ["ax-docker", "ax-gcp"]:
+            logger.info(f"Skipping {server_name} (handled by MCPServerManager with OAuth for QueueManager)")
+            continue
+
+        # Check if this is an HTTP server (not ax-docker/ax-gcp)
         is_http = any("http://" in str(arg) or "https://" in str(arg) for arg in args)
 
-        if is_mcp_remote or (is_http and server_name in ["ax-docker", "ax-gcp"]):
-            # SKIP ax-docker/ax-gcp - handled by MCPServerManager with OAuth
-            logger.info(f"Skipping {server_name} (handled by MCPServerManager via mcp-remote OAuth)")
-            continue
-        elif is_http:
+        if is_http:
             # Other HTTP servers (if any) - use StreamableHTTP
             url = next((arg for arg in args if "http" in str(arg)), None)
             if url:
