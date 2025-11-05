@@ -170,9 +170,9 @@ def test_claude_agent_sdk_ui():
 
             # Verify provider dropdown is hidden
             provider_group = page.locator("#provider-group")
-            assert (
-                not provider_group.is_visible()
-            ), "Provider dropdown should be hidden for Claude Agent SDK"
+            assert not provider_group.is_visible(), (
+                "Provider dropdown should be hidden for Claude Agent SDK"
+            )
             print("    Provider dropdown is hidden")
 
             # Verify model dropdown is visible
@@ -183,9 +183,9 @@ def test_claude_agent_sdk_ui():
             # Verify Claude Sonnet 4.5 is selected by default
             model_select = page.locator("#model-select")
             selected_value = model_select.input_value()
-            assert (
-                selected_value == "claude-sonnet-4-5"
-            ), f"Expected claude-sonnet-4-5 but got {selected_value}"
+            assert selected_value == "claude-sonnet-4-5", (
+                f"Expected claude-sonnet-4-5 but got {selected_value}"
+            )
             print("    Claude Sonnet 4.5 is selected by default")
 
             # Verify Claude Haiku 4.5 is available as an option
@@ -393,15 +393,15 @@ def test_duplicate_agent_warning():
                 page.wait_for_timeout(500)
 
                 # Verify dialog was shown
-                assert dialog_shown[
-                    "value"
-                ], "Confirmation dialog should be shown for duplicate agent"
-                assert (
-                    "REPLACE EXISTING AGENT" in dialog_shown["message"]
-                ), "Dialog should mention replacing existing agent"
-                assert (
-                    agent_name in dialog_shown["message"]
-                ), f"Dialog should mention the agent name: {agent_name}"
+                assert dialog_shown["value"], (
+                    "Confirmation dialog should be shown for duplicate agent"
+                )
+                assert "REPLACE EXISTING AGENT" in dialog_shown["message"], (
+                    "Dialog should mention replacing existing agent"
+                )
+                assert agent_name in dialog_shown["message"], (
+                    f"Dialog should mention the agent name: {agent_name}"
+                )
 
                 print("    Confirmation dialog shown")
                 print("    Dialog message mentions 'REPLACE EXISTING AGENT'")
