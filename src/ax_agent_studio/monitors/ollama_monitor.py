@@ -27,14 +27,14 @@ async def ollama_monitor(
 ):
     """Monitor for mentions and respond with Ollama AI using FIFO queue"""
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f" OLLAMA AI MONITOR: {agent_name}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     print(f"Server: {server_url}")
     print(f"Model: {model}")
     print(f"Ollama: {ollama_url}")
     print("Mode: FIFO queue")
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
 
     # Initialize Ollama client
     ollama = OpenAI(base_url=ollama_url, api_key="ollama")

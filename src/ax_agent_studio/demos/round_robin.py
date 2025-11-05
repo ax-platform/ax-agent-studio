@@ -125,13 +125,13 @@ async def multi_agent_loop(agents, max_loops=10, delay=8):
 
         while running and loop_count < max_loops:
             loop_count += 1
-            print(f"\n{'='*70}")
+            print(f"\n{'=' * 70}")
             print(f" Loop {loop_count}/{max_loops} - {datetime.now().strftime('%H:%M:%S')}")
 
             # Pick a topic for this round
             topic = topics[topic_idx % len(topics)]
             print(f" Topic: {topic}")
-            print(f"{'='*70}\n")
+            print(f"{'=' * 70}\n")
             topic_idx += 1
 
             # Each agent sends to the next one (round-robin)
@@ -162,12 +162,12 @@ async def multi_agent_loop(agents, max_loops=10, delay=8):
                 print(f"\n⏳ Waiting {delay}s before next loop...\n")
                 await asyncio.sleep(delay)
 
-        print(f"\n{'='*70}")
+        print(f"\n{'=' * 70}")
         print(" Multi-agent loop completed!")
         print(f"   Total loops: {loop_count}")
         print(f"   Total messages sent: {total_messages}")
         print(f"   Stopped: {'User interrupt' if not running else 'Max loops reached'}")
-        print(f"{'='*70}\n")
+        print(f"{'=' * 70}\n")
 
     except Exception as e:
         print(f"\n Error in multi-agent loop: {e}")

@@ -84,7 +84,7 @@ async def keep_alive(
                 )
             else:
                 # EmptyResult or minimal response - ping succeeded but no metadata
-                logger.info(f" {prefix}PING #{ping_count}: OK " f"(took {ping_duration:.2f}s)")
+                logger.info(f" {prefix}PING #{ping_count}: OK (took {ping_duration:.2f}s)")
 
         except asyncio.CancelledError:
             logger.info(f" {prefix}Heartbeat cancelled")
@@ -99,7 +99,7 @@ async def keep_alive(
     # Log final stats
     if ping_count > 0 or ping_failures > 0:
         logger.info(
-            f" {prefix}Heartbeat stopped: " f"{ping_count} pings sent, {ping_failures} failures"
+            f" {prefix}Heartbeat stopped: {ping_count} pings sent, {ping_failures} failures"
         )
 
 

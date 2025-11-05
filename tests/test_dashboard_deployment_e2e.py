@@ -100,13 +100,13 @@ class DashboardDeploymentTest:
             monitor = next((m for m in monitors if m.get("id") == monitor_id), None)
 
             if not monitor:
-                print(f"   [{i+1}s] Monitor not found")
+                print(f"   [{i + 1}s] Monitor not found")
                 continue
 
             status = monitor.get("status")
 
             if status == "running":
-                print(f"   ✅ Monitor running after {i+1}s")
+                print(f"   ✅ Monitor running after {i + 1}s")
                 return True
             elif status in ["failed", "stopped"]:
                 print(f"   ❌ Monitor failed: {status}")

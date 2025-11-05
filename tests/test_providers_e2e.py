@@ -16,9 +16,9 @@ from ax_agent_studio.llm_factory import create_llm
 
 async def test_provider(provider: str, model: str):
     """Test a single provider"""
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Testing: {provider} / {model}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     try:
         # Create LLM

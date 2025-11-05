@@ -73,8 +73,7 @@ class LLMFactory:
             return ChatGoogleGenerativeAI(model=model, google_api_key=api_key, **kwargs)
         except ImportError:
             raise ValueError(
-                "langchain-google-genai not installed. "
-                "Install with: uv add langchain-google-genai"
+                "langchain-google-genai not installed. Install with: uv add langchain-google-genai"
             )
 
     @staticmethod
@@ -90,7 +89,7 @@ class LLMFactory:
             return ChatAnthropic(model=model, anthropic_api_key=api_key, **kwargs)
         except ImportError:
             raise ValueError(
-                "langchain-anthropic not installed. " "Install with: uv add langchain-anthropic"
+                "langchain-anthropic not installed. Install with: uv add langchain-anthropic"
             )
 
     @staticmethod
@@ -106,7 +105,7 @@ class LLMFactory:
             return ChatOpenAI(model=model, openai_api_key=api_key, **kwargs)
         except ImportError:
             raise ValueError(
-                "langchain-openai not installed. " "Install with: uv add langchain-openai"
+                "langchain-openai not installed. Install with: uv add langchain-openai"
             )
 
     @staticmethod
@@ -118,7 +117,7 @@ class LLMFactory:
             # AWS credentials from environment or ~/.aws/credentials
             return ChatBedrockConverse(model_id=model, **kwargs)
         except ImportError:
-            raise ValueError("langchain-aws not installed. " "Install with: uv add langchain-aws")
+            raise ValueError("langchain-aws not installed. Install with: uv add langchain-aws")
 
     @staticmethod
     def _create_ollama(model: str, kwargs: dict[str, Any]) -> Any:
@@ -140,7 +139,7 @@ class LLMFactory:
             )
         except ImportError:
             raise ValueError(
-                "langchain-openai not installed. " "Install with: uv add langchain-openai"
+                "langchain-openai not installed. Install with: uv add langchain-openai"
             )
 
 

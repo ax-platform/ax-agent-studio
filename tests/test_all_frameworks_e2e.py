@@ -124,7 +124,7 @@ class FrameworkE2ETestSuite:
             status = monitor.get("status")
 
             if status == "running":
-                print(f"   ✅ Monitor running after {i+1}s")
+                print(f"   ✅ Monitor running after {i + 1}s")
                 return True
             elif status in ["failed", "stopped"]:
                 print(f"   ❌ Monitor failed: {status}")

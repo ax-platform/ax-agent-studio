@@ -56,10 +56,10 @@ def test_message_context_extraction():
         message_with_context = f"Message from @{sender}:\n{content}"
 
         print("\n    Message sent to LLM:")
-        print(f"   {'-'*50}")
+        print(f"   {'-' * 50}")
         for line in message_with_context.split("\n"):
             print(f"   {line}")
-        print(f"   {'-'*50}")
+        print(f"   {'-' * 50}")
 
         # Check if sender is in the context
         if f"@{test['sender']}" in message_with_context:

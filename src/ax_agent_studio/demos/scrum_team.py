@@ -163,9 +163,9 @@ async def run_scrum_demo(product_owner: str, developer: str, qa_manager: str):
         # Print phase header if new phase
         if step["phase"] != current_phase:
             current_phase = step["phase"]
-            print(f"\n{'='*70}")
+            print(f"\n{'=' * 70}")
             print(f" Phase: {current_phase}")
-            print(f"{'='*70}\n")
+            print(f"{'=' * 70}\n")
 
         from_agent = agents[step["from"]]
         to_agent = agents[step["to"]]
