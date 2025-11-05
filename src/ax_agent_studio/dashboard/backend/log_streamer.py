@@ -30,7 +30,7 @@ class LogStreamer:
 
             # Send existing logs first
             try:
-                async with aiofiles.open(log_file, 'r') as f:
+                async with aiofiles.open(log_file, 'r', encoding='utf-8', errors='replace') as f:
                     content = await f.read()
                     if content:
                         await websocket.send_json({
@@ -67,7 +67,7 @@ class LogStreamer:
             for log_file in log_files:
                 try:
                     monitor_id = log_file.stem
-                    async with aiofiles.open(log_file, 'r') as f:
+                    async with aiofiles.open(log_file, 'r', encoding='utf-8', errors='replace') as f:
                         content = await f.read()
                         if content:
                             await websocket.send_json({
@@ -105,30 +105,29 @@ class LogStreamer:
             return
 
         try:
-            async with aiofiles.open(log_file, 'r') as f:
+            async with aiofiles.open(log_file, 'r', encoding='utf-8', errors='replace') as f:
                 # Seek to end
                 await f.seek(0, 2)
-                last_pos = await f.tell()
-                truncation_logged = False  # Track if we've logged truncation
+                last_size_bytes = os.path.getsize(log_file)
 
                 while True:
                     # Check if file still exists
                     if not log_file.exists():
                         return
 
-                    # Check if file was truncated (cleared)
-                    current_size = os.path.getsize(log_file)
-                    if current_size < last_pos:
+                    # Check if file was truncated by comparing actual file size
+                    try:
+                        current_size_bytes = os.path.getsize(log_file)
+                    except FileNotFoundError:
+                        return
+
+                    if current_size_bytes < last_size_bytes:
                         # File was truncated, reset to beginning
+                        print(f"Detected truncation of {log_file}, resetting position")
                         await f.seek(0)
-                        last_pos = 0
-                        # Only log once per truncation cycle
-                        if not truncation_logged:
-                            print(f"Detected truncation of {log_file}, resetting position")
-                            truncation_logged = True
+                        last_size_bytes = current_size_bytes
                     else:
-                        # Reset flag when file size is normal
-                        truncation_logged = False
+                        last_size_bytes = current_size_bytes
 
                     line = await f.readline()
 
@@ -139,7 +138,6 @@ class LogStreamer:
                             "monitor_id": monitor_id,
                             "content": line
                         })
-                        last_pos = await f.tell()
                     else:
                         # No new content, wait a bit
                         await asyncio.sleep(0.1)
