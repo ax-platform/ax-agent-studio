@@ -11,9 +11,13 @@ import sys
 import time
 from pathlib import Path
 
+import pytest
 from dotenv import load_dotenv
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
+
+# Mark all tests in this file as e2e tests
+pytestmark = pytest.mark.e2e
 
 # Load environment variables from .env file
 load_dotenv()

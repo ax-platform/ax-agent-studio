@@ -83,7 +83,7 @@ class ConfigLoader:
                         # IMPORTANT: Never use filename as agent_name - always require explicit agent_name in config
                         agent_name = data.get("agent_name", "")
                         if not agent_name:
-                            print(f"⚠️  WARNING: {config_file.name} missing agent_name - skipping")
+                            print(f"  WARNING: {config_file.name} missing agent_name - skipping")
                             continue
                         display_name = data.get("display_name", agent_name)
                         server_url = data.get("server_url", "")

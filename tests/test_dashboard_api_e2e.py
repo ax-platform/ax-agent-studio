@@ -12,6 +12,9 @@ from pathlib import Path
 import httpx
 import pytest
 
+# Mark all tests in this file as e2e tests
+pytestmark = pytest.mark.e2e
+
 # Add src to path
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "src"))

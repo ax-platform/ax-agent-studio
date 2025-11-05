@@ -27,7 +27,7 @@ try:
     from agents import Agent, Runner
     from agents.mcp import MCPServerStdio, MCPServerStreamableHttp
 except ImportError:  # pragma: no cover
-    print("❌ Missing dependency: openai-agents")
+    print(" Missing dependency: openai-agents")
     print("   Install with: pip install openai-agents")
     sys.exit(1)
 
@@ -129,7 +129,7 @@ async def openai_agents_monitor(
     agent_config = resolve_agent_config(agent_name, config_path)
 
     print(f"\n{'=' * 60}")
-    print(f"🤖 OPENAI AGENTS SDK MONITOR: {agent_name}")
+    print(f" OPENAI AGENTS SDK MONITOR: {agent_name}")
     print(f"{'=' * 60}")
     print(f"Model: {model}")
 
@@ -162,7 +162,7 @@ async def openai_agents_monitor(
     # Create MCP servers using OpenAI Agents SDK MCP classes (for agent tool access)
     mcp_server_instances = await _create_mcp_servers_from_config(agent_config)
 
-    print(f"\n✅ Configured {len(mcp_server_instances)} MCP servers for agent")
+    print(f"\n Configured {len(mcp_server_instances)} MCP servers for agent")
     print()
 
     # Use MCPServerManager same way as LangGraph monitor - auto-loads full config
@@ -170,7 +170,7 @@ async def openai_agents_monitor(
     # (OpenAI SDK handles separate agent tool connections)
     async with MCPServerManager(agent_name, config_path=config_path) as manager:
         primary_session = manager.get_primary_session()
-        print("✅ Connected messaging layer for QueueManager\n")
+        print(" Connected messaging layer for QueueManager\n")
 
         # Open all MCP server connections
         # We need to use AsyncExitStack to manage multiple async context managers
@@ -183,7 +183,7 @@ async def openai_agents_monitor(
                 connected_server = await stack.enter_async_context(server)
                 mcp_servers.append(connected_server)
 
-            print(f"✅ Connected {len(mcp_servers)} MCP servers for agent tool access\n")
+            print(f" Connected {len(mcp_servers)} MCP servers for agent tool access\n")
 
             # Build agent instructions
             base_instructions = (
@@ -289,7 +289,7 @@ async def openai_agents_monitor(
                 startup_sweep_limit=monitor_config.get("startup_sweep_limit", 10),
             )
 
-            print("🚀 Starting FIFO queue manager...\n")
+            print(" Starting FIFO queue manager...\n")
             await queue_manager.run()
 
 

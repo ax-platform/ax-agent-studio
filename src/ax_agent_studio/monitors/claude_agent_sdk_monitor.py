@@ -370,9 +370,9 @@ async def claude_agent_sdk_monitor(
                 user_text = _extract_message_body(raw_content)
                 logger.info("Processing message %s from %s", msg_id_short or "(no id)", sender)
                 print(f"\n{'=' * 60}")
-                print(f"🤖 AGENT: {agent_name}")
-                print(f"📨 Processing message from: {sender}")
-                print(f"💬 Message: {user_text[:100]}...")
+                print(f"AGENT: {agent_name}")
+                print(f"Processing message from: {sender}")
+                print(f"Message: {user_text[:100]}...")
                 print(f"{'=' * 60}\n")
 
                 history_text = "\n".join(conversation_history[-_HISTORY_LIMIT:])
@@ -390,9 +390,9 @@ async def claude_agent_sdk_monitor(
                 prompt = "\n\n".join(section for section in prompt_sections if section)
 
                 try:
-                    print(f"⚡ {agent_name} is processing request...")
+                    print(f"{agent_name} is processing request...")
                     response_text = await _run_claude(prompt, options)
-                    print(f"✅ {agent_name} completed request")
+                    print(f"{agent_name} completed request")
                 except Exception as exc:  # pragma: no cover - network errors
                     logger.error("Claude Agent SDK query failed: %s", exc)
                     return f"@{sender} I'm having trouble thinking right now. Error: {exc}"[:240]

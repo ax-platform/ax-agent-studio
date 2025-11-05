@@ -6,8 +6,12 @@ Sends a test message and verifies the monitor responds
 
 import asyncio
 
+import pytest
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
+
+# Mark all tests in this file as e2e tests
+pytestmark = pytest.mark.e2e
 
 
 async def send_test_message(agent_name: str, message: str):

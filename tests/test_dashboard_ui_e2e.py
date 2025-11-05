@@ -10,7 +10,11 @@ Tests verify:
 - LangGraph: Provider dropdown visible, model dropdown visible
 """
 
+import pytest
 from playwright.sync_api import expect, sync_playwright
+
+# Mark all tests in this file as e2e tests
+pytestmark = pytest.mark.e2e
 
 
 def test_dashboard_loads():

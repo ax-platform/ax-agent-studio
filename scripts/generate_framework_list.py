@@ -71,7 +71,7 @@ def main():
         f.write(content)
         f.write("\n")
 
-    print(f"✅ Generated {output_path}")
+    print(f" Generated {output_path}")
     print(f"   {len(content.splitlines())} lines")
     print("\n" + "=" * 60)
     print("Preview:")

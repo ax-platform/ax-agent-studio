@@ -13,7 +13,11 @@ import tempfile
 import time
 from pathlib import Path
 
+import pytest
 import requests
+
+# Mark all tests in this file as e2e tests
+pytestmark = pytest.mark.e2e
 
 
 class AgentNameIndependenceE2ETest:
@@ -62,11 +66,11 @@ class AgentNameIndependenceE2ETest:
             "/mcp/agents/ghost_ray_363" in ghost_config["server_url"]
         ), f"URL should contain '/mcp/agents/ghost_ray_363', got '{ghost_config['server_url']}'"
 
-        print("✅ Real-world config with mismatched filename:")
+        print(" Real-world config with mismatched filename:")
         print(f"   Filename: {ghost_config['filename']}")
         print(f"   Agent name: {ghost_config['agent_name']}")
         print(f"   URL: {ghost_config['server_url']}")
-        print("   ✅ Agent name correctly extracted from URL, NOT filename!")
+        print("    Agent name correctly extracted from URL, NOT filename!")
 
         return True
 
@@ -95,10 +99,10 @@ class AgentNameIndependenceE2ETest:
                     )
 
                     verified_count += 1
-                    print(f"✅ {config['filename']}: agent_name correctly extracted from URL")
+                    print(f" {config['filename']}: agent_name correctly extracted from URL")
 
         assert verified_count > 0, "No configs with MCP URLs found to verify"
-        print(f"✅ Verified {verified_count} configs have agent_name matching their URLs")
+        print(f" Verified {verified_count} configs have agent_name matching their URLs")
 
         return True
 
@@ -137,7 +141,7 @@ class AgentNameIndependenceE2ETest:
                 not bad_config_found
             ), "Config without agent_name was loaded - should have been rejected!"
 
-            print("✅ Legacy config without explicit agent_name was correctly rejected")
+            print(" Legacy config without explicit agent_name was correctly rejected")
             print("   (not using filename as fallback)")
 
             return True
@@ -160,10 +164,10 @@ class AgentNameIndependenceE2ETest:
             # Check if dashboard is running
             response = requests.get(f"{self.api_base}/health", timeout=5)
             if response.status_code != 200:
-                print("❌ Dashboard not healthy, cannot run tests")
+                print(" Dashboard not healthy, cannot run tests")
                 return False
         except requests.exceptions.RequestException as e:
-            print(f"❌ Dashboard not reachable: {e}")
+            print(f" Dashboard not reachable: {e}")
             print(f"   Make sure dashboard is running on {self.dashboard_url}")
             return False
 
@@ -182,14 +186,14 @@ class AgentNameIndependenceE2ETest:
                     passed += 1
                 else:
                     failed += 1
-                    print(f"❌ Test failed: {test.__name__}")
+                    print(f" Test failed: {test.__name__}")
             except AssertionError as e:
                 failed += 1
-                print(f"❌ Test failed: {test.__name__}")
+                print(f" Test failed: {test.__name__}")
                 print(f"   Assertion: {e}")
             except Exception as e:
                 failed += 1
-                print(f"❌ Test error: {test.__name__}")
+                print(f" Test error: {test.__name__}")
                 print(f"   Error: {e}")
 
         print("=" * 70)

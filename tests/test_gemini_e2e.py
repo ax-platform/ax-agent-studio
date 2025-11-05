@@ -7,7 +7,11 @@ Tests that Gemini can work with MCP tools from start to finish
 import asyncio
 import os
 
+import pytest
 from dotenv import load_dotenv
+
+# Mark all tests in this file as e2e tests
+pytestmark = pytest.mark.e2e
 
 load_dotenv()
 

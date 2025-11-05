@@ -122,7 +122,7 @@ def resolve_agent_config(agent_name: str, config_path: str | None = None) -> dic
                     if arg.startswith("http") and "/agents/" in arg:
                         url_agent_name = arg.split("/agents/")[1].split("/")[0].split("?")[0]
                         if url_agent_name == agent_name:
-                            print(f"✅ Found config for {agent_name} in: {config_file.name}")
+                            print(f" Found config for {agent_name} in: {config_file.name}")
                             return agent_config
         except (json.JSONDecodeError, KeyError):
             # Skip invalid JSON files

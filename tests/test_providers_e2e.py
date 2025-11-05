@@ -8,6 +8,11 @@ import asyncio
 import sys
 from pathlib import Path
 
+import pytest
+
+# Mark all tests in this file as e2e tests
+pytestmark = pytest.mark.e2e
+
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
