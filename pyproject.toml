@@ -3,7 +3,7 @@ name = "ax-agent-studio"
 version = "1.0.0"
 description = "The Agent Factory - Build autonomous AI agents using MCP for orchestration"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.12"
 license = {text = "MIT"}
 authors = [
     {name = "aX Platform", email = "jacob.taunton@ax-platform.com"}
@@ -13,7 +13,7 @@ classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.12",
     "Topic :: Software Development :: Libraries :: Application Frameworks",
 ]
 dependencies = [
@@ -63,7 +63,7 @@ build-backend = "hatchling.build"
 
 # Ruff configuration
 [tool.ruff]
-target-version = "py313"
+target-version = "py312"
 line-length = 100
 exclude = [
     ".git",
@@ -103,7 +103,7 @@ known-first-party = ["ax_agent_studio"]
 
 # Mypy configuration
 [tool.mypy]
-python_version = "3.13"
+python_version = "3.12"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false  # Start lenient, can tighten later
