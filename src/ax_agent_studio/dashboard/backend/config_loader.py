@@ -3,12 +3,11 @@ Configuration Loader
 Loads agent configs and available models with environment support
 """
 
-import json
 import asyncio
+import json
 import subprocess
-from pathlib import Path
-from typing import List, Dict, Optional
 from collections import defaultdict
+from pathlib import Path
 
 
 class ConfigLoader:
@@ -16,7 +15,7 @@ class ConfigLoader:
         self.base_dir = base_dir
         self.agents_dir = base_dir / "configs" / "agents"
 
-    def _parse_mcp_format(self, data: Dict) -> tuple[str, str, str]:
+    def _parse_mcp_format(self, data: dict) -> tuple[str, str, str]:
         """Parse MCP server format to extract agent name and URLs"""
         mcp_servers = data.get("mcpServers", {})
 
@@ -46,13 +45,13 @@ class ConfigLoader:
         # Fallback if no agent URL found
         return "", "", ""
 
-    def list_environments(self) -> List[str]:
+    def list_environments(self) -> list[str]:
         """List all available environments from agent configs"""
         configs = self.list_configs()
         environments = sorted(set(config["environment"] for config in configs))
         return environments if environments else ["local"]
 
-    def list_configs(self, environment: Optional[str] = None) -> List[Dict[str, str]]:
+    def list_configs(self, environment: str | None = None) -> list[dict[str, str]]:
         """List all available agent configuration files from configs/agents/"""
         if not self.agents_dir.exists():
             return []
@@ -77,14 +76,14 @@ class ConfigLoader:
                         # New MCP server format
                         agent_name, server_url, oauth_url = self._parse_mcp_format(data)
                         display_name = agent_name.replace("_", " ").title()
-                        mcp_server_names = list(data['mcpServers'].keys())
+                        mcp_server_names = list(data["mcpServers"].keys())
                         description = f"Agent using {len(data['mcpServers'])} MCP server(s): {', '.join(mcp_server_names)}"
                     else:
                         # Legacy format (backward compatibility)
                         # IMPORTANT: Never use filename as agent_name - always require explicit agent_name in config
                         agent_name = data.get("agent_name", "")
                         if not agent_name:
-                            print(f"⚠️  WARNING: {config_file.name} missing agent_name - skipping")
+                            print(f"  WARNING: {config_file.name} missing agent_name - skipping")
                             continue
                         display_name = data.get("display_name", agent_name)
                         server_url = data.get("server_url", "")
@@ -105,24 +104,26 @@ class ConfigLoader:
                     # Extract server type from URL
                     server_type = "local" if "localhost" in server_url else "remote"
 
-                    configs.append({
-                        "path": str(config_file),
-                        "filename": config_file.name,
-                        "agent_name": agent_name,
-                        "display_name": display_name,
-                        "server_url": server_url,
-                        "oauth_url": oauth_url,
-                        "environment": config_env,
-                        "server_type": server_type,
-                        "description": description
-                    })
+                    configs.append(
+                        {
+                            "path": str(config_file),
+                            "filename": config_file.name,
+                            "agent_name": agent_name,
+                            "display_name": display_name,
+                            "server_url": server_url,
+                            "oauth_url": oauth_url,
+                            "environment": config_env,
+                            "server_type": server_type,
+                            "description": description,
+                        }
+                    )
             except Exception as e:
                 print(f"Error loading config {config_file}: {e}")
                 continue
 
         return sorted(configs, key=lambda x: (x["environment"], x["agent_name"]))
 
-    def get_configs_by_environment(self) -> Dict[str, List[Dict]]:
+    def get_configs_by_environment(self) -> dict[str, list[dict]]:
         """Group configs by environment"""
         all_configs = self.list_configs()
         grouped = defaultdict(list)
@@ -132,14 +133,12 @@ class ConfigLoader:
 
         return dict(grouped)
 
-    async def get_ollama_models(self) -> List[str]:
+    async def get_ollama_models(self) -> list[str]:
         """Get list of available Ollama models"""
         try:
             # Run ollama list command
             process = await asyncio.create_subprocess_shell(
-                "ollama list",
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE
+                "ollama list", stdout=subprocess.PIPE, stderr=subprocess.PIPE
             )
 
             stdout, stderr = await process.communicate()
@@ -149,7 +148,7 @@ class ConfigLoader:
                 return []
 
             # Parse output (skip header line)
-            lines = stdout.decode().strip().split('\n')[1:]
+            lines = stdout.decode().strip().split("\n")[1:]
             models = []
 
             for line in lines:
@@ -164,7 +163,7 @@ class ConfigLoader:
             print(f"Error getting Ollama models: {e}")
             return []
 
-    def load_config(self, config_path: str) -> Optional[Dict]:
+    def load_config(self, config_path: str) -> dict | None:
         """Load a specific configuration file"""
         try:
             with open(config_path) as f:
@@ -173,7 +172,7 @@ class ConfigLoader:
             print(f"Error loading config {config_path}: {e}")
             return None
 
-    def get_default_config(self, environment: str = "local") -> Optional[str]:
+    def get_default_config(self, environment: str = "local") -> str | None:
         """Get the first available config for an environment as default"""
         configs = self.list_configs(environment)
         return configs[0]["path"] if configs else None

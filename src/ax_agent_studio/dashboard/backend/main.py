@@ -3,32 +3,31 @@ Monitor Dashboard Backend
 FastAPI server for managing MCP monitor processes
 """
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
-from pydantic import BaseModel
-from typing import List, Dict, Optional, Literal
-import asyncio
-import json
 import os
-import psutil
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
+from typing import Literal
 
-from ax_agent_studio.dashboard.backend.process_manager import ProcessManager
+import psutil
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
+
 from ax_agent_studio.dashboard.backend.config_loader import ConfigLoader
-from ax_agent_studio.dashboard.backend.log_streamer import LogStreamer
-from ax_agent_studio.dashboard.backend.providers_loader import (
-    get_providers_list,
-    get_models_for_provider,
-    get_defaults
-)
 from ax_agent_studio.dashboard.backend.framework_loader import (
-    load_frameworks,
     get_framework_info,
+    get_provider_defaults,
     get_ui_defaults,
-    get_provider_defaults
+    load_frameworks,
+)
+from ax_agent_studio.dashboard.backend.log_streamer import LogStreamer
+from ax_agent_studio.dashboard.backend.process_manager import ProcessManager
+from ax_agent_studio.dashboard.backend.providers_loader import (
+    get_defaults,
+    get_models_for_provider,
+    get_providers_list,
 )
 
 app = FastAPI(title="MCP Monitor Dashboard", version="1.0.0")
@@ -49,59 +48,69 @@ process_manager = ProcessManager(PROJECT_ROOT)
 config_loader = ConfigLoader(PROJECT_ROOT)
 log_streamer = LogStreamer(PROJECT_ROOT / "logs")
 
+
 # Pydantic models
 class MonitorConfig(BaseModel):
     agent_name: str
     config_path: str
     monitor_type: Literal["echo", "ollama", "langgraph", "claude_agent_sdk", "openai_agents_sdk"]
-    model: Optional[str] = None
-    provider: Optional[str] = None
-    system_prompt: Optional[str] = None
-    system_prompt_name: Optional[str] = None
-    history_limit: Optional[int] = 25  # Default to 25 messages
+    model: str | None = None
+    provider: str | None = None
+    system_prompt: str | None = None
+    system_prompt_name: str | None = None
+    history_limit: int | None = 25  # Default to 25 messages
+
 
 class MonitorStatus(BaseModel):
     id: str
     agent_name: str
     monitor_type: str
     status: Literal["running", "stopped", "error"]
-    pid: Optional[int] = None
-    started_at: Optional[str] = None
-    uptime_seconds: Optional[int] = None
+    pid: int | None = None
+    started_at: str | None = None
+    uptime_seconds: int | None = None
     config_path: str
-    model: Optional[str] = None
-    provider: Optional[str] = None
-    system_prompt_name: Optional[str] = None
-    mcp_servers: Optional[List[str]] = None
-    environment: Optional[str] = None
+    model: str | None = None
+    provider: str | None = None
+    system_prompt_name: str | None = None
+    mcp_servers: list[str] | None = None
+    environment: str | None = None
+
 
 class DemoConfig(BaseModel):
     demo_type: Literal["round_robin", "scrum_team"]
-    agents: List[str]
+    agents: list[str]
     loops: int = 5
     delay: int = 8
     enable_tools: bool = True
+
 
 class SendMessageRequest(BaseModel):
     from_agent: str
     to_agent: str
     message: str
-    from_agent_environment: Optional[str] = None  # Environment of the test sender agent
+    from_agent_environment: str | None = None  # Environment of the test sender agent
+
 
 class StartMonitorRequest(BaseModel):
     config: MonitorConfig
 
+
 class StopMonitorRequest(BaseModel):
     monitor_id: str
 
+
 class DeploymentActionRequest(BaseModel):
-    environment: Optional[str] = None
+    environment: str | None = None
+
 
 class ResetAgentsRequest(BaseModel):
-    agents: Optional[List[str]] = None
-    environment: Optional[str] = None
+    agents: list[str] | None = None
+    environment: str | None = None
+
 
 # API Routes
+
 
 @app.get("/")
 async def root():
@@ -109,14 +118,16 @@ async def root():
     frontend_path = Path(__file__).parent.parent / "frontend" / "index.html"
     return FileResponse(frontend_path)
 
+
 @app.get("/api/health")
 async def health_check():
     """Health check endpoint"""
     return {
         "status": "healthy",
         "timestamp": datetime.now().isoformat(),
-        "monitors_running": len(process_manager.get_running_monitors())
+        "monitors_running": len(process_manager.get_running_monitors()),
     }
+
 
 @app.get("/api/settings")
 async def get_settings():
@@ -127,16 +138,17 @@ async def get_settings():
             "default_agent_type": ui_defaults.get("default_framework", "claude_agent_sdk"),
             "default_provider": ui_defaults.get("default_provider", "anthropic"),
             "default_model": ui_defaults.get("default_model", "claude-sonnet-4-5"),
-            "default_environment": ui_defaults.get("default_environment", "local")
+            "default_environment": ui_defaults.get("default_environment", "local"),
         }
-    except Exception as e:
+    except Exception:
         # Fallback to hardcoded defaults if framework config fails
         return {
             "default_agent_type": os.getenv("DEFAULT_AGENT_TYPE", "claude_agent_sdk"),
             "default_provider": os.getenv("DEFAULT_PROVIDER", "anthropic"),
             "default_model": os.getenv("DEFAULT_MODEL", "claude-sonnet-4-5"),
-            "default_environment": os.getenv("DEFAULT_ENVIRONMENT", "local")
+            "default_environment": os.getenv("DEFAULT_ENVIRONMENT", "local"),
         }
+
 
 @app.get("/api/frameworks")
 async def get_frameworks():
@@ -144,7 +156,8 @@ async def get_frameworks():
     try:
         return load_frameworks()
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to load frameworks: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to load frameworks: {e!s}")
+
 
 @app.get("/api/frameworks/{framework_type}")
 async def get_framework(framework_type: str):
@@ -154,7 +167,8 @@ async def get_framework(framework_type: str):
     except KeyError:
         raise HTTPException(status_code=404, detail=f"Framework not found: {framework_type}")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get framework info: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get framework info: {e!s}")
+
 
 @app.get("/api/processes/health")
 async def processes_health():
@@ -164,72 +178,79 @@ async def processes_health():
         "monitors": [],
         "total_memory_mb": 0,
         "warning": False,
-        "warning_message": None
+        "warning_message": None,
     }
 
     current_pid = os.getpid()
 
     # Find all dashboard processes
-    for proc in psutil.process_iter(['pid', 'name', 'cmdline', 'create_time', 'memory_info']):
+    for proc in psutil.process_iter(["pid", "name", "cmdline", "create_time", "memory_info"]):
         try:
-            cmdline = proc.info['cmdline']
+            cmdline = proc.info["cmdline"]
             if not cmdline:
                 continue
 
-            cmdline_str = ' '.join(cmdline)
+            cmdline_str = " ".join(cmdline)
 
             # Dashboard processes
-            if 'uvicorn' in cmdline_str and 'dashboard' in cmdline_str:
-                memory_mb = proc.info['memory_info'].rss / 1024 / 1024
-                uptime_seconds = int(datetime.now().timestamp() - proc.info['create_time'])
+            if "uvicorn" in cmdline_str and "dashboard" in cmdline_str:
+                memory_mb = proc.info["memory_info"].rss / 1024 / 1024
+                uptime_seconds = int(datetime.now().timestamp() - proc.info["create_time"])
 
-                processes['dashboards'].append({
-                    'pid': proc.info['pid'],
-                    'is_current': proc.info['pid'] == current_pid,
-                    'started_at': datetime.fromtimestamp(proc.info['create_time']).isoformat(),
-                    'uptime_seconds': uptime_seconds,
-                    'memory_mb': round(memory_mb, 1)
-                })
-                processes['total_memory_mb'] += memory_mb
+                processes["dashboards"].append(
+                    {
+                        "pid": proc.info["pid"],
+                        "is_current": proc.info["pid"] == current_pid,
+                        "started_at": datetime.fromtimestamp(proc.info["create_time"]).isoformat(),
+                        "uptime_seconds": uptime_seconds,
+                        "memory_mb": round(memory_mb, 1),
+                    }
+                )
+                processes["total_memory_mb"] += memory_mb
 
             # Monitor processes (only Python processes, not uv wrapper)
-            elif 'ax_agent_studio.monitors' in cmdline_str:
+            elif "ax_agent_studio.monitors" in cmdline_str:
                 # Filter out uv wrapper - only match actual Python processes
-                proc_name = proc.info.get('name', '').lower()
-                if 'python' not in proc_name:
+                proc_name = proc.info.get("name", "").lower()
+                if "python" not in proc_name:
                     continue
 
-                memory_mb = proc.info['memory_info'].rss / 1024 / 1024
-                uptime_seconds = int(datetime.now().timestamp() - proc.info['create_time'])
+                memory_mb = proc.info["memory_info"].rss / 1024 / 1024
+                uptime_seconds = int(datetime.now().timestamp() - proc.info["create_time"])
 
                 # Extract agent name from cmdline
                 agent_name = None
                 for i, arg in enumerate(cmdline):
-                    if 'monitors.' in arg and i + 1 < len(cmdline):
+                    if "monitors." in arg and i + 1 < len(cmdline):
                         agent_name = cmdline[i + 1]
                         break
 
-                processes['monitors'].append({
-                    'pid': proc.info['pid'],
-                    'agent_name': agent_name,
-                    'started_at': datetime.fromtimestamp(proc.info['create_time']).isoformat(),
-                    'uptime_seconds': uptime_seconds,
-                    'memory_mb': round(memory_mb, 1)
-                })
-                processes['total_memory_mb'] += memory_mb
+                processes["monitors"].append(
+                    {
+                        "pid": proc.info["pid"],
+                        "agent_name": agent_name,
+                        "started_at": datetime.fromtimestamp(proc.info["create_time"]).isoformat(),
+                        "uptime_seconds": uptime_seconds,
+                        "memory_mb": round(memory_mb, 1),
+                    }
+                )
+                processes["total_memory_mb"] += memory_mb
 
         except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
             continue
 
     # Check for zombie dashboards
-    zombie_count = len([d for d in processes['dashboards'] if not d['is_current']])
+    zombie_count = len([d for d in processes["dashboards"] if not d["is_current"]])
     if zombie_count > 0:
-        processes['warning'] = True
-        processes['warning_message'] = f"{zombie_count} zombie dashboard process(es) detected - wasting {round(sum(d['memory_mb'] for d in processes['dashboards'] if not d['is_current']), 1)}MB RAM"
+        processes["warning"] = True
+        processes["warning_message"] = (
+            f"{zombie_count} zombie dashboard process(es) detected - wasting {round(sum(d['memory_mb'] for d in processes['dashboards'] if not d['is_current']), 1)}MB RAM"
+        )
 
-    processes['total_memory_mb'] = round(processes['total_memory_mb'], 1)
+    processes["total_memory_mb"] = round(processes["total_memory_mb"], 1)
 
     return processes
+
 
 @app.post("/api/processes/kill-zombies")
 async def kill_zombie_dashboards():
@@ -237,19 +258,19 @@ async def kill_zombie_dashboards():
     current_pid = os.getpid()
     killed = []
 
-    for proc in psutil.process_iter(['pid', 'cmdline']):
+    for proc in psutil.process_iter(["pid", "cmdline"]):
         try:
-            cmdline = proc.info['cmdline']
+            cmdline = proc.info["cmdline"]
             if not cmdline:
                 continue
 
-            cmdline_str = ' '.join(cmdline)
+            cmdline_str = " ".join(cmdline)
 
             # Dashboard processes (not current)
-            if 'uvicorn' in cmdline_str and 'dashboard' in cmdline_str:
-                if proc.info['pid'] != current_pid:
+            if "uvicorn" in cmdline_str and "dashboard" in cmdline_str:
+                if proc.info["pid"] != current_pid:
                     proc.kill()
-                    killed.append(proc.info['pid'])
+                    killed.append(proc.info["pid"])
 
         except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
             continue
@@ -258,8 +279,9 @@ async def kill_zombie_dashboards():
         "success": True,
         "killed_count": len(killed),
         "killed_pids": killed,
-        "message": f"Killed {len(killed)} zombie dashboard process(es)"
+        "message": f"Killed {len(killed)} zombie dashboard process(es)",
     }
+
 
 @app.get("/api/environments")
 async def list_environments():
@@ -267,11 +289,13 @@ async def list_environments():
     environments = config_loader.list_environments()
     return {"environments": environments}
 
+
 @app.get("/api/configs")
-async def list_configs(environment: Optional[str] = None):
+async def list_configs(environment: str | None = None):
     """List all available agent configurations, optionally filtered by environment"""
     configs = config_loader.list_configs(environment)
     return {"configs": configs}
+
 
 @app.get("/api/configs/by-environment")
 async def get_configs_by_environment():
@@ -279,17 +303,20 @@ async def get_configs_by_environment():
     configs_by_env = config_loader.get_configs_by_environment()
     return {"configs_by_environment": configs_by_env}
 
+
 @app.get("/api/models/ollama")
 async def list_ollama_models():
     """List available Ollama models"""
     models = await config_loader.get_ollama_models()
     return {"models": models}
 
+
 @app.get("/api/providers")
 async def list_providers():
     """List all available LLM providers"""
     providers = get_providers_list()
     return {"providers": providers}
+
 
 @app.get("/api/providers/{provider_id}/models")
 async def list_provider_models(provider_id: str):
@@ -300,8 +327,11 @@ async def list_provider_models(provider_id: str):
     """
     models = await get_models_for_provider(provider_id)
     if not models:
-        raise HTTPException(status_code=404, detail=f"Provider '{provider_id}' not found or has no models")
+        raise HTTPException(
+            status_code=404, detail=f"Provider '{provider_id}' not found or has no models"
+        )
     return {"models": models}
+
 
 @app.get("/api/providers/defaults")
 async def get_provider_defaults():
@@ -309,10 +339,12 @@ async def get_provider_defaults():
     defaults = get_defaults()
     return defaults
 
+
 @app.get("/api/prompts")
 async def list_prompts():
     """List available system prompts from configs/prompts/"""
     import yaml
+
     prompts_dir = PROJECT_ROOT / "configs" / "prompts"
     prompts = []
 
@@ -323,24 +355,28 @@ async def list_prompts():
                 continue
 
             try:
-                with open(prompt_file, 'r') as f:
+                with open(prompt_file) as f:
                     prompt_data = yaml.safe_load(f)
-                    prompts.append({
-                        "file": prompt_file.stem,
-                        "name": prompt_data.get("name", prompt_file.stem),
-                        "description": prompt_data.get("description", ""),
-                        "prompt": prompt_data.get("prompt", "")
-                    })
+                    prompts.append(
+                        {
+                            "file": prompt_file.stem,
+                            "name": prompt_data.get("name", prompt_file.stem),
+                            "description": prompt_data.get("description", ""),
+                            "prompt": prompt_data.get("prompt", ""),
+                        }
+                    )
             except Exception as e:
                 print(f"Error loading prompt {prompt_file}: {e}")
 
     return {"prompts": prompts}
 
+
 @app.get("/api/deployments")
-async def list_deployment_groups(environment: Optional[str] = None):
+async def list_deployment_groups(environment: str | None = None):
     """List deployment groups and their current status"""
     groups = process_manager.get_deployment_groups(environment)
     return {"deployment_groups": groups}
+
 
 @app.post("/api/deployments/{group_id}/start")
 async def start_deployment_group(group_id: str, request: DeploymentActionRequest):
@@ -351,6 +387,7 @@ async def start_deployment_group(group_id: str, request: DeploymentActionRequest
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+
 @app.post("/api/deployments/{group_id}/stop")
 async def stop_deployment_group(group_id: str):
     """Stop all monitors started by a deployment group"""
@@ -359,10 +396,11 @@ async def stop_deployment_group(group_id: str):
         return {
             "success": True,
             "stopped": stopped,
-            "message": f"Stopped {stopped} monitor(s) from group '{group_id}'"
+            "message": f"Stopped {stopped} monitor(s) from group '{group_id}'",
         }
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
 
 @app.post("/api/deployments/reload")
 async def reload_deployment_groups():
@@ -373,6 +411,7 @@ async def reload_deployment_groups():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @app.post("/api/agents/reset")
 async def reset_agents(request: ResetAgentsRequest):
     """Reset backlog for one or more agents."""
@@ -381,12 +420,10 @@ async def reset_agents(request: ResetAgentsRequest):
             agent_names=request.agents,
             environment=request.environment,
         )
-        return {
-            "success": True,
-            **result
-        }
+        return {"success": True, **result}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.post("/api/agents/{agent_name}/reset")
 async def reset_agent(agent_name: str):
@@ -397,27 +434,31 @@ async def reset_agent(agent_name: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @app.get("/api/monitors")
 async def list_monitors():
     """List all monitors (running and stopped)"""
     monitors = process_manager.get_all_monitors()
     return {"monitors": monitors}
 
+
 def load_base_prompt() -> str:
     """Load the base system prompt that's always included"""
     import yaml
+
     base_prompt_path = PROJECT_ROOT / "configs" / "prompts" / "_base.yaml"
 
     if not base_prompt_path.exists():
         return ""
 
     try:
-        with open(base_prompt_path, 'r') as f:
+        with open(base_prompt_path) as f:
             prompt_data = yaml.safe_load(f)
             return prompt_data.get("prompt", "")
     except Exception as e:
         print(f"Error loading base prompt: {e}")
         return ""
+
 
 @app.post("/api/monitors/start")
 async def start_monitor(request: StartMonitorRequest):
@@ -441,15 +482,16 @@ async def start_monitor(request: StartMonitorRequest):
             provider=request.config.provider,
             system_prompt=combined_prompt,
             system_prompt_name=request.config.system_prompt_name,
-            history_limit=request.config.history_limit
+            history_limit=request.config.history_limit,
         )
         return {
             "success": True,
             "monitor_id": monitor_id,
-            "message": f"Monitor started for {request.config.agent_name}"
+            "message": f"Monitor started for {request.config.agent_name}",
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.post("/api/monitors/stop")
 async def stop_monitor(request: StopMonitorRequest):
@@ -457,14 +499,12 @@ async def stop_monitor(request: StopMonitorRequest):
     try:
         success = await process_manager.stop_monitor(request.monitor_id)
         if success:
-            return {
-                "success": True,
-                "message": f"Monitor {request.monitor_id} stopped"
-            }
+            return {"success": True, "message": f"Monitor {request.monitor_id} stopped"}
         else:
             raise HTTPException(status_code=404, detail="Monitor not found")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.post("/api/monitors/restart/{monitor_id}")
 async def restart_monitor(monitor_id: str):
@@ -472,63 +512,53 @@ async def restart_monitor(monitor_id: str):
     try:
         success = await process_manager.restart_monitor(monitor_id)
         if success:
-            return {
-                "success": True,
-                "message": f"Monitor {monitor_id} restarted"
-            }
+            return {"success": True, "message": f"Monitor {monitor_id} restarted"}
         else:
             raise HTTPException(status_code=404, detail="Monitor not found")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.post("/api/monitors/stop-all")
 async def stop_all_monitors():
     """Stop all running monitors gracefully (no kill switch)"""
     try:
         count = await process_manager.stop_all_monitors()
-        return {
-            "success": True,
-            "message": f"Stopped {count} monitor(s)",
-            "count": count
-        }
+        return {"success": True, "message": f"Stopped {count} monitor(s)", "count": count}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.get("/api/kill-switch/status")
 async def get_kill_switch_status():
     """Check if kill switch is active"""
     from pathlib import Path
+
     kill_switch_file = Path("data/KILL_SWITCH")
-    return {
-        "active": kill_switch_file.exists(),
-        "file_path": str(kill_switch_file)
-    }
+    return {"active": kill_switch_file.exists(), "file_path": str(kill_switch_file)}
+
 
 @app.post("/api/kill-switch/activate")
 async def activate_kill_switch():
     """Activate kill switch (pause all agents)"""
     from pathlib import Path
+
     kill_switch_file = Path("data/KILL_SWITCH")
     kill_switch_file.parent.mkdir(exist_ok=True)
     kill_switch_file.touch()
-    return {
-        "success": True,
-        "active": True,
-        "message": "Kill switch activated - all agents paused"
-    }
+    return {"success": True, "active": True, "message": "Kill switch activated - all agents paused"}
+
 
 @app.post("/api/kill-switch/deactivate")
 async def deactivate_kill_switch():
     """Deactivate kill switch (resume all agents)"""
     from pathlib import Path
+
     kill_switch_file = Path("data/KILL_SWITCH")
     if kill_switch_file.exists():
         kill_switch_file.unlink()
-    return {
-        "success": True,
-        "active": False,
-        "message": "Kill switch deactivated - agents resumed"
-    }
+    return {"success": True, "active": False, "message": "Kill switch deactivated - agents resumed"}
+
 
 @app.post("/api/monitors/kill-all")
 async def kill_all_monitors():
@@ -536,13 +566,17 @@ async def kill_all_monitors():
     try:
         # 1. Activate kill switch to prevent message processing
         from pathlib import Path
+
         kill_switch_file = Path("data/KILL_SWITCH")
         kill_switch_file.parent.mkdir(exist_ok=True)
         kill_switch_file.touch()
 
         # 2. Force kill ALL monitor processes (system-wide, not just tracked)
         import subprocess
-        result = subprocess.run(["pkill", "-9", "-f", "ax_agent_studio.monitors"], capture_output=True)
+
+        result = subprocess.run(
+            ["pkill", "-9", "-f", "ax_agent_studio.monitors"], capture_output=True
+        )
 
         # 3. Stop all tracked monitors (in case pkill missed any)
         count = await process_manager.stop_all_monitors()
@@ -555,10 +589,11 @@ async def kill_all_monitors():
             "message": f"Nuclear option: Killed {count} monitor(s), cleared {deleted_count} from list, activated kill switch",
             "kill_switch_active": True,
             "killed_count": count,
-            "cleared_count": deleted_count
+            "cleared_count": deleted_count,
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.post("/api/monitors/kill")
 async def kill_monitor(request: StopMonitorRequest):
@@ -566,14 +601,12 @@ async def kill_monitor(request: StopMonitorRequest):
     try:
         success = await process_manager.kill_monitor(request.monitor_id)
         if success:
-            return {
-                "success": True,
-                "message": f"Monitor {request.monitor_id} killed"
-            }
+            return {"success": True, "message": f"Monitor {request.monitor_id} killed"}
         else:
             raise HTTPException(status_code=404, detail="Monitor not found or already stopped")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.delete("/api/monitors/{monitor_id}")
 async def delete_monitor(monitor_id: str):
@@ -581,20 +614,19 @@ async def delete_monitor(monitor_id: str):
     try:
         success = process_manager.delete_monitor(monitor_id)
         if success:
-            return {
-                "success": True,
-                "message": f"Monitor {monitor_id} deleted"
-            }
+            return {"success": True, "message": f"Monitor {monitor_id} deleted"}
         else:
             raise HTTPException(status_code=404, detail="Monitor not found or still running")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.post("/api/logs/clear-all")
 async def clear_all_logs():
     """Clear/truncate ALL log files in the logs directory"""
     try:
         import glob
+
         log_pattern = str(process_manager.log_dir / "*.log")
         log_files = glob.glob(log_pattern)
 
@@ -602,31 +634,25 @@ async def clear_all_logs():
         for log_file in log_files:
             try:
                 # Truncate the log file
-                open(log_file, 'w').close()
+                open(log_file, "w").close()
                 cleared += 1
             except Exception as e:
                 print(f"Error clearing {log_file}: {e}")
 
-        return {
-            "success": True,
-            "message": f"Cleared {cleared} log file(s)",
-            "count": cleared
-        }
+        return {"success": True, "message": f"Cleared {cleared} log file(s)", "count": cleared}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.post("/api/monitors/clear-stopped")
 async def clear_stopped_monitors():
     """Delete all stopped monitors from the list"""
     try:
         count = process_manager.delete_all_stopped_monitors()
-        return {
-            "success": True,
-            "message": f"Cleared {count} stopped monitor(s)",
-            "count": count
-        }
+        return {"success": True, "message": f"Cleared {count} stopped monitor(s)", "count": count}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.post("/api/demos/start")
 async def start_demo(config: DemoConfig):
@@ -637,15 +663,12 @@ async def start_demo(config: DemoConfig):
             agents=config.agents,
             loops=config.loops,
             delay=config.delay,
-            enable_tools=config.enable_tools
+            enable_tools=config.enable_tools,
         )
-        return {
-            "success": True,
-            "demo_id": demo_id,
-            "message": f"Demo {config.demo_type} started"
-        }
+        return {"success": True, "demo_id": demo_id, "message": f"Demo {config.demo_type} started"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.post("/api/messages/send")
 async def send_message(request: SendMessageRequest):
@@ -656,14 +679,15 @@ async def send_message(request: SendMessageRequest):
             from_agent=request.from_agent,
             to_agent=request.to_agent,
             message=request.message,
-            from_agent_environment=request.from_agent_environment
+            from_agent_environment=request.from_agent_environment,
         )
         return {
             "success": True,
-            "message": f"Message sent from {request.from_agent} to {request.to_agent}"
+            "message": f"Message sent from {request.from_agent} to {request.to_agent}",
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.websocket("/ws/logs/{monitor_id}")
 async def websocket_logs(websocket: WebSocket, monitor_id: str):
@@ -677,6 +701,7 @@ async def websocket_logs(websocket: WebSocket, monitor_id: str):
         print(f"Error streaming logs for {monitor_id}: {e}")
         await websocket.close()
 
+
 @app.websocket("/ws/logs")
 async def websocket_all_logs(websocket: WebSocket):
     """Stream all monitor logs via WebSocket"""
@@ -689,10 +714,12 @@ async def websocket_all_logs(websocket: WebSocket):
         print(f"Error streaming all logs: {e}")
         await websocket.close()
 
+
 # Mount static files (frontend)
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
 app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="127.0.0.1", port=8000)

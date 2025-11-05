@@ -1,8 +1,8 @@
 """Tests for the Claude Agent SDK monitor helpers."""
 
-from pathlib import Path
 import sys
 import types
+from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.append(str(PROJECT_ROOT / "src"))

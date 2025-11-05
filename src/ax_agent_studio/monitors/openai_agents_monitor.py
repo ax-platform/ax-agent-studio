@@ -10,12 +10,9 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import json
 import logging
 import os
 import sys
-from pathlib import Path
-from typing import Dict, List, Optional
 
 from dotenv import load_dotenv
 
@@ -30,7 +27,7 @@ try:
     from agents import Agent, Runner
     from agents.mcp import MCPServerStdio, MCPServerStreamableHttp
 except ImportError:  # pragma: no cover
-    print("❌ Missing dependency: openai-agents")
+    print(" Missing dependency: openai-agents")
     print("   Install with: pip install openai-agents")
     sys.exit(1)
 
@@ -47,9 +44,7 @@ DEFAULT_MODEL = "gpt-5-mini"  # OpenAI's latest efficient model
 _HISTORY_LIMIT = 10  # Recent message pairs to keep
 
 
-
-
-async def _create_mcp_servers_from_config(agent_config: Dict) -> List:
+async def _create_mcp_servers_from_config(agent_config: dict) -> list:
     """Create OpenAI Agents SDK MCP server instances from agent config.
 
     IMPORTANT: Only creates stdio servers (filesystem, memory, etc).
@@ -68,7 +63,9 @@ async def _create_mcp_servers_from_config(agent_config: Dict) -> List:
         # These are handled by MCPServerManager for QueueManager messaging only
         # OpenAI SDK cannot connect to them directly (401 Unauthorized)
         if server_name in ["ax-docker", "ax-gcp"]:
-            logger.info(f"Skipping {server_name} (handled by MCPServerManager with OAuth for QueueManager)")
+            logger.info(
+                f"Skipping {server_name} (handled by MCPServerManager with OAuth for QueueManager)"
+            )
             continue
 
         # Check if this is an HTTP server (not ax-docker/ax-gcp)
@@ -123,7 +120,7 @@ def _extract_message_body(raw_content: str) -> str:
 
 async def openai_agents_monitor(
     agent_name: str,
-    config_path: Optional[str] = None,
+    config_path: str | None = None,
     model: str = DEFAULT_MODEL,
 ) -> None:
     """Run the OpenAI Agents SDK monitor for an MCP agent."""
@@ -132,7 +129,7 @@ async def openai_agents_monitor(
     agent_config = resolve_agent_config(agent_name, config_path)
 
     print(f"\n{'=' * 60}")
-    print(f"🤖 OPENAI AGENTS SDK MONITOR: {agent_name}")
+    print(f" OPENAI AGENTS SDK MONITOR: {agent_name}")
     print(f"{'=' * 60}")
     print(f"Model: {model}")
 
@@ -147,8 +144,8 @@ async def openai_agents_monitor(
     # Read permissions if configured
     permissions_config = agent_config.get("permissions", {})
     if permissions_config:
-        print(f"\nPermissions Config:")
-        print(f"  Note: OpenAI Agents SDK handles permissions via tool filtering")
+        print("\nPermissions Config:")
+        print("  Note: OpenAI Agents SDK handles permissions via tool filtering")
         print()
 
     # API key check
@@ -160,12 +157,12 @@ async def openai_agents_monitor(
         )
 
     system_prompt_override = os.getenv("AGENT_SYSTEM_PROMPT")
-    conversation_history: List[Dict] = []
+    conversation_history: list[dict] = []
 
     # Create MCP servers using OpenAI Agents SDK MCP classes (for agent tool access)
     mcp_server_instances = await _create_mcp_servers_from_config(agent_config)
 
-    print(f"\n✅ Configured {len(mcp_server_instances)} MCP servers for agent")
+    print(f"\n Configured {len(mcp_server_instances)} MCP servers for agent")
     print()
 
     # Use MCPServerManager same way as LangGraph monitor - auto-loads full config
@@ -173,7 +170,7 @@ async def openai_agents_monitor(
     # (OpenAI SDK handles separate agent tool connections)
     async with MCPServerManager(agent_name, config_path=config_path) as manager:
         primary_session = manager.get_primary_session()
-        print(f"✅ Connected messaging layer for QueueManager\n")
+        print(" Connected messaging layer for QueueManager\n")
 
         # Open all MCP server connections
         # We need to use AsyncExitStack to manage multiple async context managers
@@ -186,7 +183,7 @@ async def openai_agents_monitor(
                 connected_server = await stack.enter_async_context(server)
                 mcp_servers.append(connected_server)
 
-            print(f"✅ Connected {len(mcp_servers)} MCP servers for agent tool access\n")
+            print(f" Connected {len(mcp_servers)} MCP servers for agent tool access\n")
 
             # Build agent instructions
             base_instructions = (
@@ -199,13 +196,15 @@ async def openai_agents_monitor(
             )
 
             if system_prompt_override:
-                instructions = f"{base_instructions}\n\nAdditional instructions:\n{system_prompt_override}"
+                instructions = (
+                    f"{base_instructions}\n\nAdditional instructions:\n{system_prompt_override}"
+                )
             else:
                 instructions = base_instructions
 
             # Create OpenAI agent with MCP servers
             # Note: We create the agent inside the context managers
-            async def handle_message(message: Dict) -> str:
+            async def handle_message(message: dict) -> str:
                 sender = message.get("sender", "unknown")
                 if sender == agent_name:
                     logger.info("Ignoring self-mention for %s", agent_name)
@@ -275,7 +274,7 @@ async def openai_agents_monitor(
                 conversation_history.append({"role": "assistant", "content": response_text})
 
                 if len(conversation_history) > _HISTORY_LIMIT * 2:
-                    conversation_history[:] = conversation_history[-_HISTORY_LIMIT * 2:]
+                    conversation_history[:] = conversation_history[-_HISTORY_LIMIT * 2 :]
 
                 logger.info("Response generated: %d chars", len(response_text))
                 return response_text
@@ -290,7 +289,7 @@ async def openai_agents_monitor(
                 startup_sweep_limit=monitor_config.get("startup_sweep_limit", 10),
             )
 
-            print("🚀 Starting FIFO queue manager...\n")
+            print(" Starting FIFO queue manager...\n")
             await queue_manager.run()
 
 

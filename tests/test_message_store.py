@@ -6,14 +6,13 @@ Tests verify that multiple agents can store and process the same message ID
 independently, which is critical for multi-agent @mention scenarios.
 """
 
-import sqlite3
 import tempfile
 import time
 from pathlib import Path
 
 import pytest
 
-from ax_agent_studio.message_store import MessageStore, StoredMessage
+from ax_agent_studio.message_store import MessageStore
 
 
 class TestMessageStoreMultiAgent:
@@ -22,7 +21,7 @@ class TestMessageStoreMultiAgent:
     @pytest.fixture
     def temp_db(self):
         """Create a temporary database for testing."""
-        with tempfile.NamedTemporaryFile(suffix='.db', delete=False) as f:
+        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
             db_path = f.name
         yield db_path
         # Cleanup
@@ -148,9 +147,9 @@ class TestMessageStoreMultiAgent:
         # Get stats
         stats = store.get_stats("agent1")
 
-        assert stats['pending'] == 1
-        assert stats['completed'] == 1
-        assert stats['avg_processing_time'] > 0
+        assert stats["pending"] == 1
+        assert stats["completed"] == 1
+        assert stats["avg_processing_time"] > 0
 
     def test_composite_primary_key_schema(self, store):
         """Test that the database schema uses composite primary key (id, agent)."""
@@ -171,19 +170,16 @@ class TestMessageStoreMultiAgent:
             # Insert same ID for two agents - should succeed
             conn.execute(
                 "INSERT INTO messages (id, agent, sender, content, timestamp) VALUES (?, ?, ?, ?, ?)",
-                ("same-id", "agent1", "user", "content", time.time())
+                ("same-id", "agent1", "user", "content", time.time()),
             )
             conn.execute(
                 "INSERT INTO messages (id, agent, sender, content, timestamp) VALUES (?, ?, ?, ?, ?)",
-                ("same-id", "agent2", "user", "content", time.time())
+                ("same-id", "agent2", "user", "content", time.time()),
             )
             conn.commit()
 
             # Query to verify both exist
-            cursor = conn.execute(
-                "SELECT COUNT(*) FROM messages WHERE id = ?",
-                ("same-id",)
-            )
+            cursor = conn.execute("SELECT COUNT(*) FROM messages WHERE id = ?", ("same-id",))
             count = cursor.fetchone()[0]
             assert count == 2  # Both agents have the message
 
@@ -194,7 +190,7 @@ class TestMessageStoreBasicFunctionality:
     @pytest.fixture
     def temp_db(self):
         """Create a temporary database for testing."""
-        with tempfile.NamedTemporaryFile(suffix='.db', delete=False) as f:
+        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
             db_path = f.name
         yield db_path
         Path(db_path).unlink(missing_ok=True)
@@ -248,7 +244,7 @@ class TestMessageStoreBasicFunctionality:
 
 def test_mark_processing_methods():
     """Test that mark_processing methods accept agent parameter."""
-    with tempfile.NamedTemporaryFile(suffix='.db', delete=False) as f:
+    with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
         db_path = f.name
 
     try:
@@ -271,12 +267,13 @@ if __name__ == "__main__":
     # Run with pytest if available, otherwise basic test
     try:
         import pytest
+
         sys.exit(pytest.main([__file__, "-v"]))
     except ImportError:
         print("pytest not found, running basic tests...")
 
         # Run a basic smoke test
-        with tempfile.NamedTemporaryFile(suffix='.db', delete=False) as f:
+        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
             db_path = f.name
 
         try:

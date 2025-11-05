@@ -9,8 +9,8 @@ Automatically:
 """
 
 import os
-import sys
 import subprocess
+import sys
 from pathlib import Path
 
 
@@ -19,10 +19,7 @@ def check_config_files(project_root: Path) -> bool:
     Check if config files exist and copy from examples if needed.
     Returns True if all required files exist or were created successfully.
     """
-    configs_to_check = [
-        ("config.yaml", "config.yaml.example"),
-        (".env", ".env.example")
-    ]
+    configs_to_check = [("config.yaml", "config.yaml.example"), (".env", ".env.example")]
 
     missing_files = []
     copied_files = []
@@ -42,8 +39,8 @@ def check_config_files(project_root: Path) -> bool:
     if copied_files:
         print(f" Created config files: {', '.join(copied_files)}\n")
         print("  IMPORTANT: Edit these files to add your credentials:")
-        print(f"   - .env: Add your LLM provider API keys")
-        print(f"   - config.yaml: Review settings (defaults should work)")
+        print("   - .env: Add your LLM provider API keys")
+        print("   - config.yaml: Review settings (defaults should work)")
         print()
 
     if missing_files:
@@ -74,11 +71,7 @@ def main():
 
     # Always run uv sync (it's fast if everything is already installed)
     try:
-        subprocess.run(
-            ["uv", "sync"],
-            cwd=project_root,
-            check=True
-        )
+        subprocess.run(["uv", "sync"], cwd=project_root, check=True)
         print(" Dependencies ready!\n")
     except subprocess.CalledProcessError as e:
         print(f"\n Failed to install dependencies: {e}")
@@ -110,15 +103,19 @@ def main():
         subprocess.run(
             [
                 str(python_exe),
-                "-m", "uvicorn",
+                "-m",
+                "uvicorn",
                 "ax_agent_studio.dashboard.backend.main:app",
-                "--host", "127.0.0.1",
-                "--port", "8000",
-                "--log-level", "warning"
+                "--host",
+                "127.0.0.1",
+                "--port",
+                "8000",
+                "--log-level",
+                "warning",
             ],
             cwd=project_root,
             env=env,
-            check=True
+            check=True,
         )
     except KeyboardInterrupt:
         # Ctrl+C pressed - subprocess is already dead

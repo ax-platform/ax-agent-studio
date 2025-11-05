@@ -11,9 +11,13 @@ import sys
 import time
 from pathlib import Path
 
+import pytest
 from dotenv import load_dotenv
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
+
+# Mark all tests in this file as e2e tests
+pytestmark = pytest.mark.e2e
 
 # Load environment variables from .env file
 load_dotenv()
@@ -62,7 +66,9 @@ async def send_test_message(sender_handle: str, agent_name: str, message: str):
                 if hasattr(result, "content"):
                     content = result.content
                     if isinstance(content, list) and len(content) > 0:
-                        text = str(content[0].text) if hasattr(content[0], "text") else str(content[0])
+                        text = (
+                            str(content[0].text) if hasattr(content[0], "text") else str(content[0])
+                        )
                         print(f" Response received:\n{text}\n")
 
                         # Check if agent responded (should mention the sender)
@@ -172,7 +178,7 @@ async def test_openai_agents_monitor():
 
         if success:
             print("\n End-to-end test PASSED!")
-            print(f"    Monitor started successfully")
+            print("    Monitor started successfully")
             print(f"    Message sent from @{sender_handle}")
             print(f"    @{agent_name} processed and responded")
             return True

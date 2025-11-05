@@ -5,10 +5,10 @@ WebSocket streaming of monitor logs
 
 import asyncio
 from pathlib import Path
-from typing import Optional
+
+import aiofiles
 from fastapi import WebSocket
 from starlette.websockets import WebSocketDisconnect
-import aiofiles
 
 
 class LogStreamer:
@@ -22,27 +22,23 @@ class LogStreamer:
             log_file = self.log_dir / f"{monitor_id}.log"
 
             if not log_file.exists():
-                await websocket.send_json({
-                    "type": "error",
-                    "message": f"Log file not found for monitor {monitor_id}"
-                })
+                await websocket.send_json(
+                    {"type": "error", "message": f"Log file not found for monitor {monitor_id}"}
+                )
                 return
 
             # Send existing logs first
             try:
-                async with aiofiles.open(log_file, 'r') as f:
+                async with aiofiles.open(log_file) as f:
                     content = await f.read()
                     if content:
-                        await websocket.send_json({
-                            "type": "log",
-                            "monitor_id": monitor_id,
-                            "content": content
-                        })
+                        await websocket.send_json(
+                            {"type": "log", "monitor_id": monitor_id, "content": content}
+                        )
             except Exception as e:
-                await websocket.send_json({
-                    "type": "error",
-                    "message": f"Error reading log file: {e}"
-                })
+                await websocket.send_json(
+                    {"type": "error", "message": f"Error reading log file: {e}"}
+                )
                 return
 
             # Tail new logs
@@ -58,30 +54,24 @@ class LogStreamer:
             log_files = list(self.log_dir.glob("*.log"))
 
             if not log_files:
-                await websocket.send_json({
-                    "type": "info",
-                    "message": "No log files found"
-                })
+                await websocket.send_json({"type": "info", "message": "No log files found"})
 
             # Send existing logs from all files
             for log_file in log_files:
                 try:
                     monitor_id = log_file.stem
-                    async with aiofiles.open(log_file, 'r') as f:
+                    async with aiofiles.open(log_file) as f:
                         content = await f.read()
                         if content:
-                            await websocket.send_json({
-                                "type": "log",
-                                "monitor_id": monitor_id,
-                                "content": content
-                            })
+                            await websocket.send_json(
+                                {"type": "log", "monitor_id": monitor_id, "content": content}
+                            )
                 except Exception as e:
                     print(f"Error reading {log_file}: {e}")
 
             # Tail all log files concurrently
             tasks = [
-                self._tail_log_file(websocket, log_file, log_file.stem)
-                for log_file in log_files
+                self._tail_log_file(websocket, log_file, log_file.stem) for log_file in log_files
             ]
 
             await asyncio.gather(*tasks, return_exceptions=True)
@@ -105,7 +95,7 @@ class LogStreamer:
             return
 
         try:
-            async with aiofiles.open(log_file, 'r') as f:
+            async with aiofiles.open(log_file) as f:
                 # Seek to end
                 await f.seek(0, 2)
                 last_pos = await f.tell()
@@ -134,11 +124,9 @@ class LogStreamer:
 
                     if line:
                         # New content available
-                        await websocket.send_json({
-                            "type": "log",
-                            "monitor_id": monitor_id,
-                            "content": line
-                        })
+                        await websocket.send_json(
+                            {"type": "log", "monitor_id": monitor_id, "content": line}
+                        )
                         last_pos = await f.tell()
                     else:
                         # No new content, wait a bit
@@ -159,4 +147,5 @@ class LogStreamer:
             if "No such file or directory" not in error_msg:
                 print(f"Error tailing {log_file}: {type(e).__name__}: {error_msg}")
                 import traceback
+
                 traceback.print_exc()

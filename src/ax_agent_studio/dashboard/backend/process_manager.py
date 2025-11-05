@@ -4,25 +4,26 @@ Handles starting, stopping, and tracking monitor processes
 """
 
 import asyncio
-import subprocess
-import signal
-import psutil
 import json
 import os
 import re
-import yaml
-from pathlib import Path
-from datetime import datetime
-from typing import Dict, List, Optional, Literal, Any, Set
+import signal
+import subprocess
 import uuid
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Literal
+
+import psutil
+import yaml
 
 from ax_agent_studio.dashboard.backend.config_loader import ConfigLoader
 from ax_agent_studio.dashboard.backend.deployment_loader import (
     DeploymentLoader,
     get_deployment_loader,
 )
-from ax_agent_studio.message_store import MessageStore
 from ax_agent_studio.mcp_manager import MCPServerManager
+from ax_agent_studio.message_store import MessageStore
 
 
 def sanitize_agent_name(agent_name: str) -> str:
@@ -33,14 +34,14 @@ def sanitize_agent_name(agent_name: str) -> str:
     Blocks: ../, shell metacharacters, etc.
     """
     # Allow only safe characters: letters, numbers, underscore, hyphen
-    sanitized = re.sub(r'[^a-zA-Z0-9_-]', '_', agent_name)
+    sanitized = re.sub(r"[^a-zA-Z0-9_-]", "_", agent_name)
 
     # Ensure it's not empty after sanitization
     if not sanitized or sanitized.isspace():
         raise ValueError(f"Invalid agent_name '{agent_name}': must contain alphanumeric characters")
 
     # Prevent path traversal
-    if '..' in agent_name or '/' in agent_name or '\\' in agent_name:
+    if ".." in agent_name or "/" in agent_name or "\\" in agent_name:
         raise ValueError(f"Invalid agent_name '{agent_name}': cannot contain path separators")
 
     return sanitized
@@ -49,15 +50,15 @@ def sanitize_agent_name(agent_name: str) -> str:
 class ProcessManager:
     def __init__(self, base_dir: Path):
         self.base_dir = base_dir
-        self.monitors: Dict[str, dict] = {}  # monitor_id -> monitor info
-        self.group_deployments: Dict[str, Dict[str, Any]] = {}
+        self.monitors: dict[str, dict] = {}  # monitor_id -> monitor info
+        self.group_deployments: dict[str, dict[str, Any]] = {}
         self.log_dir = base_dir / "logs"
         self.log_dir.mkdir(parents=True, exist_ok=True)
         self.config_loader = ConfigLoader(base_dir)
         self.deployment_loader: DeploymentLoader = get_deployment_loader(base_dir)
         self.message_store = MessageStore()
 
-    def _resolve_system_prompt(self, prompt_ref: Optional[str]) -> tuple[Optional[str], Optional[str]]:
+    def _resolve_system_prompt(self, prompt_ref: str | None) -> tuple[str | None, str | None]:
         """
         Resolve system prompt reference to actual text.
 
@@ -86,7 +87,7 @@ class ProcessManager:
             if path.exists():
                 try:
                     if path.suffix in {".yaml", ".yml"}:
-                        with open(path, "r") as f:
+                        with open(path) as f:
                             data = yaml.safe_load(f) or {}
                         prompt_text = data.get("prompt")
                         if not prompt_text:
@@ -122,26 +123,26 @@ class ProcessManager:
             f"Agent name is extracted from the MCP URL in your config file (e.g., https://mcp.paxai.app/mcp/agents/your_agent_name)"
         )
 
-    def scan_system_monitors(self) -> List[dict]:
+    def scan_system_monitors(self) -> list[dict]:
         """Scan system for ALL running monitor processes (even orphans)"""
         system_monitors = []
 
         try:
-            for proc in psutil.process_iter(['pid', 'name', 'cmdline', 'create_time']):
+            for proc in psutil.process_iter(["pid", "name", "cmdline", "create_time"]):
                 try:
-                    cmdline = proc.info.get('cmdline', [])
+                    cmdline = proc.info.get("cmdline", [])
                     if not cmdline or not isinstance(cmdline, list):
                         continue
 
-                    cmdline_str = ' '.join(cmdline)
+                    cmdline_str = " ".join(cmdline)
 
                     # Match monitor processes (only Python processes, not uv wrapper)
-                    if 'ax_agent_studio.monitors' not in cmdline_str:
+                    if "ax_agent_studio.monitors" not in cmdline_str:
                         continue
 
                     # Filter out uv wrapper - only match actual Python processes
-                    proc_name = proc.info.get('name', '').lower()
-                    if 'python' not in proc_name:
+                    proc_name = proc.info.get("name", "").lower()
+                    if "python" not in proc_name:
                         continue
 
                     # Extract monitor type and agent name from command line
@@ -149,28 +150,30 @@ class ProcessManager:
                     agent_name = None
 
                     for i, arg in enumerate(cmdline):
-                        if 'monitors.' in arg:
+                        if "monitors." in arg:
                             # Extract monitor type from path like "ax_agent_studio.monitors.langgraph_monitor"
-                            parts = arg.split('.')
+                            parts = arg.split(".")
                             if len(parts) >= 3:
-                                monitor_type = parts[-1].replace('_monitor', '')
-                        elif i > 0 and 'monitors' in cmdline[i-1]:
+                                monitor_type = parts[-1].replace("_monitor", "")
+                        elif i > 0 and "monitors" in cmdline[i - 1]:
                             # Agent name is usually the first arg after the monitor module
                             agent_name = arg
 
                     # Calculate uptime
-                    create_time = datetime.fromtimestamp(proc.info['create_time'])
+                    create_time = datetime.fromtimestamp(proc.info["create_time"])
                     uptime = int((datetime.now() - create_time).total_seconds())
 
-                    system_monitors.append({
-                        "pid": proc.info['pid'],
-                        "agent_name": agent_name or "unknown",
-                        "monitor_type": monitor_type or "unknown",
-                        "started_at": create_time.isoformat(),
-                        "uptime_seconds": uptime,
-                        "source": "system",  # Mark as found by system scan
-                        "cmdline": ' '.join(cmdline[:5])  # For debugging
-                    })
+                    system_monitors.append(
+                        {
+                            "pid": proc.info["pid"],
+                            "agent_name": agent_name or "unknown",
+                            "monitor_type": monitor_type or "unknown",
+                            "started_at": create_time.isoformat(),
+                            "uptime_seconds": uptime,
+                            "source": "system",  # Mark as found by system scan
+                            "cmdline": " ".join(cmdline[:5]),  # For debugging
+                        }
+                    )
 
                 except (psutil.NoSuchProcess, psutil.AccessDenied):
                     continue
@@ -180,7 +183,7 @@ class ProcessManager:
 
         return system_monitors
 
-    def get_all_monitors(self) -> List[dict]:
+    def get_all_monitors(self) -> list[dict]:
         """Get all monitors: tracked + system orphans"""
         result = []
         system_pids = set()
@@ -188,63 +191,81 @@ class ProcessManager:
         # First, add all system monitors
         system_monitors = self.scan_system_monitors()
         for sys_mon in system_monitors:
-            system_pids.add(sys_mon['pid'])
+            system_pids.add(sys_mon["pid"])
 
             # Check if this PID is tracked
             tracked = False
             monitor_id = None
             for mid, info in self.monitors.items():
-                if info.get('pid') == sys_mon['pid']:
+                if info.get("pid") == sys_mon["pid"]:
                     tracked = True
                     monitor_id = mid
                     break
 
-            result.append({
-                "id": monitor_id or f"orphan_{sys_mon['pid']}",
-                "agent_name": sys_mon['agent_name'],
-                "monitor_type": sys_mon['monitor_type'],
-                "status": "running",
-                "pid": sys_mon['pid'],
-                "started_at": sys_mon['started_at'],
-                "uptime_seconds": sys_mon['uptime_seconds'],
-                "config_path": self.monitors.get(monitor_id, {}).get('config_path') if monitor_id else None,
-                "model": self.monitors.get(monitor_id, {}).get('model') if monitor_id else None,
-                "provider": self.monitors.get(monitor_id, {}).get('provider') if monitor_id else None,
-                "system_prompt_name": self.monitors.get(monitor_id, {}).get('system_prompt_name') if monitor_id else None,
-                "mcp_servers": self.monitors.get(monitor_id, {}).get('mcp_servers', []) if monitor_id else [],
-                "environment": self.monitors.get(monitor_id, {}).get('environment', 'unknown') if monitor_id else 'unknown',
-                "deployment_group": self.monitors.get(monitor_id, {}).get('deployment_group') if monitor_id else None,
-                "tracked": tracked,  # Is dashboard tracking this?
-                "orphan": not tracked  # Is this an orphan?
-            })
+            result.append(
+                {
+                    "id": monitor_id or f"orphan_{sys_mon['pid']}",
+                    "agent_name": sys_mon["agent_name"],
+                    "monitor_type": sys_mon["monitor_type"],
+                    "status": "running",
+                    "pid": sys_mon["pid"],
+                    "started_at": sys_mon["started_at"],
+                    "uptime_seconds": sys_mon["uptime_seconds"],
+                    "config_path": self.monitors.get(monitor_id, {}).get("config_path")
+                    if monitor_id
+                    else None,
+                    "model": self.monitors.get(monitor_id, {}).get("model") if monitor_id else None,
+                    "provider": self.monitors.get(monitor_id, {}).get("provider")
+                    if monitor_id
+                    else None,
+                    "system_prompt_name": self.monitors.get(monitor_id, {}).get(
+                        "system_prompt_name"
+                    )
+                    if monitor_id
+                    else None,
+                    "mcp_servers": self.monitors.get(monitor_id, {}).get("mcp_servers", [])
+                    if monitor_id
+                    else [],
+                    "environment": self.monitors.get(monitor_id, {}).get("environment", "unknown")
+                    if monitor_id
+                    else "unknown",
+                    "deployment_group": self.monitors.get(monitor_id, {}).get("deployment_group")
+                    if monitor_id
+                    else None,
+                    "tracked": tracked,  # Is dashboard tracking this?
+                    "orphan": not tracked,  # Is this an orphan?
+                }
+            )
 
         # Then add tracked monitors that aren't running (zombies in dashboard memory)
         for monitor_id, info in self.monitors.items():
-            pid = info.get('pid')
+            pid = info.get("pid")
             if pid not in system_pids:
                 # This is tracked but not actually running (zombie in memory)
-                result.append({
-                    "id": monitor_id,
-                    "agent_name": info.get("agent_name"),
-                    "monitor_type": info.get("monitor_type"),
-                    "status": "stopped",
-                    "pid": None,
-                    "started_at": info.get("started_at"),
-                    "uptime_seconds": None,
-                    "config_path": info.get("config_path"),
-                    "model": info.get("model"),
-                    "provider": info.get("provider"),
-                    "system_prompt_name": info.get("system_prompt_name"),
-                    "mcp_servers": info.get("mcp_servers", []),
-                    "environment": info.get("environment", "local"),
-                    "deployment_group": info.get("deployment_group"),
-                    "tracked": True,
-                    "orphan": False
-                })
+                result.append(
+                    {
+                        "id": monitor_id,
+                        "agent_name": info.get("agent_name"),
+                        "monitor_type": info.get("monitor_type"),
+                        "status": "stopped",
+                        "pid": None,
+                        "started_at": info.get("started_at"),
+                        "uptime_seconds": None,
+                        "config_path": info.get("config_path"),
+                        "model": info.get("model"),
+                        "provider": info.get("provider"),
+                        "system_prompt_name": info.get("system_prompt_name"),
+                        "mcp_servers": info.get("mcp_servers", []),
+                        "environment": info.get("environment", "local"),
+                        "deployment_group": info.get("deployment_group"),
+                        "tracked": True,
+                        "orphan": False,
+                    }
+                )
 
         return result
 
-    def get_running_monitors(self) -> List[dict]:
+    def get_running_monitors(self) -> list[dict]:
         """Get only running monitors"""
         return [m for m in self.get_all_monitors() if m["status"] == "running"]
 
@@ -302,12 +323,14 @@ class ProcessManager:
         self,
         agent_name: str,
         config_path: str,
-        monitor_type: Literal["echo", "ollama", "langgraph", "claude_agent_sdk", "openai_agents_sdk"],
-        model: Optional[str] = None,
-        provider: Optional[str] = None,
-        system_prompt: Optional[str] = None,
-        system_prompt_name: Optional[str] = None,
-        history_limit: Optional[int] = 25
+        monitor_type: Literal[
+            "echo", "ollama", "langgraph", "claude_agent_sdk", "openai_agents_sdk"
+        ],
+        model: str | None = None,
+        provider: str | None = None,
+        system_prompt: str | None = None,
+        system_prompt_name: str | None = None,
+        history_limit: int | None = 25,
     ) -> str:
         """Start a monitor process"""
         # Resolve config_path to full path if it's just a filename
@@ -346,17 +369,21 @@ class ProcessManager:
         try:
             killed_count = 0
             # Find all Python processes running our monitors
-            for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+            for proc in psutil.process_iter(["pid", "name", "cmdline"]):
                 try:
-                    cmdline = proc.info.get('cmdline', [])
+                    cmdline = proc.info.get("cmdline", [])
                     if cmdline and isinstance(cmdline, list):
                         lower_args = [arg.lower() for arg in cmdline if isinstance(arg, str)]
                         # Match monitor processes for this specific agent
                         if (
-                            any("ax_agent_studio.monitors" in arg for arg in lower_args) and
-                            agent_name.lower() in (arg.lower() for arg in cmdline if isinstance(arg, str)) and
-                            proc.pid != os.getpid()):  # Don't kill ourselves
-                            print(f"  Killing orphaned process PID {proc.pid}: {' '.join(cmdline[:3])}...")
+                            any("ax_agent_studio.monitors" in arg for arg in lower_args)
+                            and agent_name.lower()
+                            in (arg.lower() for arg in cmdline if isinstance(arg, str))
+                            and proc.pid != os.getpid()
+                        ):  # Don't kill ourselves
+                            print(
+                                f"  Killing orphaned process PID {proc.pid}: {' '.join(cmdline[:3])}..."
+                            )
                             proc.kill()
                             killed_count += 1
                 except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
@@ -397,20 +424,46 @@ class ProcessManager:
         else:
             venv_python = venv_dir / "bin" / "python"
         if not venv_python.exists():
-            raise FileNotFoundError(f"Virtual environment not found at {venv_python}. Run 'uv sync' first.")
+            raise FileNotFoundError(
+                f"Virtual environment not found at {venv_python}. Run 'uv sync' first."
+            )
 
         # Build command based on monitor type
         # IMPORTANT: Pass original agent_name so monitors join correct MCP channels
         if monitor_type == "echo":
-            cmd = [str(venv_python), "-u", "-m", "ax_agent_studio.monitors.echo_monitor", agent_name, "--config", config_path]
+            cmd = [
+                str(venv_python),
+                "-u",
+                "-m",
+                "ax_agent_studio.monitors.echo_monitor",
+                agent_name,
+                "--config",
+                config_path,
+            ]
         elif monitor_type == "ollama":
-            cmd = [str(venv_python), "-u", "-m", "ax_agent_studio.monitors.ollama_monitor", agent_name, "--config", config_path]
+            cmd = [
+                str(venv_python),
+                "-u",
+                "-m",
+                "ax_agent_studio.monitors.ollama_monitor",
+                agent_name,
+                "--config",
+                config_path,
+            ]
             if model:
                 cmd.extend(["--model", model])
             if history_limit is not None:
                 cmd.extend(["--history-limit", str(history_limit)])
         elif monitor_type == "langgraph":
-            cmd = [str(venv_python), "-u", "-m", "ax_agent_studio.monitors.langgraph_monitor", agent_name, "--config", config_path]
+            cmd = [
+                str(venv_python),
+                "-u",
+                "-m",
+                "ax_agent_studio.monitors.langgraph_monitor",
+                agent_name,
+                "--config",
+                config_path,
+            ]
             if model:
                 cmd.extend(["--model", model])
             if provider:
@@ -461,7 +514,7 @@ class ProcessManager:
                 f.write(f"Provider: {provider}\n")
             if system_prompt_name:
                 f.write(f"System Prompt: {system_prompt_name}\n")
-            f.write("="*50 + "\n\n")
+            f.write("=" * 50 + "\n\n")
 
         # Start process (using exec directly instead of shell)
         process = await asyncio.create_subprocess_exec(
@@ -470,7 +523,7 @@ class ProcessManager:
             stderr=subprocess.STDOUT,
             cwd=str(self.base_dir),
             env=env,
-            start_new_session=True  # Cross-platform process group creation (Windows compatible)
+            start_new_session=True,  # Cross-platform process group creation (Windows compatible)
         )
 
         # Load config to get MCP servers and auto-detect environment
@@ -511,7 +564,7 @@ class ProcessManager:
             "mcp_servers": mcp_servers,
             "environment": environment,
             "log_file": str(log_file),
-            "process": process
+            "process": process,
         }
 
         # Start log tailing task
@@ -519,14 +572,11 @@ class ProcessManager:
 
         return monitor_id
 
-    async def clear_agent_backlog(self, agent_name: str, config_path: Optional[str] = None) -> Dict[str, Any]:
+    async def clear_agent_backlog(
+        self, agent_name: str, config_path: str | None = None
+    ) -> dict[str, Any]:
         """Clear MCP backlog and local queue for a single agent."""
-        summary = {
-            "agent": agent_name,
-            "remote_cleared": 0,
-            "local_cleared": 0,
-            "errors": []
-        }
+        summary = {"agent": agent_name, "remote_cleared": 0, "local_cleared": 0, "errors": []}
 
         if not config_path:
             try:
@@ -548,12 +598,15 @@ class ProcessManager:
                 iteration = 0
 
                 while iteration < max_iterations:
-                    result = await primary_session.call_tool("messages", {
-                        "action": "check",
-                        "wait": False,
-                        "mark_read": True,
-                        "limit": 10  # Batch process up to 10 at a time
-                    })
+                    result = await primary_session.call_tool(
+                        "messages",
+                        {
+                            "action": "check",
+                            "wait": False,
+                            "mark_read": True,
+                            "limit": 10,  # Batch process up to 10 at a time
+                        },
+                    )
                     mention_count = self._count_mentions(result)
                     if mention_count == 0:
                         break
@@ -565,7 +618,9 @@ class ProcessManager:
                     await asyncio.sleep(0.7)
 
                 if iteration >= max_iterations:
-                    summary["errors"].append(f"Hit max iterations ({max_iterations}) - backlog may not be fully cleared")
+                    summary["errors"].append(
+                        f"Hit max iterations ({max_iterations}) - backlog may not be fully cleared"
+                    )
         except Exception as e:
             summary["errors"].append(f"remote: {e}")
 
@@ -575,13 +630,11 @@ class ProcessManager:
         return summary
 
     async def clear_agents_backlog(
-        self,
-        agent_names: Optional[List[str]] = None,
-        environment: Optional[str] = None
-    ) -> Dict[str, Any]:
+        self, agent_names: list[str] | None = None, environment: str | None = None
+    ) -> dict[str, Any]:
         """Clear backlog for multiple agents."""
         monitors_snapshot = self.get_all_monitors()
-        agent_state: Dict[str, Dict[str, Any]] = {}
+        agent_state: dict[str, dict[str, Any]] = {}
 
         for monitor in monitors_snapshot:
             name = monitor.get("agent_name")
@@ -593,12 +646,16 @@ class ProcessManager:
             env = monitor.get("environment") or "any"
             state["environments"].add(env)
 
-        agents_to_reset: Set[str] = set()
-        skipped_running: Set[str] = set()
+        agents_to_reset: set[str] = set()
+        skipped_running: set[str] = set()
 
         if not agent_names:
             for name, state in agent_state.items():
-                if environment and environment not in state["environments"] and environment != "any":
+                if (
+                    environment
+                    and environment not in state["environments"]
+                    and environment != "any"
+                ):
                     continue
                 if state["running"]:
                     skipped_running.add(name)
@@ -610,7 +667,12 @@ class ProcessManager:
                 if state and state["running"]:
                     skipped_running.add(name)
                     continue
-                if state and environment and environment not in state["environments"] and environment != "any":
+                if (
+                    state
+                    and environment
+                    and environment not in state["environments"]
+                    and environment != "any"
+                ):
                     continue
                 agents_to_reset.add(name)
 
@@ -659,22 +721,22 @@ class ProcessManager:
 
         return 1
 
-    async def start_deployment_group(self, group_id: str, environment: Optional[str] = None) -> Dict[str, Any]:
+    async def start_deployment_group(
+        self, group_id: str, environment: str | None = None
+    ) -> dict[str, Any]:
         """Start all monitors defined in a deployment group."""
         group = self.deployment_loader.get_group(group_id)
         if not group:
             raise ValueError(f"Deployment group '{group_id}' not found")
 
         if environment and group.environment not in ("any", environment):
-            raise ValueError(
-                f"Group '{group_id}' is not available for environment '{environment}'"
-            )
+            raise ValueError(f"Group '{group_id}' is not available for environment '{environment}'")
 
         # Stop existing deployment if already running
         if group_id in self.group_deployments and self.group_deployments[group_id].get("monitors"):
             await self.stop_deployment_group(group_id)
 
-        started_monitor_ids: List[str] = []
+        started_monitor_ids: list[str] = []
         record = {
             "monitors": started_monitor_ids,
             "group_id": group_id,
@@ -693,7 +755,13 @@ class ProcessManager:
             system_prompt, system_prompt_name = self._resolve_system_prompt(prompt_ref)
             start_delay_ms = agent.start_delay_ms or defaults.get("start_delay_ms", 0)
 
-            if monitor_type not in {"echo", "ollama", "langgraph", "claude_agent_sdk", "openai_agents_sdk"}:
+            if monitor_type not in {
+                "echo",
+                "ollama",
+                "langgraph",
+                "claude_agent_sdk",
+                "openai_agents_sdk",
+            }:
                 raise ValueError(f"Unsupported monitor type '{monitor_type}' in group '{group_id}'")
 
             config_path = self._get_agent_config_path(agent.id)
@@ -740,14 +808,14 @@ class ProcessManager:
 
         return stopped
 
-    def get_deployment_groups(self, environment: Optional[str] = None) -> List[Dict[str, Any]]:
+    def get_deployment_groups(self, environment: str | None = None) -> list[dict[str, Any]]:
         """Return deployment groups with runtime status."""
         groups = self.deployment_loader.list_groups(environment)
-        response: List[Dict[str, Any]] = []
+        response: list[dict[str, Any]] = []
 
         for group in groups:
             record = self.group_deployments.get(group.id, {})
-            monitor_ids: List[str] = record.get("monitors", [])
+            monitor_ids: list[str] = record.get("monitors", [])
 
             running_ids = []
             for monitor_id in monitor_ids:
@@ -756,31 +824,33 @@ class ProcessManager:
                 if status["status"] == "running":
                     running_ids.append(monitor_id)
 
-            response.append({
-                "id": group.id,
-                "name": group.name,
-                "description": group.description,
-                "defaults": group.defaults,
-                "tags": group.tags,
-                "environment": group.environment,
-                "total_agents": len(group.agents),
-                "running_count": len(running_ids),
-                "monitor_ids": monitor_ids,
-                "status": "running" if running_ids else "stopped",
-                "started_at": record.get("started_at"),
-                "stopped_at": record.get("stopped_at"),
-                "agents": [
-                    {
-                        "id": agent.id,
-                        "monitor": agent.monitor,
-                        "provider": agent.provider,
-                        "model": agent.model,
-                        "system_prompt": agent.system_prompt,
-                        "start_delay_ms": agent.start_delay_ms,
-                    }
-                    for agent in group.agents
-                ],
-            })
+            response.append(
+                {
+                    "id": group.id,
+                    "name": group.name,
+                    "description": group.description,
+                    "defaults": group.defaults,
+                    "tags": group.tags,
+                    "environment": group.environment,
+                    "total_agents": len(group.agents),
+                    "running_count": len(running_ids),
+                    "monitor_ids": monitor_ids,
+                    "status": "running" if running_ids else "stopped",
+                    "started_at": record.get("started_at"),
+                    "stopped_at": record.get("stopped_at"),
+                    "agents": [
+                        {
+                            "id": agent.id,
+                            "monitor": agent.monitor,
+                            "provider": agent.provider,
+                            "model": agent.model,
+                            "system_prompt": agent.system_prompt,
+                            "start_delay_ms": agent.start_delay_ms,
+                        }
+                        for agent in group.agents
+                    ],
+                }
+            )
 
         return response
 
@@ -812,6 +882,7 @@ class ProcessManager:
         if not monitors:
             record["status"] = "stopped"
             record["stopped_at"] = datetime.now().isoformat()
+
     async def _tail_process_output(self, monitor_id: str, process, log_file: Path):
         """Tail process output to log file"""
         try:
@@ -1026,10 +1097,10 @@ class ProcessManager:
     async def start_demo(
         self,
         demo_type: Literal["round_robin", "scrum_team"],
-        agents: List[str],
+        agents: list[str],
         loops: int = 5,
         delay: int = 8,
-        enable_tools: bool = True
+        enable_tools: bool = True,
     ) -> str:
         """Start a demo script"""
         # Sanitize all agent names to prevent shell injection
@@ -1041,24 +1112,30 @@ class ProcessManager:
         # Get Python from venv (no uv wrapper)
         venv_python = self.base_dir / ".venv" / "bin" / "python"
         if not venv_python.exists():
-            raise FileNotFoundError(f"Virtual environment not found at {venv_python}. Run 'uv sync' first.")
+            raise FileNotFoundError(
+                f"Virtual environment not found at {venv_python}. Run 'uv sync' first."
+            )
 
         # Build demo command using venv's python directly
         if demo_type == "round_robin":
             if len(safe_agents) < 2:
                 raise ValueError("Round robin requires at least 2 agents")
             cmd = [
-                str(venv_python), "multi_agent_loop.py",
+                str(venv_python),
+                "multi_agent_loop.py",
                 *safe_agents,
-                "--loops", str(loops),
-                "--delay", str(delay)
+                "--loops",
+                str(loops),
+                "--delay",
+                str(delay),
             ]
         elif demo_type == "scrum_team":
             if len(safe_agents) < 3:
                 raise ValueError("Scrum team requires 3 agents")
             cmd = [
-                str(venv_python), "demo_scrum_team.py",
-                *safe_agents[:3]  # Only use first 3 agents
+                str(venv_python),
+                "demo_scrum_team.py",
+                *safe_agents[:3],  # Only use first 3 agents
             ]
         else:
             raise ValueError(f"Unknown demo type: {demo_type}")
@@ -1068,7 +1145,7 @@ class ProcessManager:
             f.write(f"Type: {demo_type}\n")
             f.write(f"Agents: {', '.join(safe_agents)}\n")
             f.write(f"Command: {' '.join(cmd)}\n")
-            f.write("="*50 + "\n\n")
+            f.write("=" * 50 + "\n\n")
 
         # Set up environment (needed since we're not using uv run)
         env = os.environ.copy()
@@ -1081,7 +1158,7 @@ class ProcessManager:
             stderr=subprocess.STDOUT,
             cwd=str(self.base_dir),
             env=env,
-            start_new_session=True  # Cross-platform process group
+            start_new_session=True,  # Cross-platform process group
         )
 
         # Store demo info (treat as special monitor)
@@ -1095,7 +1172,7 @@ class ProcessManager:
             "log_file": str(log_file),
             "process": process,
             "demo_type": demo_type,
-            "demo_agents": agents
+            "demo_agents": agents,
         }
 
         # Start log tailing
@@ -1103,7 +1180,13 @@ class ProcessManager:
 
         return demo_id
 
-    async def send_test_message(self, from_agent: str, to_agent: str, message: str, from_agent_environment: Optional[str] = None) -> bool:
+    async def send_test_message(
+        self,
+        from_agent: str,
+        to_agent: str,
+        message: str,
+        from_agent_environment: str | None = None,
+    ) -> bool:
         """Send a test message from one agent to another
 
         Args:
@@ -1124,11 +1207,15 @@ class ProcessManager:
         else:
             # Fallback: search all environments
             all_configs = self.config_loader.list_configs()
-            from_agent_config = next((c for c in all_configs if c["agent_name"] == from_agent), None)
+            from_agent_config = next(
+                (c for c in all_configs if c["agent_name"] == from_agent), None
+            )
 
         if not from_agent_config:
-            raise ValueError(f"Test sender agent '{from_agent}' not found" +
-                           (f" in environment '{from_agent_environment}'" if from_agent_environment else ""))
+            raise ValueError(
+                f"Test sender agent '{from_agent}' not found"
+                + (f" in environment '{from_agent_environment}'" if from_agent_environment else "")
+            )
 
         # Get server URL and OAuth URL from the agent's config
         server_url = from_agent_config.get("server_url")
@@ -1140,12 +1227,15 @@ class ProcessManager:
         server_params = StdioServerParameters(
             command="npx",
             args=[
-                "-y", "mcp-remote@0.1.29",
+                "-y",
+                "mcp-remote@0.1.29",
                 server_url,
-                "--transport", "http-only",
+                "--transport",
+                "http-only",
                 "--allow-http",
-                "--oauth-server", oauth_url
-            ]
+                "--oauth-server",
+                oauth_url,
+            ],
         )
 
         try:
@@ -1156,10 +1246,7 @@ class ProcessManager:
                     # Send message with @mention
                     full_message = f"@{to_agent} {message}"
 
-                    await session.call_tool("messages", {
-                        "action": "send",
-                        "content": full_message
-                    })
+                    await session.call_tool("messages", {"action": "send", "content": full_message})
 
                     return True
         except Exception as e:

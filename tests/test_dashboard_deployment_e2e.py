@@ -11,9 +11,13 @@ Run: python tests/test_dashboard_deployment_e2e.py
 import os
 import sys
 import time
+
+import pytest
 import requests
-from pathlib import Path
 from dotenv import load_dotenv
+
+# Mark all tests in this file as e2e tests
+pytestmark = pytest.mark.e2e
 
 # Load environment variables
 load_dotenv()
@@ -37,16 +41,14 @@ class DashboardDeploymentTest:
         # Get agent config to find proper config file name
         response = requests.get(f"{self.api_base}/configs")
         if response.status_code != 200:
-            print(f"❌ Failed to get configs: {response.status_code}")
+            print(f" Failed to get configs: {response.status_code}")
             return False
 
         configs = response.json().get("configs", [])
-        agent_config = next(
-            (c for c in configs if c["agent_name"] == agent_name), None
-        )
+        agent_config = next((c for c in configs if c["agent_name"] == agent_name), None)
 
         if not agent_config:
-            print(f"❌ Agent config not found for {agent_name}")
+            print(f" Agent config not found for {agent_name}")
             return False
 
         actual_config_file = agent_config["filename"]
@@ -67,13 +69,13 @@ class DashboardDeploymentTest:
         response = requests.post(f"{self.api_base}/monitors/start", json=payload)
 
         if response.status_code != 200:
-            print(f"❌ Failed to start monitor: {response.status_code}")
+            print(f" Failed to start monitor: {response.status_code}")
             print(f"   Response: {response.text}")
             return False
 
         data = response.json()
         monitor_id = data.get("id")
-        print(f"✅ Monitor started: {monitor_id}")
+        print(f" Monitor started: {monitor_id}")
         self.deployed_monitors.append(monitor_id)
 
         # Wait for monitor to be running
@@ -84,7 +86,7 @@ class DashboardDeploymentTest:
         if not self.check_monitor_logs(monitor_id, monitor_type):
             return False
 
-        print(f"✅ {monitor_type} deployment successful!")
+        print(f" {monitor_type} deployment successful!")
         return True
 
     def wait_for_monitor_running(self, monitor_id: str, timeout: int = 30) -> bool:
@@ -102,39 +104,39 @@ class DashboardDeploymentTest:
             monitor = next((m for m in monitors if m.get("id") == monitor_id), None)
 
             if not monitor:
-                print(f"   [{i+1}s] Monitor not found")
+                print(f"   [{i + 1}s] Monitor not found")
                 continue
 
             status = monitor.get("status")
 
             if status == "running":
-                print(f"   ✅ Monitor running after {i+1}s")
+                print(f"    Monitor running after {i + 1}s")
                 return True
             elif status in ["failed", "stopped"]:
-                print(f"   ❌ Monitor failed: {status}")
+                print(f"    Monitor failed: {status}")
                 return False
 
-        print(f"   ❌ Timeout waiting for monitor")
+        print("    Timeout waiting for monitor")
         return False
 
     def check_monitor_logs(self, monitor_id: str, monitor_type: str) -> bool:
         """Check monitor logs for critical errors"""
-        print(f"\n   Checking logs for errors...")
+        print("\n   Checking logs for errors...")
 
         response = requests.get(f"{self.api_base}/logs/{monitor_id}")
         if response.status_code != 200:
-            print(f"   ⚠️  Could not fetch logs: {response.status_code}")
+            print(f"     Could not fetch logs: {response.status_code}")
             return True  # Don't fail if logs unavailable
 
         logs = response.text
 
         # Check for critical errors
         if "401 Unauthorized" in logs:
-            print(f"   ❌ Found 401 Unauthorized error")
+            print("    Found 401 Unauthorized error")
             return False
 
         if "Traceback" in logs and "Error" in logs:
-            print(f"   ❌ Found Python traceback in logs")
+            print("    Found Python traceback in logs")
             # Print last 20 lines
             lines = logs.split("\n")
             print("   Last 20 lines:")
@@ -145,12 +147,12 @@ class DashboardDeploymentTest:
         # Check for success indicators based on monitor type
         if monitor_type == "openai_agents_sdk":
             if "Skipping ax-docker" in logs or "Skipping ax-gcp" in logs:
-                print(f"   ✅ OpenAI monitor correctly skipped ax-docker/ax-gcp")
+                print("    OpenAI monitor correctly skipped ax-docker/ax-gcp")
             else:
-                print(f"   ⚠️  ax-docker skip message not found (may be OK)")
+                print("     ax-docker skip message not found (may be OK)")
 
         if "QueueManager initialized" in logs or "queue manager" in logs.lower():
-            print(f"   ✅ QueueManager started")
+            print("    QueueManager started")
 
         return True
 
@@ -164,11 +166,11 @@ class DashboardDeploymentTest:
             try:
                 response = requests.delete(f"{self.api_base}/monitors/{monitor_id}")
                 if response.status_code == 200:
-                    print(f"✅ Stopped {monitor_id}")
+                    print(f" Stopped {monitor_id}")
                 else:
-                    print(f"⚠️  Failed to stop {monitor_id}: {response.status_code}")
+                    print(f"  Failed to stop {monitor_id}: {response.status_code}")
             except Exception as e:
-                print(f"⚠️  Error stopping {monitor_id}: {e}")
+                print(f"  Error stopping {monitor_id}: {e}")
 
     def run_all_tests(self) -> bool:
         """Run deployment tests for all monitor types"""
@@ -192,7 +194,7 @@ class DashboardDeploymentTest:
                 )
             )
         else:
-            print("\n⚠️  OPENAI_API_KEY not set, skipping OpenAI Agents SDK test")
+            print("\n  OPENAI_API_KEY not set, skipping OpenAI Agents SDK test")
 
         # Only test Claude if API key is set
         if os.getenv("ANTHROPIC_API_KEY"):
@@ -205,14 +207,12 @@ class DashboardDeploymentTest:
                 )
             )
         else:
-            print("\n⚠️  ANTHROPIC_API_KEY not set, skipping Claude Agent SDK test")
+            print("\n  ANTHROPIC_API_KEY not set, skipping Claude Agent SDK test")
 
         try:
             results = []
             for agent_name, monitor_type, model, config_file in test_cases:
-                success = self.test_monitor_deployment(
-                    agent_name, monitor_type, model, config_file
-                )
+                success = self.test_monitor_deployment(agent_name, monitor_type, model, config_file)
                 results.append((monitor_type, success))
 
                 # Brief pause between tests
@@ -226,7 +226,7 @@ class DashboardDeploymentTest:
 
             all_passed = True
             for monitor_type, success in results:
-                status = "✅ PASS" if success else "❌ FAIL"
+                status = " PASS" if success else " FAIL"
                 print(f"{status}: {monitor_type}")
                 if not success:
                     all_passed = False
@@ -234,7 +234,7 @@ class DashboardDeploymentTest:
             return all_passed
 
         except Exception as e:
-            print(f"\n❌ Test suite failed with exception: {e}")
+            print(f"\n Test suite failed with exception: {e}")
             import traceback
 
             traceback.print_exc()
@@ -264,14 +264,14 @@ def main():
     try:
         response = requests.get("http://localhost:8000/api/monitors", timeout=5)
         if response.status_code != 200:
-            print("❌ Dashboard not responding correctly")
+            print(" Dashboard not responding correctly")
             sys.exit(1)
     except requests.exceptions.RequestException:
-        print("❌ Dashboard is not running on http://localhost:8000")
+        print(" Dashboard is not running on http://localhost:8000")
         print("   Start it with: python scripts/start_dashboard.py")
         sys.exit(1)
 
-    print("✅ Dashboard is running\n")
+    print(" Dashboard is running\n")
 
     # Run tests
     test = DashboardDeploymentTest()

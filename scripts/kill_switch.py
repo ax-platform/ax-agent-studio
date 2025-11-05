@@ -9,11 +9,12 @@ Usage:
     python kill_switch.py status  # Check kill switch status
 """
 
-import sys
 import subprocess
+import sys
 from pathlib import Path
 
 KILL_SWITCH_FILE = Path("data/KILL_SWITCH")
+
 
 def activate():
     """Activate kill switch - all agents will pause processing"""
@@ -24,6 +25,7 @@ def activate():
     print("   Run 'python kill_switch.py off' to resume")
     print("   Run 'python kill_switch.py kill' to STOP all processes")
 
+
 def deactivate():
     """Deactivate kill switch - agents will resume processing"""
     if KILL_SWITCH_FILE.exists():
@@ -33,6 +35,7 @@ def deactivate():
     else:
         print("ℹ  Kill switch was already off")
 
+
 def kill_all_monitors():
     """Kill all monitor processes immediately"""
     print(" KILLING ALL MONITORS...")
@@ -40,16 +43,12 @@ def kill_all_monitors():
     try:
         # Kill all monitor processes
         result = subprocess.run(
-            ["pkill", "-9", "-f", "ax_agent_studio.monitors"],
-            capture_output=True,
-            text=True
+            ["pkill", "-9", "-f", "ax_agent_studio.monitors"], capture_output=True, text=True
         )
 
         # Check what's left
         check = subprocess.run(
-            ["pgrep", "-f", "ax_agent_studio.monitors"],
-            capture_output=True,
-            text=True
+            ["pgrep", "-f", "ax_agent_studio.monitors"], capture_output=True, text=True
         )
 
         if check.stdout.strip():
@@ -67,6 +66,7 @@ def kill_all_monitors():
         print(f" Error killing monitors: {e}")
         print(" Try manually: pkill -9 -f ax_agent_studio.monitors")
 
+
 def status():
     """Check kill switch status and show running monitors"""
     if KILL_SWITCH_FILE.exists():
@@ -78,17 +78,16 @@ def status():
     print("\n Running monitors:")
     try:
         result = subprocess.run(
-            ["pgrep", "-fl", "ax_agent_studio.monitors"],
-            capture_output=True,
-            text=True
+            ["pgrep", "-fl", "ax_agent_studio.monitors"], capture_output=True, text=True
         )
         if result.stdout.strip():
-            for line in result.stdout.strip().split('\n'):
+            for line in result.stdout.strip().split("\n"):
                 print(f"   • {line}")
         else:
             print("   (none)")
     except Exception:
         print("   (could not check)")
+
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:

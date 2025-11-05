@@ -6,7 +6,7 @@ Loads framework definitions from configs/frameworks.yaml with environment variab
 import os
 import re
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 import yaml
 
@@ -18,11 +18,11 @@ def _substitute_env_vars(value: Any) -> Any:
     """
     if isinstance(value, str):
         # Pattern: ${VAR_NAME:-default}
-        pattern = r'\$\{([^:}]+)(?::-([^}]+))?\}'
+        pattern = r"\$\{([^:}]+)(?::-([^}]+))?\}"
 
         def replacer(match):
             var_name = match.group(1)
-            default = match.group(2) or ''
+            default = match.group(2) or ""
             return os.getenv(var_name, default)
 
         return re.sub(pattern, replacer, value)
@@ -34,7 +34,7 @@ def _substitute_env_vars(value: Any) -> Any:
         return value
 
 
-def load_frameworks() -> Dict[str, Any]:
+def load_frameworks() -> dict[str, Any]:
     """Load framework registry with environment variable substitution.
 
     Returns:
@@ -46,7 +46,7 @@ def load_frameworks() -> Dict[str, Any]:
     if not config_path.exists():
         raise FileNotFoundError(f"Framework registry not found: {config_path}")
 
-    with open(config_path, 'r') as f:
+    with open(config_path) as f:
         config = yaml.safe_load(f)
 
     # Substitute environment variables in the entire config
@@ -55,7 +55,7 @@ def load_frameworks() -> Dict[str, Any]:
     return config
 
 
-def get_framework_info(framework_type: str) -> Dict[str, Any]:
+def get_framework_info(framework_type: str) -> dict[str, Any]:
     """Get configuration info for a specific framework.
 
     Args:
@@ -68,7 +68,7 @@ def get_framework_info(framework_type: str) -> Dict[str, Any]:
         KeyError: If framework not found
     """
     config = load_frameworks()
-    frameworks = config.get('frameworks', {})
+    frameworks = config.get("frameworks", {})
 
     if framework_type not in frameworks:
         raise KeyError(f"Unknown framework: {framework_type}")
@@ -76,17 +76,17 @@ def get_framework_info(framework_type: str) -> Dict[str, Any]:
     return frameworks[framework_type]
 
 
-def get_ui_defaults() -> Dict[str, str]:
+def get_ui_defaults() -> dict[str, str]:
     """Get UI defaults with environment variable substitution.
 
     Returns:
         Dict with default_framework, default_provider, default_model
     """
     config = load_frameworks()
-    return config.get('ui', {})
+    return config.get("ui", {})
 
 
-def get_provider_defaults(provider: str) -> Dict[str, Any]:
+def get_provider_defaults(provider: str) -> dict[str, Any]:
     """Get default model and available models for a provider.
 
     Args:
@@ -99,7 +99,7 @@ def get_provider_defaults(provider: str) -> Dict[str, Any]:
         KeyError: If provider not found
     """
     config = load_frameworks()
-    provider_defaults = config.get('provider_defaults', {})
+    provider_defaults = config.get("provider_defaults", {})
 
     if provider not in provider_defaults:
         raise KeyError(f"Unknown provider: {provider}")

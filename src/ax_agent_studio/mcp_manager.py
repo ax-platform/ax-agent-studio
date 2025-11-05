@@ -5,13 +5,14 @@ Manages connections to multiple MCP servers and provides unified tool access
 """
 
 import json
-import asyncio
 import logging
-from pathlib import Path
-from typing import Dict, List, Any, Optional
 from contextlib import AsyncExitStack
+from pathlib import Path
+from typing import Any
+
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
+
 from ax_agent_studio.mcp_heartbeat import HeartbeatManager
 
 logger = logging.getLogger(__name__)
@@ -23,8 +24,8 @@ class MCPServerManager:
     def __init__(
         self,
         agent_name: str,
-        base_dir: Optional[Path] = None,
-        config_path: Optional[Path] = None,
+        base_dir: Path | None = None,
+        config_path: Path | None = None,
         heartbeat_interval: int = 240,
     ):
         """
@@ -44,7 +45,7 @@ class MCPServerManager:
             self.config_path = self.base_dir / "configs" / "agents" / f"{agent_name}.json"
 
         # Multi-server state
-        self.sessions: Dict[str, ClientSession] = {}
+        self.sessions: dict[str, ClientSession] = {}
         self.exit_stack = None
         self.config = None
 
@@ -61,7 +62,7 @@ class MCPServerManager:
         """Async context manager exit - cleanup all connections"""
         await self.disconnect_all()
 
-    def load_config(self) -> Dict:
+    def load_config(self) -> dict:
         """Load agent configuration from the specified config_path"""
         if not self.config_path.exists():
             raise FileNotFoundError(
@@ -79,17 +80,13 @@ class MCPServerManager:
 
         return self.config
 
-    def _build_server_params(self, server_name: str, server_config: Dict) -> StdioServerParameters:
+    def _build_server_params(self, server_name: str, server_config: dict) -> StdioServerParameters:
         """Build StdioServerParameters from config"""
         command = server_config.get("command", "npx")
         args = server_config.get("args", [])
         env = server_config.get("env")
 
-        return StdioServerParameters(
-            command=command,
-            args=args,
-            env=env
-        )
+        return StdioServerParameters(command=command, args=args, env=env)
 
     async def connect_all(self):
         """Connect to all MCP servers defined in config"""
@@ -111,14 +108,10 @@ class MCPServerManager:
                 server_params = self._build_server_params(server_name, server_config)
 
                 # Connect to server
-                read, write = await self.exit_stack.enter_async_context(
-                    stdio_client(server_params)
-                )
+                read, write = await self.exit_stack.enter_async_context(stdio_client(server_params))
 
                 # Create session
-                session = await self.exit_stack.enter_async_context(
-                    ClientSession(read, write)
-                )
+                session = await self.exit_stack.enter_async_context(ClientSession(read, write))
 
                 # Initialize session
                 await session.initialize()
@@ -128,10 +121,11 @@ class MCPServerManager:
 
                 # Start heartbeat ONLY for remote aX servers (not local filesystem/memory/etc)
                 # Local servers don't have Cloud Run timeouts, only remote aX server needs pings
-                if server_name.startswith("ax-") or "mcp-remote" in str(server_config.get("args", [])):
+                if server_name.startswith("ax-") or "mcp-remote" in str(
+                    server_config.get("args", [])
+                ):
                     await self.heartbeat_manager.start(
-                        session,
-                        name=f"{self.agent_name}/{server_name}"
+                        session, name=f"{self.agent_name}/{server_name}"
                     )
                     logger.info(f"Started heartbeat for remote server: {server_name}")
                 else:
@@ -139,13 +133,13 @@ class MCPServerManager:
 
                 # Get available tools
                 tools_response = await session.list_tools()
-                tool_count = len(tools_response.tools) if hasattr(tools_response, 'tools') else 0
+                tool_count = len(tools_response.tools) if hasattr(tools_response, "tools") else 0
 
                 print(f" ({tool_count} tools)")
                 logger.info(f"Connected to {server_name} with {tool_count} tools")
 
             except Exception as e:
-                print(f"")
+                print("")
                 logger.error(f"Failed to connect to {server_name}: {e}")
                 # Continue with other servers even if one fails
 
@@ -161,7 +155,7 @@ class MCPServerManager:
             await self.exit_stack.__aexit__(None, None, None)
             self.sessions.clear()
 
-    def get_session(self, server_name: str) -> Optional[ClientSession]:
+    def get_session(self, server_name: str) -> ClientSession | None:
         """Get a specific MCP session by server name"""
         return self.sessions.get(server_name)
 
@@ -177,14 +171,14 @@ class MCPServerManager:
 
         raise RuntimeError("No MCP sessions available")
 
-    async def list_all_tools(self) -> Dict[str, List[Any]]:
+    async def list_all_tools(self) -> dict[str, list[Any]]:
         """List all available tools from all servers"""
         all_tools = {}
 
         for server_name, session in self.sessions.items():
             try:
                 response = await session.list_tools()
-                tools = response.tools if hasattr(response, 'tools') else []
+                tools = response.tools if hasattr(response, "tools") else []
                 all_tools[server_name] = tools
             except Exception as e:
                 logger.error(f"Failed to list tools for {server_name}: {e}")
@@ -192,7 +186,7 @@ class MCPServerManager:
 
         return all_tools
 
-    async def call_tool(self, server_name: str, tool_name: str, arguments: Dict) -> Any:
+    async def call_tool(self, server_name: str, tool_name: str, arguments: dict) -> Any:
         """Call a tool on a specific server"""
         session = self.get_session(server_name)
         if not session:
