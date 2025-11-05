@@ -37,8 +37,8 @@ jobs:
         run: ruff format --check .
 
       - name: Run Bandit security check
-        run: bandit -r src/ -c pyproject.toml
-        continue-on-error: true  # Allow low-severity security warnings
+        run: bandit -r src/ -c pyproject.toml --severity-level medium
+        continue-on-error: false  # Only fail on medium/high severity issues
 
       - name: Run mypy type checker
         run: mypy src/
