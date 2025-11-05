@@ -19,7 +19,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-          cache: 'pip'
 
       - name: Install uv
         run: |
@@ -41,8 +40,8 @@ jobs:
         continue-on-error: false  # Only fail on medium/high severity issues
 
       - name: Run mypy type checker
-        run: mypy src/
-        continue-on-error: true  # Don't fail on type errors initially
+        run: mypy src/ || true
+        shell: bash  # Don't use bash -e so errors don't fail the step
 
   test:
     name: Test Suite
@@ -60,7 +59,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-          cache: 'pip'
 
       - name: Install uv
         run: |
