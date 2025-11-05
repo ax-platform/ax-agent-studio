@@ -10,15 +10,14 @@ Tests verify:
 - LangGraph: Provider dropdown visible, model dropdown visible
 """
 
-from playwright.sync_api import sync_playwright, expect
-import time
+from playwright.sync_api import expect, sync_playwright
 
 
 def test_dashboard_loads():
     """Test that dashboard loads successfully"""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print(" Testing Dashboard Load")
-    print("="*60)
+    print("=" * 60)
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -26,22 +25,22 @@ def test_dashboard_loads():
 
         try:
             # Navigate to dashboard
-            page.goto('http://localhost:8000')
-            page.wait_for_load_state('networkidle')
+            page.goto("http://localhost:8000")
+            page.wait_for_load_state("networkidle")
 
             # Take screenshot for debugging
-            page.screenshot(path='/tmp/dashboard_loaded.png')
+            page.screenshot(path="/tmp/dashboard_loaded.png")
 
             # Verify key elements exist
-            expect(page.locator('text=Deploy New Agent')).to_be_visible()
-            expect(page.locator('#monitor-type-select')).to_be_visible()
+            expect(page.locator("text=Deploy New Agent")).to_be_visible()
+            expect(page.locator("#monitor-type-select")).to_be_visible()
 
             print("    Dashboard loaded successfully")
             return True
 
         except Exception as e:
             print(f"    Failed: {e}")
-            page.screenshot(path='/tmp/dashboard_error.png')
+            page.screenshot(path="/tmp/dashboard_error.png")
             return False
         finally:
             browser.close()
@@ -49,9 +48,9 @@ def test_dashboard_loads():
 
 def test_echo_agent_ui():
     """Test Echo agent type - should hide provider and model dropdowns"""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print(" Testing Echo Agent UI")
-    print("="*60)
+    print("=" * 60)
     print("Expected: No provider dropdown, no model dropdown")
 
     with sync_playwright() as p:
@@ -59,28 +58,28 @@ def test_echo_agent_ui():
         page = browser.new_page()
 
         try:
-            page.goto('http://localhost:8000')
-            page.wait_for_load_state('networkidle')
+            page.goto("http://localhost:8000")
+            page.wait_for_load_state("networkidle")
 
             # Select Echo monitor type
-            page.select_option('#monitor-type-select', 'echo')
+            page.select_option("#monitor-type-select", "echo")
             page.wait_for_timeout(500)  # Wait for UI update
 
             # Take screenshot
-            page.screenshot(path='/tmp/echo_agent.png')
+            page.screenshot(path="/tmp/echo_agent.png")
 
             # Verify provider dropdown is hidden
-            provider_group = page.locator('#provider-group')
+            provider_group = page.locator("#provider-group")
             assert not provider_group.is_visible(), "Provider dropdown should be hidden for Echo"
             print("    Provider dropdown is hidden")
 
             # Verify model dropdown is hidden
-            model_group = page.locator('#model-group')
+            model_group = page.locator("#model-group")
             assert not model_group.is_visible(), "Model dropdown should be hidden for Echo"
             print("    Model dropdown is hidden")
 
             # Verify system prompt is hidden
-            prompt_group = page.locator('#system-prompt-group')
+            prompt_group = page.locator("#system-prompt-group")
             assert not prompt_group.is_visible(), "System prompt should be hidden for Echo"
             print("    System prompt is hidden")
 
@@ -89,7 +88,7 @@ def test_echo_agent_ui():
 
         except Exception as e:
             print(f"\n Echo agent UI test FAILED: {e}")
-            page.screenshot(path='/tmp/echo_agent_error.png')
+            page.screenshot(path="/tmp/echo_agent_error.png")
             return False
         finally:
             browser.close()
@@ -97,9 +96,9 @@ def test_echo_agent_ui():
 
 def test_ollama_agent_ui():
     """Test Ollama agent type - should show model dropdown but hide provider"""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print(" Testing Ollama Agent UI")
-    print("="*60)
+    print("=" * 60)
     print("Expected: No provider dropdown, model dropdown visible")
 
     with sync_playwright() as p:
@@ -107,28 +106,28 @@ def test_ollama_agent_ui():
         page = browser.new_page()
 
         try:
-            page.goto('http://localhost:8000')
-            page.wait_for_load_state('networkidle')
+            page.goto("http://localhost:8000")
+            page.wait_for_load_state("networkidle")
 
             # Select Ollama monitor type
-            page.select_option('#monitor-type-select', 'ollama')
+            page.select_option("#monitor-type-select", "ollama")
             page.wait_for_timeout(1000)  # Wait for models to load
 
             # Take screenshot
-            page.screenshot(path='/tmp/ollama_agent.png')
+            page.screenshot(path="/tmp/ollama_agent.png")
 
             # Verify provider dropdown is hidden
-            provider_group = page.locator('#provider-group')
+            provider_group = page.locator("#provider-group")
             assert not provider_group.is_visible(), "Provider dropdown should be hidden for Ollama"
             print("    Provider dropdown is hidden")
 
             # Verify model dropdown is visible
-            model_group = page.locator('#model-group')
+            model_group = page.locator("#model-group")
             assert model_group.is_visible(), "Model dropdown should be visible for Ollama"
             print("    Model dropdown is visible")
 
             # Verify system prompt is visible
-            prompt_group = page.locator('#system-prompt-group')
+            prompt_group = page.locator("#system-prompt-group")
             assert prompt_group.is_visible(), "System prompt should be visible for Ollama"
             print("    System prompt is visible")
 
@@ -137,7 +136,7 @@ def test_ollama_agent_ui():
 
         except Exception as e:
             print(f"\n Ollama agent UI test FAILED: {e}")
-            page.screenshot(path='/tmp/ollama_agent_error.png')
+            page.screenshot(path="/tmp/ollama_agent_error.png")
             return False
         finally:
             browser.close()
@@ -145,9 +144,9 @@ def test_ollama_agent_ui():
 
 def test_claude_agent_sdk_ui():
     """Test Claude Agent SDK - should show model dropdown with Claude models, hide provider"""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print(" Testing Claude Agent SDK UI")
-    print("="*60)
+    print("=" * 60)
     print("Expected: No provider dropdown, Claude models in dropdown, Sonnet 4.5 default")
 
     with sync_playwright() as p:
@@ -155,34 +154,38 @@ def test_claude_agent_sdk_ui():
         page = browser.new_page()
 
         try:
-            page.goto('http://localhost:8000')
-            page.wait_for_load_state('networkidle')
+            page.goto("http://localhost:8000")
+            page.wait_for_load_state("networkidle")
 
             # Select Claude Agent SDK monitor type
-            page.select_option('#monitor-type-select', 'claude_agent_sdk')
+            page.select_option("#monitor-type-select", "claude_agent_sdk")
             page.wait_for_timeout(1000)  # Wait for models to load
 
             # Take screenshot
-            page.screenshot(path='/tmp/claude_sdk_agent.png', full_page=True)
+            page.screenshot(path="/tmp/claude_sdk_agent.png", full_page=True)
 
             # Verify provider dropdown is hidden
-            provider_group = page.locator('#provider-group')
-            assert not provider_group.is_visible(), "Provider dropdown should be hidden for Claude Agent SDK"
+            provider_group = page.locator("#provider-group")
+            assert (
+                not provider_group.is_visible()
+            ), "Provider dropdown should be hidden for Claude Agent SDK"
             print("    Provider dropdown is hidden")
 
             # Verify model dropdown is visible
-            model_group = page.locator('#model-group')
+            model_group = page.locator("#model-group")
             assert model_group.is_visible(), "Model dropdown should be visible for Claude Agent SDK"
             print("    Model dropdown is visible")
 
             # Verify Claude Sonnet 4.5 is selected by default
-            model_select = page.locator('#model-select')
+            model_select = page.locator("#model-select")
             selected_value = model_select.input_value()
-            assert selected_value == "claude-sonnet-4-5", f"Expected claude-sonnet-4-5 but got {selected_value}"
+            assert (
+                selected_value == "claude-sonnet-4-5"
+            ), f"Expected claude-sonnet-4-5 but got {selected_value}"
             print("    Claude Sonnet 4.5 is selected by default")
 
             # Verify Claude Haiku 4.5 is available as an option
-            model_options = page.locator('#model-select option').all_text_contents()
+            model_options = page.locator("#model-select option").all_text_contents()
             haiku_found = any("Haiku 4.5" in opt for opt in model_options)
             assert haiku_found, "Claude Haiku 4.5 should be available as an option"
             print("    Claude Haiku 4.5 is available")
@@ -193,7 +196,7 @@ def test_claude_agent_sdk_ui():
             print("    Gemini models are not shown")
 
             # Verify system prompt is visible
-            prompt_group = page.locator('#system-prompt-group')
+            prompt_group = page.locator("#system-prompt-group")
             assert prompt_group.is_visible(), "System prompt should be visible for Claude Agent SDK"
             print("    System prompt is visible")
 
@@ -202,12 +205,14 @@ def test_claude_agent_sdk_ui():
 
         except Exception as e:
             print(f"\n Claude Agent SDK UI test FAILED: {e}")
-            page.screenshot(path='/tmp/claude_sdk_agent_error.png', full_page=True)
+            page.screenshot(path="/tmp/claude_sdk_agent_error.png", full_page=True)
 
             # Debug info
-            model_select = page.locator('#model-select')
+            model_select = page.locator("#model-select")
             print(f"\n   Debug - Selected model: {model_select.input_value()}")
-            print(f"   Debug - Available options: {page.locator('#model-select option').all_text_contents()}")
+            print(
+                f"   Debug - Available options: {page.locator('#model-select option').all_text_contents()}"
+            )
 
             return False
         finally:
@@ -216,9 +221,9 @@ def test_claude_agent_sdk_ui():
 
 def test_langgraph_agent_ui():
     """Test LangGraph agent type - should show both provider and model dropdowns"""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print(" Testing LangGraph Agent UI")
-    print("="*60)
+    print("=" * 60)
     print("Expected: Provider dropdown visible, model dropdown visible")
 
     with sync_playwright() as p:
@@ -226,28 +231,28 @@ def test_langgraph_agent_ui():
         page = browser.new_page()
 
         try:
-            page.goto('http://localhost:8000')
-            page.wait_for_load_state('networkidle')
+            page.goto("http://localhost:8000")
+            page.wait_for_load_state("networkidle")
 
             # Select LangGraph monitor type
-            page.select_option('#monitor-type-select', 'langgraph')
+            page.select_option("#monitor-type-select", "langgraph")
             page.wait_for_timeout(500)  # Wait for UI update
 
             # Take screenshot
-            page.screenshot(path='/tmp/langgraph_agent.png')
+            page.screenshot(path="/tmp/langgraph_agent.png")
 
             # Verify provider dropdown is visible
-            provider_group = page.locator('#provider-group')
+            provider_group = page.locator("#provider-group")
             assert provider_group.is_visible(), "Provider dropdown should be visible for LangGraph"
             print("    Provider dropdown is visible")
 
             # Verify model dropdown is visible
-            model_group = page.locator('#model-group')
+            model_group = page.locator("#model-group")
             assert model_group.is_visible(), "Model dropdown should be visible for LangGraph"
             print("    Model dropdown is visible")
 
             # Verify system prompt is visible
-            prompt_group = page.locator('#system-prompt-group')
+            prompt_group = page.locator("#system-prompt-group")
             assert prompt_group.is_visible(), "System prompt should be visible for LangGraph"
             print("    System prompt is visible")
 
@@ -256,7 +261,7 @@ def test_langgraph_agent_ui():
 
         except Exception as e:
             print(f"\n LangGraph agent UI test FAILED: {e}")
-            page.screenshot(path='/tmp/langgraph_agent_error.png')
+            page.screenshot(path="/tmp/langgraph_agent_error.png")
             return False
         finally:
             browser.close()
@@ -264,9 +269,9 @@ def test_langgraph_agent_ui():
 
 def test_default_agent_type():
     """Test that default agent type is set correctly from env var"""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("  Testing Default Agent Type")
-    print("="*60)
+    print("=" * 60)
     print("Expected: DEFAULT_AGENT_TYPE from .env is pre-selected")
 
     with sync_playwright() as p:
@@ -274,23 +279,27 @@ def test_default_agent_type():
         page = browser.new_page()
 
         try:
-            page.goto('http://localhost:8000')
-            page.wait_for_load_state('networkidle')
+            page.goto("http://localhost:8000")
+            page.wait_for_load_state("networkidle")
             page.wait_for_timeout(1000)  # Wait for defaults to load
 
             # Take screenshot
-            page.screenshot(path='/tmp/default_agent_type.png')
+            page.screenshot(path="/tmp/default_agent_type.png")
 
             # Check what monitor type is selected
-            monitor_select = page.locator('#monitor-type-select')
+            monitor_select = page.locator("#monitor-type-select")
             selected_value = monitor_select.input_value()
 
             print(f"   Default agent type: {selected_value}")
 
             # It should be claude_agent_sdk if DEFAULT_AGENT_TYPE is set
             # (This might vary based on .env configuration)
-            assert selected_value in ["echo", "ollama", "claude_agent_sdk", "langgraph"], \
-                f"Invalid agent type selected: {selected_value}"
+            assert selected_value in [
+                "echo",
+                "ollama",
+                "claude_agent_sdk",
+                "langgraph",
+            ], f"Invalid agent type selected: {selected_value}"
             print(f"    Valid agent type selected: {selected_value}")
 
             print("\n Default agent type test PASSED")
@@ -298,7 +307,7 @@ def test_default_agent_type():
 
         except Exception as e:
             print(f"\n Default agent type test FAILED: {e}")
-            page.screenshot(path='/tmp/default_agent_type_error.png')
+            page.screenshot(path="/tmp/default_agent_type_error.png")
             return False
         finally:
             browser.close()
@@ -306,9 +315,9 @@ def test_default_agent_type():
 
 def test_duplicate_agent_warning():
     """Test that deploying a duplicate agent shows a warning dialog"""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("  Testing Duplicate Agent Warning")
-    print("="*60)
+    print("=" * 60)
     print("Expected: Confirmation dialog when deploying agent with same name")
 
     with sync_playwright() as p:
@@ -316,8 +325,8 @@ def test_duplicate_agent_warning():
         page = browser.new_page()
 
         try:
-            page.goto('http://localhost:8000')
-            page.wait_for_load_state('networkidle')
+            page.goto("http://localhost:8000")
+            page.wait_for_load_state("networkidle")
             page.wait_for_timeout(1000)
 
             # Set up dialog handler to capture the confirmation dialog
@@ -332,19 +341,19 @@ def test_duplicate_agent_warning():
             page.on("dialog", handle_dialog)
 
             # Select Echo agent type (simplest - no model needed)
-            page.select_option('#monitor-type-select', 'echo')
+            page.select_option("#monitor-type-select", "echo")
             page.wait_for_timeout(500)
 
             # Select an agent to deploy
-            agent_select = page.locator('#agent-select')
-            agent_options = agent_select.locator('option').all_inner_texts()
+            agent_select = page.locator("#agent-select")
+            agent_options = agent_select.locator("option").all_inner_texts()
 
             if not agent_options or len(agent_options) == 0:
                 print("     No agents configured, skipping test")
                 return None
 
             # Select first agent
-            page.select_option('#agent-select', index=0)
+            page.select_option("#agent-select", index=0)
             page.wait_for_timeout(500)
 
             # Get the selected agent name
@@ -353,6 +362,7 @@ def test_duplicate_agent_warning():
 
             # Check if this agent is already running
             import httpx
+
             monitors_response = httpx.get("http://localhost:8000/api/monitors", timeout=5.0)
             monitors_data = monitors_response.json()
             running_monitors = [m for m in monitors_data["monitors"] if m["status"] == "running"]
@@ -360,7 +370,9 @@ def test_duplicate_agent_warning():
             # Get agent name from config
             configs_response = httpx.get("http://localhost:8000/api/configs", timeout=5.0)
             configs_data = configs_response.json()
-            selected_config = next((c for c in configs_data["configs"] if c["path"] == selected_value), None)
+            selected_config = next(
+                (c for c in configs_data["configs"] if c["path"] == selected_value), None
+            )
 
             if not selected_config:
                 print("     Could not find agent config, skipping test")
@@ -377,29 +389,33 @@ def test_duplicate_agent_warning():
                 page.wait_for_timeout(500)
 
                 # Verify dialog was shown
-                assert dialog_shown["value"], "Confirmation dialog should be shown for duplicate agent"
-                assert "REPLACE EXISTING AGENT" in dialog_shown["message"], \
-                    "Dialog should mention replacing existing agent"
-                assert agent_name in dialog_shown["message"], \
-                    f"Dialog should mention the agent name: {agent_name}"
+                assert dialog_shown[
+                    "value"
+                ], "Confirmation dialog should be shown for duplicate agent"
+                assert (
+                    "REPLACE EXISTING AGENT" in dialog_shown["message"]
+                ), "Dialog should mention replacing existing agent"
+                assert (
+                    agent_name in dialog_shown["message"]
+                ), f"Dialog should mention the agent name: {agent_name}"
 
-                print(f"    Confirmation dialog shown")
-                print(f"    Dialog message mentions 'REPLACE EXISTING AGENT'")
-                print(f"    Dialog message includes agent name")
+                print("    Confirmation dialog shown")
+                print("    Dialog message mentions 'REPLACE EXISTING AGENT'")
+                print("    Dialog message includes agent name")
 
             else:
                 print(f"   Agent '{agent_name}' is not running - no dialog expected (test skipped)")
                 return None
 
             # Take screenshot
-            page.screenshot(path='/tmp/duplicate_agent_warning.png')
+            page.screenshot(path="/tmp/duplicate_agent_warning.png")
 
             print("\n Duplicate agent warning test PASSED")
             return True
 
         except Exception as e:
             print(f"\n Duplicate agent warning test FAILED: {e}")
-            page.screenshot(path='/tmp/duplicate_agent_warning_error.png')
+            page.screenshot(path="/tmp/duplicate_agent_warning_error.png")
             return False
         finally:
             browser.close()
@@ -407,14 +423,15 @@ def test_duplicate_agent_warning():
 
 def main():
     """Run all dashboard UI tests"""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print(" Dashboard UI E2E Test Suite")
-    print("="*60)
+    print("=" * 60)
     print("Testing against: http://localhost:8000")
     print("Make sure the dashboard is running: uv run dashboard")
 
     # Check if dashboard is running
     import httpx
+
     try:
         response = httpx.get("http://localhost:8000/api/health", timeout=5.0)
         if response.status_code != 200:
@@ -439,9 +456,9 @@ def main():
     }
 
     # Summary
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print(" Test Results Summary")
-    print("="*60)
+    print("=" * 60)
 
     for test_name, result in results.items():
         status = " PASS" if result else " FAIL"
@@ -467,5 +484,6 @@ def main():
 
 if __name__ == "__main__":
     import sys
+
     exit_code = main()
     sys.exit(exit_code)

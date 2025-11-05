@@ -9,10 +9,11 @@ Tests deployment and functionality of all 4 monitor types:
 """
 
 import asyncio
-import sys
 import os
+import sys
 import time
 from pathlib import Path
+
 import httpx
 
 # Add src to path
@@ -58,7 +59,7 @@ class MonitorTester:
             "model": model,
             "system_prompt": None,
             "system_prompt_name": None,
-            "history_limit": 25
+            "history_limit": 25,
         }
 
         response = await self.client.post("/api/monitors/start", json={"config": config})
@@ -90,11 +91,10 @@ class MonitorTester:
 
     async def send_test_message(self, to_agent: str, message: str):
         """Send a test message to an agent"""
-        response = await self.client.post("/api/messages/send", json={
-            "from_agent": "test_sender",
-            "to_agent": to_agent,
-            "message": message
-        })
+        response = await self.client.post(
+            "/api/messages/send",
+            json={"from_agent": "test_sender", "to_agent": to_agent, "message": message},
+        )
         assert response.status_code == 200
         return response.json()
 
@@ -107,9 +107,9 @@ class MonitorTester:
 
 async def test_echo_monitor(tester: MonitorTester):
     """Test Echo monitor (no provider, no model)"""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print(" Testing Echo Monitor")
-    print("="*60)
+    print("=" * 60)
     print("Requirements: No provider, no model (simple passthrough)")
 
     try:
@@ -117,7 +117,7 @@ async def test_echo_monitor(tester: MonitorTester):
         monitor_id = await tester.start_monitor(
             monitor_type="echo",
             provider=None,  # Echo doesn't need provider
-            model=None      # Echo doesn't need model
+            model=None,  # Echo doesn't need model
         )
 
         # Wait for it to be running
@@ -128,7 +128,7 @@ async def test_echo_monitor(tester: MonitorTester):
 
         # Test sending a message
         result = await tester.send_test_message(TEST_AGENT, "Echo test message")
-        print(f"    Message sent successfully")
+        print("    Message sent successfully")
 
         # Stop the monitor
         await tester.stop_monitor(monitor_id)
@@ -139,15 +139,16 @@ async def test_echo_monitor(tester: MonitorTester):
     except Exception as e:
         print(f"\n Echo monitor test FAILED: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
 
 async def test_ollama_monitor(tester: MonitorTester):
     """Test Ollama monitor (no provider, requires model)"""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print(" Testing Ollama Monitor")
-    print("="*60)
+    print("=" * 60)
     print("Requirements: No provider (implicit), requires model")
 
     try:
@@ -166,8 +167,8 @@ async def test_ollama_monitor(tester: MonitorTester):
         # Start Ollama monitor
         monitor_id = await tester.start_monitor(
             monitor_type="ollama",
-            provider=None,      # Ollama doesn't need provider (implicit)
-            model=test_model    # Ollama requires model
+            provider=None,  # Ollama doesn't need provider (implicit)
+            model=test_model,  # Ollama requires model
         )
 
         # Wait for it to be running
@@ -185,15 +186,16 @@ async def test_ollama_monitor(tester: MonitorTester):
     except Exception as e:
         print(f"\n Ollama monitor test FAILED: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
 
 async def test_claude_agent_sdk_monitor(tester: MonitorTester):
     """Test Claude Agent SDK monitor (no provider, requires Claude model)"""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print(" Testing Claude Agent SDK Monitor")
-    print("="*60)
+    print("=" * 60)
     print("Requirements: No provider (uses Anthropic SDK), requires Claude model")
 
     try:
@@ -206,13 +208,13 @@ async def test_claude_agent_sdk_monitor(tester: MonitorTester):
         assert sonnet is not None, "Claude Sonnet 4.5 not found"
         assert sonnet.get("default") is True, "Sonnet 4.5 should be default"
 
-        print(f"   Using model: claude-sonnet-4-5 (default)")
+        print("   Using model: claude-sonnet-4-5 (default)")
 
         # Start Claude Agent SDK monitor
         monitor_id = await tester.start_monitor(
             monitor_type="claude_agent_sdk",
-            provider=None,              # Claude SDK doesn't need provider
-            model="claude-sonnet-4-5"   # Claude SDK requires Claude model
+            provider=None,  # Claude SDK doesn't need provider
+            model="claude-sonnet-4-5",  # Claude SDK requires Claude model
         )
 
         # Wait for it to be running
@@ -230,15 +232,16 @@ async def test_claude_agent_sdk_monitor(tester: MonitorTester):
     except Exception as e:
         print(f"\n Claude Agent SDK monitor test FAILED: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
 
 async def test_langgraph_monitor(tester: MonitorTester):
     """Test LangGraph monitor (requires provider and model)"""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print(" Testing LangGraph Monitor")
-    print("="*60)
+    print("=" * 60)
     print("Requirements: Requires provider + model (multi-provider support)")
 
     try:
@@ -276,7 +279,7 @@ async def test_langgraph_monitor(tester: MonitorTester):
         monitor_id = await tester.start_monitor(
             monitor_type="langgraph",
             provider=provider_id,  # LangGraph requires provider
-            model=test_model       # LangGraph requires model
+            model=test_model,  # LangGraph requires model
         )
 
         # Wait for it to be running
@@ -294,15 +297,16 @@ async def test_langgraph_monitor(tester: MonitorTester):
     except Exception as e:
         print(f"\n LangGraph monitor test FAILED: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
 
 async def main():
     """Run all monitor E2E tests"""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print(" All Monitors E2E Test Suite")
-    print("="*60)
+    print("=" * 60)
     print(f"Testing against: {DASHBOARD_URL}")
     print("Make sure the dashboard is running: uv run dashboard")
 
@@ -333,9 +337,9 @@ async def main():
         await tester.cleanup()
 
     # Summary
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print(" Test Results Summary")
-    print("="*60)
+    print("=" * 60)
 
     for test_name, result in results.items():
         if result is True:

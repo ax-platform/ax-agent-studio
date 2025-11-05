@@ -11,8 +11,8 @@ Run: python tests/test_dashboard_deployment_e2e.py
 import os
 import sys
 import time
+
 import requests
-from pathlib import Path
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -41,9 +41,7 @@ class DashboardDeploymentTest:
             return False
 
         configs = response.json().get("configs", [])
-        agent_config = next(
-            (c for c in configs if c["agent_name"] == agent_name), None
-        )
+        agent_config = next((c for c in configs if c["agent_name"] == agent_name), None)
 
         if not agent_config:
             print(f"❌ Agent config not found for {agent_name}")
@@ -114,12 +112,12 @@ class DashboardDeploymentTest:
                 print(f"   ❌ Monitor failed: {status}")
                 return False
 
-        print(f"   ❌ Timeout waiting for monitor")
+        print("   ❌ Timeout waiting for monitor")
         return False
 
     def check_monitor_logs(self, monitor_id: str, monitor_type: str) -> bool:
         """Check monitor logs for critical errors"""
-        print(f"\n   Checking logs for errors...")
+        print("\n   Checking logs for errors...")
 
         response = requests.get(f"{self.api_base}/logs/{monitor_id}")
         if response.status_code != 200:
@@ -130,11 +128,11 @@ class DashboardDeploymentTest:
 
         # Check for critical errors
         if "401 Unauthorized" in logs:
-            print(f"   ❌ Found 401 Unauthorized error")
+            print("   ❌ Found 401 Unauthorized error")
             return False
 
         if "Traceback" in logs and "Error" in logs:
-            print(f"   ❌ Found Python traceback in logs")
+            print("   ❌ Found Python traceback in logs")
             # Print last 20 lines
             lines = logs.split("\n")
             print("   Last 20 lines:")
@@ -145,12 +143,12 @@ class DashboardDeploymentTest:
         # Check for success indicators based on monitor type
         if monitor_type == "openai_agents_sdk":
             if "Skipping ax-docker" in logs or "Skipping ax-gcp" in logs:
-                print(f"   ✅ OpenAI monitor correctly skipped ax-docker/ax-gcp")
+                print("   ✅ OpenAI monitor correctly skipped ax-docker/ax-gcp")
             else:
-                print(f"   ⚠️  ax-docker skip message not found (may be OK)")
+                print("   ⚠️  ax-docker skip message not found (may be OK)")
 
         if "QueueManager initialized" in logs or "queue manager" in logs.lower():
-            print(f"   ✅ QueueManager started")
+            print("   ✅ QueueManager started")
 
         return True
 
@@ -210,9 +208,7 @@ class DashboardDeploymentTest:
         try:
             results = []
             for agent_name, monitor_type, model, config_file in test_cases:
-                success = self.test_monitor_deployment(
-                    agent_name, monitor_type, model, config_file
-                )
+                success = self.test_monitor_deployment(agent_name, monitor_type, model, config_file)
                 results.append((monitor_type, success))
 
                 # Brief pause between tests

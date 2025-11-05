@@ -19,9 +19,10 @@ Safety features:
 """
 
 import asyncio
-import sys
 import signal
+import sys
 from datetime import datetime
+
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
@@ -29,27 +30,28 @@ from mcp.client.stdio import stdio_client
 running = True
 total_messages = 0
 
+
 def signal_handler(sig, frame):
     global running
     print("\n\n Stopping multi-agent loop...")
     running = False
 
+
 signal.signal(signal.SIGINT, signal_handler)
+
 
 async def send_message(session, from_agent, to_agent, content):
     """Send a message from one agent to another"""
     global total_messages
     try:
-        result = await session.call_tool("messages", {
-            "action": "send",
-            "content": content
-        })
+        result = await session.call_tool("messages", {"action": "send", "content": content})
         total_messages += 1
         print(f" @{from_agent} → @{to_agent}: {content[:60]}...")
         return True
     except Exception as e:
         print(f" Error sending from @{from_agent} to @{to_agent}: {e}")
         return False
+
 
 async def multi_agent_loop(agents, max_loops=10, delay=8):
     """Create a round-robin conversation loop between N agents"""
@@ -60,11 +62,11 @@ async def multi_agent_loop(agents, max_loops=10, delay=8):
 
     oauth_server = "http://localhost:8001"
 
-    print(f" Starting multi-agent loop")
+    print(" Starting multi-agent loop")
     print(f"   Agents: {' → '.join([f'@{a}' for a in agents])} → @{agents[0]} (loop)")
     print(f"   Max loops: {max_loops}")
     print(f"   Delay: {delay}s")
-    print(f"   Press Ctrl+C to stop\n")
+    print("   Press Ctrl+C to stop\n")
 
     # Conversation prompts - each agent asks the next one
     prompts = [
@@ -96,12 +98,15 @@ async def multi_agent_loop(agents, max_loops=10, delay=8):
             server_params = StdioServerParameters(
                 command="npx",
                 args=[
-                    "-y", "mcp-remote@0.1.29",
+                    "-y",
+                    "mcp-remote@0.1.29",
                     server_url,
-                    "--transport", "http-only",
+                    "--transport",
+                    "http-only",
                     "--allow-http",
-                    "--oauth-server", oauth_server
-                ]
+                    "--oauth-server",
+                    oauth_server,
+                ],
             )
 
             read, write = await stdio_client(server_params).__aenter__()
@@ -146,7 +151,7 @@ async def multi_agent_loop(agents, max_loops=10, delay=8):
                 # Send message
                 success = await send_message(session, from_agent, to_agent, message)
                 if not success:
-                    print(f"  Failed to send message, continuing...")
+                    print("  Failed to send message, continuing...")
 
                 # Wait between messages to avoid overwhelming the system
                 if i < len(agents) - 1:  # Don't wait after last message in round
@@ -158,7 +163,7 @@ async def multi_agent_loop(agents, max_loops=10, delay=8):
                 await asyncio.sleep(delay)
 
         print(f"\n{'='*70}")
-        print(f" Multi-agent loop completed!")
+        print(" Multi-agent loop completed!")
         print(f"   Total loops: {loop_count}")
         print(f"   Total messages sent: {total_messages}")
         print(f"   Stopped: {'User interrupt' if not running else 'Max loops reached'}")
@@ -167,14 +172,20 @@ async def multi_agent_loop(agents, max_loops=10, delay=8):
     except Exception as e:
         print(f"\n Error in multi-agent loop: {e}")
         import traceback
+
         traceback.print_exc()
+
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
-        print("Usage: python multi_agent_loop.py <agent1> <agent2> [agent3] ... [--loops N] [--delay N]")
+        print(
+            "Usage: python multi_agent_loop.py <agent1> <agent2> [agent3] ... [--loops N] [--delay N]"
+        )
         print("\nExample:")
         print("  python multi_agent_loop.py rigelz_334 lunar_craft_128 --loops 10 --delay 8")
-        print("  python multi_agent_loop.py rigelz_334 lunar_craft_128 orion_344 --loops 5 --delay 10")
+        print(
+            "  python multi_agent_loop.py rigelz_334 lunar_craft_128 orion_344 --loops 5 --delay 10"
+        )
         sys.exit(1)
 
     # Parse arguments

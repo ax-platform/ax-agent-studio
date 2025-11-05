@@ -7,11 +7,11 @@ Ensures all frameworks have required components before allowing deployment.
 
 import importlib
 from pathlib import Path
-from typing import Dict, List, Tuple
+
 import yaml
 
 
-def validate_frameworks(base_dir: Path) -> Tuple[bool, List[str]]:
+def validate_frameworks(base_dir: Path) -> tuple[bool, list[str]]:
     """
     Validate all frameworks have required components.
 
@@ -43,9 +43,7 @@ def validate_frameworks(base_dir: Path) -> Tuple[bool, List[str]]:
         required_fields = ["name", "emoji", "requires_provider", "requires_model"]
         for field in required_fields:
             if field not in config:
-                errors.append(
-                    f"Framework '{framework_id}': Missing required field '{field}'"
-                )
+                errors.append(f"Framework '{framework_id}': Missing required field '{field}'")
 
         # Check provider logic
         if not config.get("requires_provider", True):
@@ -105,7 +103,7 @@ def validate_frameworks(base_dir: Path) -> Tuple[bool, List[str]]:
     return len(errors) == 0, errors
 
 
-def get_framework_monitor_types(base_dir: Path) -> List[str]:
+def get_framework_monitor_types(base_dir: Path) -> list[str]:
     """
     Get list of valid monitor types from framework registry.
 

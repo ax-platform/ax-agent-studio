@@ -11,8 +11,8 @@ Run: python tests/test_all_frameworks_e2e.py
 import os
 import sys
 import time
+
 import requests
-from pathlib import Path
 from dotenv import load_dotenv
 
 # Load environment
@@ -50,9 +50,7 @@ class FrameworkE2ETestSuite:
             return False
 
         configs = response.json().get("configs", [])
-        agent_config = next(
-            (c for c in configs if c["agent_name"] == agent_name), None
-        )
+        agent_config = next((c for c in configs if c["agent_name"] == agent_name), None)
 
         if not agent_config:
             print(f"❌ Agent config not found for {agent_name}")
@@ -71,7 +69,7 @@ class FrameworkE2ETestSuite:
             }
         }
 
-        print(f"\n   Deploying...")
+        print("\n   Deploying...")
 
         # Deploy monitor
         response = requests.post(f"{self.api_base}/monitors/start", json=payload)
@@ -133,32 +131,30 @@ class FrameworkE2ETestSuite:
                 self.print_monitor_logs(monitor_id)
                 return False
 
-        print(f"   ❌ Timeout waiting for monitor")
+        print("   ❌ Timeout waiting for monitor")
         return False
 
     def validate_monitor_state(
         self, monitor_id: str, framework_id: str, expected_provider: str = None
     ) -> bool:
         """Validate monitor state matches framework expectations"""
-        print(f"\n   Validating monitor state...")
+        print("\n   Validating monitor state...")
 
         response = requests.get(f"{self.api_base}/monitors")
         if response.status_code != 200:
-            print(f"   ⚠️  Could not fetch monitors")
+            print("   ⚠️  Could not fetch monitors")
             return False
 
         monitors = response.json().get("monitors", [])
         monitor = next((m for m in monitors if m.get("id") == monitor_id), None)
 
         if not monitor:
-            print(f"   ❌ Monitor not found")
+            print("   ❌ Monitor not found")
             return False
 
         # Check framework type
         if monitor.get("monitor_type") != framework_id:
-            print(
-                f"   ❌ Wrong monitor type: {monitor.get('monitor_type')} != {framework_id}"
-            )
+            print(f"   ❌ Wrong monitor type: {monitor.get('monitor_type')} != {framework_id}")
             return False
 
         # Check provider (framework-specific monitors should NOT have provider)
@@ -169,25 +165,23 @@ class FrameworkE2ETestSuite:
                 print(
                     f"   ⚠️  WARNING: Framework-specific monitor has provider: {monitor.get('provider')}"
                 )
-                print(
-                    f"   This is a cosmetic bug but monitor should work correctly"
-                )
+                print("   This is a cosmetic bug but monitor should work correctly")
         else:
             # Provider should be present for generic frameworks
             if not monitor.get("provider"):
-                print(f"   ⚠️  WARNING: Generic framework missing provider")
+                print("   ⚠️  WARNING: Generic framework missing provider")
 
         # Check MCP servers connected
         mcp_servers = monitor.get("mcp_servers", [])
         if not mcp_servers:
-            print(f"   ⚠️  WARNING: No MCP servers listed")
+            print("   ⚠️  WARNING: No MCP servers listed")
 
-        print(f"   ✅ Monitor state validated")
+        print("   ✅ Monitor state validated")
         return True
 
     def print_monitor_logs(self, monitor_id: str):
         """Print last 20 lines of monitor logs"""
-        print(f"\n   Last 20 lines of logs:")
+        print("\n   Last 20 lines of logs:")
         try:
             response = requests.get(f"{self.api_base}/logs/{monitor_id}")
             if response.status_code == 200:

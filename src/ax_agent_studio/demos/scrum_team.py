@@ -23,9 +23,9 @@ Prerequisites:
 import asyncio
 import sys
 from datetime import datetime
+
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
-
 
 SCRUM_WORKFLOW = [
     # Sprint Planning
@@ -34,62 +34,59 @@ SCRUM_WORKFLOW = [
         "to": "developer",
         "message": "Hey {to}! Let's start our sprint. Can you create a task called 'Implement User Authentication' with priority high and description 'Add OAuth2 login flow for users'?",
         "expected_tool": "create_task",
-        "phase": "Sprint Planning"
+        "phase": "Sprint Planning",
     },
     {
         "from": "product_owner",
         "to": "developer",
         "message": "{to}, also create a task 'Fix Bug in Search' with priority medium and description 'Search returns duplicate results'",
         "expected_tool": "create_task",
-        "phase": "Sprint Planning"
+        "phase": "Sprint Planning",
     },
-
     # Development Phase
     {
         "from": "developer",
         "to": "product_owner",
         "message": "{to}, tasks created! Can you list all tasks so we can see our sprint backlog?",
         "expected_tool": "list_tasks",
-        "phase": "Development"
+        "phase": "Development",
     },
     {
         "from": "developer",
         "to": "qa_manager",
         "message": "Hey {to}! I've started working on the auth task. Can you search for any messages about 'authentication requirements'?",
         "expected_tool": "search_messages",
-        "phase": "Development"
+        "phase": "Development",
     },
-
     # Testing & Review
     {
         "from": "qa_manager",
         "to": "developer",
         "message": "{to}, I reviewed the search. Now can you list all current tasks to see what's in progress?",
         "expected_tool": "list_tasks",
-        "phase": "Testing"
+        "phase": "Testing",
     },
     {
         "from": "qa_manager",
         "to": "product_owner",
         "message": "{to}, the auth implementation looks good! Can you create a task 'Deploy Authentication Feature' with priority high?",
         "expected_tool": "create_task",
-        "phase": "Review"
+        "phase": "Review",
     },
-
     # Sprint Retrospective
     {
         "from": "product_owner",
         "to": "qa_manager",
         "message": "{to}, great work! Can you list all tasks so we can review what we accomplished this sprint?",
         "expected_tool": "list_tasks",
-        "phase": "Retrospective"
+        "phase": "Retrospective",
     },
     {
         "from": "product_owner",
         "to": "developer",
         "message": "Thanks {to}! Can you search for messages about 'next sprint' to help us plan?",
         "expected_tool": "search_messages",
-        "phase": "Sprint Planning (Next)"
+        "phase": "Sprint Planning (Next)",
     },
 ]
 
@@ -103,12 +100,15 @@ async def send_scrum_message(from_agent: str, to_agent: str, message: str):
     server_params = StdioServerParameters(
         command="npx",
         args=[
-            "-y", "mcp-remote@0.1.29",
+            "-y",
+            "mcp-remote@0.1.29",
             server_url,
-            "--transport", "http-only",
+            "--transport",
+            "http-only",
             "--allow-http",
-            "--oauth-server", oauth_server
-        ]
+            "--oauth-server",
+            oauth_server,
+        ],
     )
 
     async with stdio_client(server_params) as (read, write):
@@ -119,20 +119,13 @@ async def send_scrum_message(from_agent: str, to_agent: str, message: str):
             full_message = f"@{to_agent} {message}"
 
             # Send message
-            await session.call_tool("messages", {
-                "action": "send",
-                "content": full_message
-            })
+            await session.call_tool("messages", {"action": "send", "content": full_message})
 
 
 async def run_scrum_demo(product_owner: str, developer: str, qa_manager: str):
     """Run the scrum team demo"""
 
-    agents = {
-        "product_owner": product_owner,
-        "developer": developer,
-        "qa_manager": qa_manager
-    }
+    agents = {"product_owner": product_owner, "developer": developer, "qa_manager": qa_manager}
 
     print("""
 ╔══════════════════════════════════════════════════════════════════╗
@@ -187,7 +180,7 @@ async def run_scrum_demo(product_owner: str, developer: str, qa_manager: str):
         # Send message
         try:
             await send_scrum_message(from_agent, to_agent, message)
-            print(f"    Message sent!")
+            print("    Message sent!")
         except Exception as e:
             print(f"    Error: {e}")
 
@@ -197,9 +190,9 @@ async def run_scrum_demo(product_owner: str, developer: str, qa_manager: str):
         await asyncio.sleep(wait_time)
         print()
 
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print(" Scrum Sprint Demo Complete!")
-    print("="*70)
+    print("=" * 70)
     print()
     print(" Summary:")
     print(f"   - Total messages: {len(SCRUM_WORKFLOW)}")

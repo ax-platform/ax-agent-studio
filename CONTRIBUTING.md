@@ -61,11 +61,49 @@ Before contributing, make sure you have:
 ### Install Dependencies
 
 ```bash
-# Install all dependencies (fast with uv!)
-uv sync
+# Install all dependencies including dev tools (fast with uv!)
+uv pip install -e ".[dev]"
 
 # Verify installation
-uv run python --version  # Should show Python 3.13+
+python --version  # Should show Python 3.13+
+```
+
+### Set Up Pre-commit Hooks
+
+We use pre-commit hooks to ensure code quality before commits. These hooks automatically check:
+- Code formatting (Ruff)
+- Linting (Ruff)
+- Type checking (mypy)
+- Security issues (Bandit)
+- File formatting (trailing whitespace, line endings, etc.)
+
+**Install pre-commit hooks:**
+```bash
+# Install pre-commit hooks
+pre-commit install
+
+# Run hooks manually on all files (optional)
+pre-commit run --all-files
+```
+
+**The hooks will now run automatically on every commit!** If any check fails, the commit will be blocked until you fix the issues.
+
+**Manual linting and formatting:**
+```bash
+# Run linter
+ruff check .
+
+# Auto-fix linting issues
+ruff check --fix .
+
+# Format code
+ruff format .
+
+# Type check
+mypy src/
+
+# Security check
+bandit -r src/ -c pyproject.toml
 ```
 
 ### Run the Dashboard Locally
@@ -160,10 +198,13 @@ python tests/test_gemini_e2e.py
 ### Code Style
 
 **Python:**
-- Follow **PEP 8** style guide
+- Follow **PEP 8** style guide (enforced by Ruff)
+- Use **Ruff** for linting and formatting (configured in `pyproject.toml`)
+- Line length: **100 characters**
 - Use **async/await** for I/O operations
-- Add **type hints** where helpful
+- Add **type hints** where helpful (checked by mypy)
 - Write **docstrings** for functions/classes
+- Pre-commit hooks will automatically format and lint your code
 
 **Example:**
 ```python
@@ -230,6 +271,8 @@ to prevent self-replies.
 
 **Before submitting:**
 -  Code runs without errors
+-  Pre-commit hooks pass (run `pre-commit run --all-files`)
+-  CI/CD checks pass (linting, formatting, tests)
 -  Tests pass (if applicable)
 -  Documentation updated
 -  No sensitive data (API keys, credentials) committed

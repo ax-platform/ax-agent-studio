@@ -10,20 +10,20 @@ import time
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional
 
 
 @dataclass
 class StoredMessage:
     """Persisted mention message."""
+
     id: str
     agent: str
     sender: str
     content: str
     timestamp: float
     processed: bool = False
-    processing_started_at: Optional[float] = None
-    processing_completed_at: Optional[float] = None
+    processing_started_at: float | None = None
+    processing_completed_at: float | None = None
 
 
 class MessageStore:
@@ -87,7 +87,7 @@ class MessageStore:
         except sqlite3.Error:
             return False
 
-    def get_pending_messages(self, agent: str, limit: int = 10) -> List[StoredMessage]:
+    def get_pending_messages(self, agent: str, limit: int = 10) -> list[StoredMessage]:
         """Get unprocessed messages for an agent, ordered by timestamp."""
         with self._conn() as conn:
             rows = conn.execute(

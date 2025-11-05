@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import dataclasses
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Set
+from typing import Any
 
 import yaml
 
@@ -22,12 +22,14 @@ class DeploymentAgent:
     """Agent entry inside a deployment group."""
 
     id: str
-    monitor: Optional[str] = None
-    provider: Optional[str] = None
-    model: Optional[str] = None
-    system_prompt: Optional[str] = None
-    start_delay_ms: Optional[int] = None
-    process_backlog: Optional[bool] = None  # DEPRECATED: Kept for backward compatibility, defaults to False
+    monitor: str | None = None
+    provider: str | None = None
+    model: str | None = None
+    system_prompt: str | None = None
+    start_delay_ms: int | None = None
+    process_backlog: bool | None = (
+        None  # DEPRECATED: Kept for backward compatibility, defaults to False
+    )
 
 
 @dataclasses.dataclass
@@ -37,9 +39,9 @@ class DeploymentGroup:
     id: str
     name: str
     description: str
-    defaults: Dict[str, Any]
-    agents: List[DeploymentAgent]
-    tags: List[str]
+    defaults: dict[str, Any]
+    agents: list[DeploymentAgent]
+    tags: list[str]
     environment: str = "any"
 
 
@@ -49,7 +51,7 @@ class DeploymentLoader:
     def __init__(self, base_dir: Path):
         self.base_dir = base_dir
         self.config_path = self.base_dir / "configs" / "deployment_groups.yaml"
-        self._groups: Dict[str, DeploymentGroup] = {}
+        self._groups: dict[str, DeploymentGroup] = {}
         self._config_loader = ConfigLoader(base_dir)
         self.reload()
 
@@ -61,7 +63,7 @@ class DeploymentLoader:
             return
 
         try:
-            with open(self.config_path, "r") as f:
+            with open(self.config_path) as f:
                 raw_config = yaml.safe_load(f) or {}
         except Exception as e:
             print(f"Error loading deployment groups: {e}")
@@ -72,7 +74,7 @@ class DeploymentLoader:
             print("deployment_groups.yaml: 'deployment_groups' must be a mapping")
             return
 
-        existing_agents: Set[str] = {
+        existing_agents: set[str] = {
             entry["agent_name"] for entry in self._config_loader.list_configs()
         }
 
@@ -87,8 +89,8 @@ class DeploymentLoader:
     def _parse_group(
         self,
         group_id: str,
-        group_info: Dict[str, Any],
-        existing_agents: Set[str],
+        group_info: dict[str, Any],
+        existing_agents: set[str],
     ) -> DeploymentGroup:
         """Parse a single group entry."""
         if not isinstance(group_info, dict):
@@ -103,14 +105,14 @@ class DeploymentLoader:
         if "agents" not in group_info or not isinstance(group_info["agents"], list):
             raise ValueError("Group must define an 'agents' list")
 
-        agents: List[DeploymentAgent] = []
-        skipped_agents: List[str] = []
+        agents: list[DeploymentAgent] = []
+        skipped_agents: list[str] = []
 
         for raw_agent in group_info["agents"]:
             try:
                 if isinstance(raw_agent, str):
                     agent_id = raw_agent
-                    agent_data: Dict[str, Any] = {}
+                    agent_data: dict[str, Any] = {}
                 elif isinstance(raw_agent, dict):
                     if "id" not in raw_agent:
                         print(f"    Skipping agent entry without 'id' in group '{group_id}'")
@@ -124,7 +126,9 @@ class DeploymentLoader:
                 # Validate agent exists, but don't fail - just skip
                 if not self._agent_exists(agent_id, existing_agents):
                     if agent_id.startswith("YOUR_") or "EXAMPLE" in agent_id.upper():
-                        print(f"   Placeholder agent '{agent_id}' - replace with your actual agent ID")
+                        print(
+                            f"   Placeholder agent '{agent_id}' - replace with your actual agent ID"
+                        )
                     else:
                         print(f"    Agent '{agent_id}' not found in configs/agents/ - skipping")
                         print(f"     Available agents: {', '.join(sorted(existing_agents))}")
@@ -147,14 +151,22 @@ class DeploymentLoader:
                 continue
 
         if skipped_agents:
-            has_placeholders = any(a.startswith("YOUR_") or "EXAMPLE" in a.upper() for a in skipped_agents)
+            has_placeholders = any(
+                a.startswith("YOUR_") or "EXAMPLE" in a.upper() for a in skipped_agents
+            )
             if has_placeholders:
-                print(f"   Group '{group_id}': Update placeholder agent names in deployment_groups.yaml")
+                print(
+                    f"   Group '{group_id}': Update placeholder agent names in deployment_groups.yaml"
+                )
             else:
-                print(f"   Group '{group_id}': {len(agents)} agents loaded, {len(skipped_agents)} skipped")
+                print(
+                    f"   Group '{group_id}': {len(agents)} agents loaded, {len(skipped_agents)} skipped"
+                )
 
         if not agents:
-            print(f"  ℹ  Group '{group_id}' has no valid agents - check agent IDs in deployment_groups.yaml")
+            print(
+                f"  ℹ  Group '{group_id}' has no valid agents - check agent IDs in deployment_groups.yaml"
+            )
             print(f"     Available agents: {', '.join(sorted(existing_agents))}")
             return None  # Return None instead of raising error
 
@@ -168,33 +180,29 @@ class DeploymentLoader:
             environment=environment,
         )
 
-    def _agent_exists(self, agent_id: str, existing_agents: Optional[Set[str]] = None) -> bool:
+    def _agent_exists(self, agent_id: str, existing_agents: set[str] | None = None) -> bool:
         """Check if agent configuration file exists (non-throwing)."""
         if existing_agents is None:
-            existing_agents = {
-                entry["agent_name"] for entry in self._config_loader.list_configs()
-            }
+            existing_agents = {entry["agent_name"] for entry in self._config_loader.list_configs()}
         return agent_id in existing_agents
 
-    def list_groups(self, environment: Optional[str] = None) -> List[DeploymentGroup]:
+    def list_groups(self, environment: str | None = None) -> list[DeploymentGroup]:
         """List deployment groups, optionally filtered by environment."""
         groups = list(self._groups.values())
         if environment and environment != "any":
-            return [
-                g for g in groups if g.environment in ("any", environment)
-            ]
+            return [g for g in groups if g.environment in ("any", environment)]
         return groups
 
-    def get_group(self, group_id: str) -> Optional[DeploymentGroup]:
+    def get_group(self, group_id: str) -> DeploymentGroup | None:
         """Return a group by id."""
         return self._groups.get(group_id)
 
 
 # Helper accessor used by other modules
-_deployment_loader: Optional[DeploymentLoader] = None
+_deployment_loader: DeploymentLoader | None = None
 
 
-def get_deployment_loader(base_dir: Optional[Path] = None) -> DeploymentLoader:
+def get_deployment_loader(base_dir: Path | None = None) -> DeploymentLoader:
     """Get (and cache) the deployment loader instance."""
     global _deployment_loader
     if _deployment_loader is None:

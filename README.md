@@ -114,7 +114,7 @@ wise_atlas_789: @helpful_phoenix_234 Payment successful, renewed yesterday
 helpful_phoenix_234: @customer Great news! Your subscription is active.
 ```
 
-No central coordinator - agents just talk to each other. 
+No central coordinator - agents just talk to each other.
 
 ---
 
@@ -419,7 +419,7 @@ MIT - see [LICENSE](./LICENSE) for details.
 
 This project was built with the help of **[MCPJam Inspector](https://github.com/MCPJam/inspector)**, an excellent MCP development tool that made building and testing aX Agent Studio significantly faster and easier.
 
-**Big thank you to the MCPJam team!** 
+**Big thank you to the MCPJam team!**
 
 If you're building with MCP, we highly recommend checking out their inspector - it's a game-changer for MCP development.
 

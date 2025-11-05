@@ -38,6 +38,19 @@ dependencies = [
     "claude-agent-sdk>=0.1.5",
 ]
 
+[project.optional-dependencies]
+dev = [
+    "pre-commit>=4.0.0",
+    "ruff>=0.8.0",
+    "mypy>=1.13.0",
+    "bandit[toml]>=1.7.0",
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+    "playwright>=1.48.0",
+    "types-pyyaml>=6.0.0",
+    "types-aiofiles>=24.0.0",
+]
+
 [project.urls]
 Homepage = "https://github.com/ax-platform/ax-agent-studio"
 Documentation = "https://github.com/ax-platform/ax-agent-studio/blob/main/README.md"
@@ -47,3 +60,82 @@ Issues = "https://github.com/ax-platform/ax-agent-studio/issues"
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+# Ruff configuration
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+exclude = [
+    ".git",
+    ".venv",
+    "venv",
+    "__pycache__",
+    "*.pyc",
+    ".pytest_cache",
+    ".mypy_cache",
+    ".ruff_cache",
+    "build",
+    "dist",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # pyflakes
+    "I",      # isort
+]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+    "E402",   # Module level import not at top - tests need special imports
+    "E712",   # Comparison to True/False - tests use explicit comparisons
+    "F401",   # Unused import - will clean up later
+    "F841",   # Unused variable - will clean up later
+    "F811",   # Redefinition of unused variable - will clean up later
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["ARG", "S101"]  # Allow assert and unused args in tests
+"scripts/*" = ["T201"]        # Allow print() in scripts
+
+[tool.ruff.lint.isort]
+known-first-party = ["ax_agent_studio"]
+
+# Mypy configuration
+[tool.mypy]
+python_version = "3.13"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false  # Start lenient, can tighten later
+check_untyped_defs = true
+ignore_missing_imports = true
+exclude = [
+    "venv",
+    ".venv",
+    "tests",
+    "scripts",
+]
+
+# Bandit security configuration
+[tool.bandit]
+exclude_dirs = ["tests", ".venv", "venv"]
+skips = ["B101"]  # Allow assert statements
+
+# Pytest configuration
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--tb=short",
+]
+markers = [
+    "e2e: End-to-end tests requiring dashboard",
+    "unit: Unit tests",
+    "integration: Integration tests",
+]

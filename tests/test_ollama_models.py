@@ -12,6 +12,7 @@ Note: These tests are skipped if Ollama is not installed/running
 
 import asyncio
 import subprocess
+
 import pytest
 
 
@@ -22,9 +23,7 @@ async def test_ollama_list_command():
 
     try:
         process = await asyncio.create_subprocess_shell(
-            "ollama list",
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE
+            "ollama list", stdout=subprocess.PIPE, stderr=subprocess.PIPE
         )
         stdout, stderr = await process.communicate()
 
@@ -32,7 +31,7 @@ async def test_ollama_list_command():
             print(f"   FAIL: ollama list failed: {stderr.decode()}")
             return False
 
-        lines = stdout.decode().strip().split('\n')
+        lines = stdout.decode().strip().split("\n")
         model_count = len(lines) - 1  # Exclude header
 
         print(f"   PASS: Found {model_count} Ollama models")
@@ -56,7 +55,7 @@ async def test_providers_loader():
 
         from ax_agent_studio.dashboard.backend.providers_loader import get_models_for_provider
 
-        models = await get_models_for_provider('ollama')
+        models = await get_models_for_provider("ollama")
 
         if not models:
             print("   FAIL: No models returned")
@@ -64,7 +63,7 @@ async def test_providers_loader():
 
         # Verify structure
         for model in models:
-            if not all(k in model for k in ['id', 'name', 'description']):
+            if not all(k in model for k in ["id", "name", "description"]):
                 print(f"   FAIL: Invalid model structure: {model}")
                 return False
 
@@ -77,6 +76,7 @@ async def test_providers_loader():
     except Exception as e:
         print(f"   FAIL: Exception: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
@@ -97,7 +97,7 @@ async def test_dashboard_endpoint():
                 return True  # Not a failure, just can't test
 
             data = response.json()
-            models = data.get('models', [])
+            models = data.get("models", [])
 
             if not models:
                 print("   FAIL: No models returned from API")

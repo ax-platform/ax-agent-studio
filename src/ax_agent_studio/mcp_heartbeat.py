@@ -21,8 +21,8 @@ Usage:
 import asyncio
 import logging
 from datetime import datetime
+
 from mcp import ClientSession
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -30,8 +30,8 @@ logger = logging.getLogger(__name__)
 async def keep_alive(
     session: ClientSession,
     interval: int = 240,
-    name: Optional[str] = None,
-    stop_event: Optional[asyncio.Event] = None
+    name: str | None = None,
+    stop_event: asyncio.Event | None = None,
 ) -> None:
     """
     Keep MCP connection alive with periodic pings.
@@ -77,17 +77,14 @@ async def keep_alive(
             ping_count += 1
 
             # Handle different result types (some MCP servers return EmptyResult)
-            if hasattr(result, 'status') and hasattr(result, 'timestamp'):
+            if hasattr(result, "status") and hasattr(result, "timestamp"):
                 logger.info(
                     f" {prefix}PING #{ping_count}: {result.status} "
                     f"(took {ping_duration:.2f}s, server time: {result.timestamp})"
                 )
             else:
                 # EmptyResult or minimal response - ping succeeded but no metadata
-                logger.info(
-                    f" {prefix}PING #{ping_count}: OK "
-                    f"(took {ping_duration:.2f}s)"
-                )
+                logger.info(f" {prefix}PING #{ping_count}: OK " f"(took {ping_duration:.2f}s)")
 
         except asyncio.CancelledError:
             logger.info(f" {prefix}Heartbeat cancelled")
@@ -102,8 +99,7 @@ async def keep_alive(
     # Log final stats
     if ping_count > 0 or ping_failures > 0:
         logger.info(
-            f" {prefix}Heartbeat stopped: "
-            f"{ping_count} pings sent, {ping_failures} failures"
+            f" {prefix}Heartbeat stopped: " f"{ping_count} pings sent, {ping_failures} failures"
         )
 
 
@@ -137,10 +133,7 @@ class HeartbeatManager:
         logger.info(f" HeartbeatManager initialized (interval: {interval}s)")
 
     async def start(
-        self,
-        session: ClientSession,
-        name: str,
-        interval: Optional[int] = None
+        self, session: ClientSession, name: str, interval: int | None = None
     ) -> asyncio.Task:
         """
         Start heartbeat for a session.
@@ -157,9 +150,7 @@ class HeartbeatManager:
             logger.warning(f"  Heartbeat already running for {name}, stopping old one")
             await self.stop(name)
 
-        task = asyncio.create_task(
-            keep_alive(session, interval or self.interval, name)
-        )
+        task = asyncio.create_task(keep_alive(session, interval or self.interval, name))
         self.tasks[name] = task
         logger.info(f" Heartbeat started for {name}")
         return task
@@ -182,7 +173,4 @@ class HeartbeatManager:
 
     def get_stats(self) -> dict[str, int]:
         """Get statistics about active heartbeats."""
-        return {
-            "active_heartbeats": len(self.tasks),
-            "task_names": list(self.tasks.keys())
-        }
+        return {"active_heartbeats": len(self.tasks), "task_names": list(self.tasks.keys())}

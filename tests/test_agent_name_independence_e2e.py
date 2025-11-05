@@ -12,7 +12,6 @@ import json
 import tempfile
 import time
 from pathlib import Path
-from typing import Dict
 
 import requests
 
@@ -41,29 +40,33 @@ class AgentNameIndependenceE2ETest:
         # Find the real mismatched config
         ghost_config = None
         for config in configs:
-            if config['filename'] == 'local_ghost.json' and config['agent_name'] == 'ghost_ray_363':
+            if config["filename"] == "local_ghost.json" and config["agent_name"] == "ghost_ray_363":
                 ghost_config = config
                 break
 
-        assert ghost_config is not None, \
-            "Real-world example not found: local_ghost.json should have agent_name ghost_ray_363"
+        assert (
+            ghost_config is not None
+        ), "Real-world example not found: local_ghost.json should have agent_name ghost_ray_363"
 
         # CRITICAL: agent_name must be extracted from URL, not filename
-        assert ghost_config['agent_name'] == 'ghost_ray_363', \
-            f"Expected agent_name 'ghost_ray_363' from URL, got '{ghost_config['agent_name']}'"
+        assert (
+            ghost_config["agent_name"] == "ghost_ray_363"
+        ), f"Expected agent_name 'ghost_ray_363' from URL, got '{ghost_config['agent_name']}'"
 
-        assert ghost_config['filename'] == 'local_ghost.json', \
-            f"Expected filename 'local_ghost.json', got '{ghost_config['filename']}'"
+        assert (
+            ghost_config["filename"] == "local_ghost.json"
+        ), f"Expected filename 'local_ghost.json', got '{ghost_config['filename']}'"
 
         # Verify agent name is in the URL
-        assert '/mcp/agents/ghost_ray_363' in ghost_config['server_url'], \
-            f"URL should contain '/mcp/agents/ghost_ray_363', got '{ghost_config['server_url']}'"
+        assert (
+            "/mcp/agents/ghost_ray_363" in ghost_config["server_url"]
+        ), f"URL should contain '/mcp/agents/ghost_ray_363', got '{ghost_config['server_url']}'"
 
-        print(f"✅ Real-world config with mismatched filename:")
+        print("✅ Real-world config with mismatched filename:")
         print(f"   Filename: {ghost_config['filename']}")
         print(f"   Agent name: {ghost_config['agent_name']}")
         print(f"   URL: {ghost_config['server_url']}")
-        print(f"   ✅ Agent name correctly extracted from URL, NOT filename!")
+        print("   ✅ Agent name correctly extracted from URL, NOT filename!")
 
         return True
 
@@ -79,16 +82,17 @@ class AgentNameIndependenceE2ETest:
 
         verified_count = 0
         for config in configs:
-            if config.get('server_url') and '/mcp/agents/' in config['server_url']:
+            if config.get("server_url") and "/mcp/agents/" in config["server_url"]:
                 # Extract expected agent_name from URL
-                url_parts = config['server_url'].split('/mcp/agents/')
+                url_parts = config["server_url"].split("/mcp/agents/")
                 if len(url_parts) > 1:
                     expected_agent_name = url_parts[1].strip()
 
                     # Verify it matches the config's agent_name
-                    assert config['agent_name'] == expected_agent_name, \
-                        f"agent_name '{config['agent_name']}' doesn't match URL '{expected_agent_name}' " \
+                    assert config["agent_name"] == expected_agent_name, (
+                        f"agent_name '{config['agent_name']}' doesn't match URL '{expected_agent_name}' "
                         f"in {config['filename']}"
+                    )
 
                     verified_count += 1
                     print(f"✅ {config['filename']}: agent_name correctly extracted from URL")
@@ -108,16 +112,12 @@ class AgentNameIndependenceE2ETest:
         # This should be REJECTED (not fall back to filename)
         legacy_config_bad = {
             "server_url": "http://localhost:8002",
-            "oauth_url": "http://localhost:8001"
+            "oauth_url": "http://localhost:8001",
             # NOTE: No "agent_name" field!
         }
 
         with tempfile.NamedTemporaryFile(
-            mode='w',
-            suffix='.json',
-            prefix='bad_legacy_',
-            dir='configs/agents',
-            delete=False
+            mode="w", suffix=".json", prefix="bad_legacy_", dir="configs/agents", delete=False
         ) as f:
             temp_path = Path(f.name)
             json.dump(legacy_config_bad, f)
@@ -131,13 +131,11 @@ class AgentNameIndependenceE2ETest:
             configs = response.json()["configs"]
 
             # This config should NOT appear (should be skipped)
-            bad_config_found = any(
-                'bad_legacy' in config['filename']
-                for config in configs
-            )
+            bad_config_found = any("bad_legacy" in config["filename"] for config in configs)
 
-            assert not bad_config_found, \
-                "Config without agent_name was loaded - should have been rejected!"
+            assert (
+                not bad_config_found
+            ), "Config without agent_name was loaded - should have been rejected!"
 
             print("✅ Legacy config without explicit agent_name was correctly rejected")
             print("   (not using filename as fallback)")

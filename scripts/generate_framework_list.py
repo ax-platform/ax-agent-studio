@@ -10,8 +10,9 @@ Usage:
     python scripts/generate_framework_list.py
 """
 
-import yaml
 from pathlib import Path
+
+import yaml
 
 
 def generate_framework_list():
@@ -32,8 +33,7 @@ def generate_framework_list():
 
     # Sort frameworks: recommended first, then alphabetically
     sorted_frameworks = sorted(
-        frameworks.items(),
-        key=lambda x: (not x[1].get("recommended", False), x[1]["name"])
+        frameworks.items(), key=lambda x: (not x[1].get("recommended", False), x[1]["name"])
     )
 
     for fw_id, fw in sorted_frameworks:
@@ -73,9 +73,9 @@ def main():
 
     print(f"✅ Generated {output_path}")
     print(f"   {len(content.splitlines())} lines")
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Preview:")
-    print("="*60)
+    print("=" * 60)
     print(content)
 
 
