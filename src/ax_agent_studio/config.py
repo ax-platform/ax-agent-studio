@@ -5,15 +5,16 @@ Loads settings from config.yaml in the project root.
 """
 
 import json
-import yaml
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
+
+import yaml
 
 # Find the project root (where config.yaml lives)
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 
 
-def load_config() -> Dict[str, Any]:
+def load_config() -> dict[str, Any]:
     """Load configuration from config.yaml."""
     config_path = PROJECT_ROOT / "config.yaml"
 
@@ -23,7 +24,7 @@ def load_config() -> Dict[str, Any]:
             "Please create config.yaml in the project root."
         )
 
-    with open(config_path, "r") as f:
+    with open(config_path) as f:
         config = yaml.safe_load(f)
 
     return config
@@ -34,27 +35,27 @@ config = load_config()
 
 
 # Convenience accessors
-def get_mcp_config() -> Dict[str, str]:
+def get_mcp_config() -> dict[str, str]:
     """Get MCP server configuration."""
     return config.get("mcp", {})
 
 
-def get_monitor_config() -> Dict[str, Any]:
+def get_monitor_config() -> dict[str, Any]:
     """Get monitor configuration."""
     return config.get("monitors", {})
 
 
-def get_ollama_config() -> Dict[str, str]:
+def get_ollama_config() -> dict[str, str]:
     """Get Ollama configuration."""
     return config.get("ollama", {})
 
 
-def get_dashboard_config() -> Dict[str, Any]:
+def get_dashboard_config() -> dict[str, Any]:
     """Get dashboard configuration."""
     return config.get("dashboard", {})
 
 
-def resolve_agent_config(agent_name: str, config_path: Optional[str] = None) -> Dict[str, Any]:
+def resolve_agent_config(agent_name: str, config_path: str | None = None) -> dict[str, Any]:
     """
     Resolve agent configuration file dynamically.
 
@@ -121,7 +122,7 @@ def resolve_agent_config(agent_name: str, config_path: Optional[str] = None) -> 
                     if arg.startswith("http") and "/agents/" in arg:
                         url_agent_name = arg.split("/agents/")[1].split("/")[0].split("?")[0]
                         if url_agent_name == agent_name:
-                            print(f"✅ Found config for {agent_name} in: {config_file.name}")
+                            print(f" Found config for {agent_name} in: {config_file.name}")
                             return agent_config
         except (json.JSONDecodeError, KeyError):
             # Skip invalid JSON files

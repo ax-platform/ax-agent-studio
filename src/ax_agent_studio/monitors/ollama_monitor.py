@@ -8,11 +8,13 @@ Flow:
 3. OUTPUT: Reply with AI-generated message
 4. Loop back to step 1
 """
+
 import asyncio
-import sys
-from openai import OpenAI
+
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
+from openai import OpenAI
+
 from ax_agent_studio.config import get_mcp_config, get_monitor_config, get_ollama_config
 
 
@@ -21,24 +23,24 @@ async def ollama_monitor(
     server_url: str,
     model: str = "gpt-oss:latest",
     ollama_url: str = "http://localhost:11434/v1",
-    history_limit: int = 25
+    history_limit: int = 25,
 ):
     """Monitor for mentions and respond with Ollama AI using FIFO queue"""
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f" OLLAMA AI MONITOR: {agent_name}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     print(f"Server: {server_url}")
     print(f"Model: {model}")
     print(f"Ollama: {ollama_url}")
-    print(f"Mode: FIFO queue")
-    print(f"{'='*60}\n")
+    print("Mode: FIFO queue")
+    print(f"{'=' * 60}\n")
 
     # Initialize Ollama client
     ollama = OpenAI(base_url=ollama_url, api_key="ollama")
 
     # System prompt for the AI - make identity VERY clear
-    system_prompt = f""" YOUR IDENTITY 
+    system_prompt = f""" YOUR IDENTITY
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 YOU ARE: @{agent_name}
 YOUR USERNAME: {agent_name}
@@ -83,7 +85,7 @@ Example:
             from ax_agent_studio.conversation_memory import (
                 fetch_conversation_context,
                 format_conversation_for_llm,
-                get_conversation_summary
+                get_conversation_summary,
             )
 
             # Define message handler (pluggable function for QueueManager)
@@ -102,9 +104,7 @@ Example:
 
                 # Fetch last 25 messages for conversation context (chirpy-style!)
                 context_messages = await fetch_conversation_context(
-                    session=session,
-                    agent_name=agent_name,
-                    limit=history_limit
+                    session=session, agent_name=agent_name, limit=history_limit
                 )
 
                 # Log conversation context
@@ -112,16 +112,12 @@ Example:
                 print(f" Context: {summary}")
 
                 # Format conversation for LLM (includes context + current message)
-                current_message = {
-                    "sender": sender,
-                    "content": content,
-                    "id": msg_id
-                }
+                current_message = {"sender": sender, "content": content, "id": msg_id}
                 conversation = format_conversation_for_llm(
                     messages=context_messages,
                     current_message=current_message,
                     agent_name=agent_name,
-                    system_prompt=system_prompt
+                    system_prompt=system_prompt,
                 )
 
                 try:
@@ -150,10 +146,11 @@ Example:
 
                 except Exception as e:
                     print(f"     Ollama error: {e}")
-                    return f"@{sender} Sorry, I'm having trouble thinking right now. Error: {str(e)}"
+                    return f"@{sender} Sorry, I'm having trouble thinking right now. Error: {e!s}"
 
             # Use QueueManager for FIFO processing
             from ax_agent_studio.queue_manager import QueueManager
+
             monitor_config = get_monitor_config()
 
             queue_mgr = QueueManager(
@@ -163,7 +160,7 @@ Example:
                 mark_read=monitor_config.get("mark_read", False),
                 startup_sweep=monitor_config.get("startup_sweep", True),
                 startup_sweep_limit=monitor_config.get("startup_sweep_limit", 10),
-                heartbeat_interval=monitor_config.get("heartbeat_interval", 240)
+                heartbeat_interval=monitor_config.get("heartbeat_interval", 240),
             )
 
             print(" Starting FIFO queue manager...\n")
@@ -180,11 +177,23 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Ollama AI Monitor for MCP agents")
     parser.add_argument("agent_name", help="Name of the agent to monitor")
     parser.add_argument("--config", help="Path to agent config JSON file")
-    parser.add_argument("--model", default=ollama_config.get("default_model", "gpt-oss:latest"), help="Ollama model to use")
+    parser.add_argument(
+        "--model",
+        default=ollama_config.get("default_model", "gpt-oss:latest"),
+        help="Ollama model to use",
+    )
     parser.add_argument("--server", help="MCP server URL (overrides config file)")
-    parser.add_argument("--ollama-url", default=ollama_config.get("base_url", "http://localhost:11434/v1"), help="Ollama API URL")
-    parser.add_argument("--history-limit", type=int, default=25,
-                       help="Number of recent messages to remember (default: 25)")
+    parser.add_argument(
+        "--ollama-url",
+        default=ollama_config.get("base_url", "http://localhost:11434/v1"),
+        help="Ollama API URL",
+    )
+    parser.add_argument(
+        "--history-limit",
+        type=int,
+        default=25,
+        help="Number of recent messages to remember (default: 25)",
+    )
 
     args = parser.parse_args()
 
@@ -224,9 +233,15 @@ if __name__ == "__main__":
     else:
         print("  No config or server provided, using global config.yaml")
         mcp_config = get_mcp_config()
-        server_url = f"{mcp_config.get('server_url', 'http://localhost:8002')}/mcp/agents/{args.agent_name}"
+        server_url = (
+            f"{mcp_config.get('server_url', 'http://localhost:8002')}/mcp/agents/{args.agent_name}"
+        )
 
     try:
-        asyncio.run(ollama_monitor(args.agent_name, server_url, args.model, args.ollama_url, args.history_limit))
+        asyncio.run(
+            ollama_monitor(
+                args.agent_name, server_url, args.model, args.ollama_url, args.history_limit
+            )
+        )
     except KeyboardInterrupt:
         print("\n\n AI Monitor stopped")

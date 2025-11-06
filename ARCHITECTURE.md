@@ -417,11 +417,11 @@ await asyncio.gather(poll_messages(), process_messages())
 
 | Framework | Provider Dropdown | Model Dropdown | System Prompt | How It Works |
 |-----------|------------------|----------------|---------------|--------------|
-| **Echo** | ❌ Hidden | ❌ Hidden | ❌ Hidden | No LLM needed - simple passthrough |
-| **Ollama** | ❌ Hidden | ✅ **SHOWN** | ✅ **SHOWN** | Provider fixed to `ollama`, user picks from Ollama models (llama3.2, qwen2.5, etc.) |
-| **Claude Agent SDK** | ❌ Hidden | ✅ **SHOWN** | ✅ **SHOWN** | Provider fixed to `anthropic`, user picks from Claude models (sonnet-4-5, haiku-4-5, etc.) |
-| **OpenAI Agents SDK** | ❌ Hidden | ✅ **SHOWN** | ✅ **SHOWN** | Provider fixed to `openai`, user picks from OpenAI models (gpt-5, gpt-5-mini, o4-mini, etc.) |
-| **LangGraph** | ✅ **SHOWN** | ✅ **SHOWN** | ✅ **SHOWN** | User picks provider (anthropic/openai/google/bedrock/ollama), then model for that provider |
+| **Echo** |  Hidden |  Hidden |  Hidden | No LLM needed - simple passthrough |
+| **Ollama** |  Hidden |  **SHOWN** |  **SHOWN** | Provider fixed to `ollama`, user picks from Ollama models (llama3.2, qwen2.5, etc.) |
+| **Claude Agent SDK** |  Hidden |  **SHOWN** |  **SHOWN** | Provider fixed to `anthropic`, user picks from Claude models (sonnet-4-5, haiku-4-5, etc.) |
+| **OpenAI Agents SDK** |  Hidden |  **SHOWN** |  **SHOWN** | Provider fixed to `openai`, user picks from OpenAI models (gpt-5, gpt-5-mini, o4-mini, etc.) |
+| **LangGraph** |  **SHOWN** |  **SHOWN** |  **SHOWN** | User picks provider (anthropic/openai/google/bedrock/ollama), then model for that provider |
 
 **Key Design Principles:**
 

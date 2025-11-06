@@ -23,26 +23,17 @@ class LogStreamer:
 
             if not log_file.exists():
                 await websocket.send_json(
-                    {
-                        "type": "error",
-                        "message": f"Log file not found for monitor {monitor_id}",
-                    }
+                    {"type": "error", "message": f"Log file not found for monitor {monitor_id}"}
                 )
                 return
 
             # Send existing logs first
             try:
-                async with aiofiles.open(
-                    log_file, "r", encoding="utf-8", errors="replace"
-                ) as f:
+                async with aiofiles.open(log_file, "r", encoding="utf-8", errors="replace") as f:
                     content = await f.read()
                     if content:
                         await websocket.send_json(
-                            {
-                                "type": "log",
-                                "monitor_id": monitor_id,
-                                "content": content,
-                            }
+                            {"type": "log", "monitor_id": monitor_id, "content": content}
                         )
             except Exception as e:
                 await websocket.send_json(
@@ -63,33 +54,24 @@ class LogStreamer:
             log_files = list(self.log_dir.glob("*.log"))
 
             if not log_files:
-                await websocket.send_json(
-                    {"type": "info", "message": "No log files found"}
-                )
+                await websocket.send_json({"type": "info", "message": "No log files found"})
 
             # Send existing logs from all files
             for log_file in log_files:
                 try:
                     monitor_id = log_file.stem
-                    async with aiofiles.open(
-                        log_file, "r", encoding="utf-8", errors="replace"
-                    ) as f:
+                    async with aiofiles.open(log_file, "r", encoding="utf-8", errors="replace") as f:
                         content = await f.read()
                         if content:
                             await websocket.send_json(
-                                {
-                                    "type": "log",
-                                    "monitor_id": monitor_id,
-                                    "content": content,
-                                }
+                                {"type": "log", "monitor_id": monitor_id, "content": content}
                             )
                 except Exception as e:
                     print(f"Error reading {log_file}: {e}")
 
             # Tail all log files concurrently
             tasks = [
-                self._tail_log_file(websocket, log_file, log_file.stem)
-                for log_file in log_files
+                self._tail_log_file(websocket, log_file, log_file.stem) for log_file in log_files
             ]
 
             await asyncio.gather(*tasks, return_exceptions=True)
@@ -97,9 +79,7 @@ class LogStreamer:
             # Client disconnected - exit quietly
             return
 
-    async def _tail_log_file(
-        self, websocket: WebSocket, log_file: Path, monitor_id: str
-    ):
+    async def _tail_log_file(self, websocket: WebSocket, log_file: Path, monitor_id: str):
         """Tail a log file and send new lines via WebSocket"""
         import os
 
@@ -115,9 +95,7 @@ class LogStreamer:
             return
 
         try:
-            async with aiofiles.open(
-                log_file, "r", encoding="utf-8", errors="replace"
-            ) as f:
+            async with aiofiles.open(log_file, "r", encoding="utf-8", errors="replace") as f:
                 # Seek to end
                 await f.seek(0, 2)
                 last_pos = await f.tell()
@@ -136,9 +114,7 @@ class LogStreamer:
                         last_pos = 0
                         # Only log once per truncation cycle
                         if not truncation_logged:
-                            print(
-                                f"Detected truncation of {log_file}, resetting position"
-                            )
+                            print(f"Detected truncation of {log_file}, resetting position")
                             truncation_logged = True
                     else:
                         # Reset flag when file size is normal

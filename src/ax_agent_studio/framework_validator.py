@@ -7,11 +7,11 @@ Ensures all frameworks have required components before allowing deployment.
 
 import importlib
 from pathlib import Path
-from typing import Dict, List, Tuple
+
 import yaml
 
 
-def validate_frameworks(base_dir: Path) -> Tuple[bool, List[str]]:
+def validate_frameworks(base_dir: Path) -> tuple[bool, list[str]]:
     """
     Validate all frameworks have required components.
 
@@ -34,7 +34,7 @@ def validate_frameworks(base_dir: Path) -> Tuple[bool, List[str]]:
     errors = []
     warnings = []
 
-    print(f"\n🔍 Validating {len(frameworks)} framework(s)...")
+    print(f"\n Validating {len(frameworks)} framework(s)...")
 
     for framework_id, config in frameworks.items():
         print(f"\n   Checking {framework_id}...")
@@ -43,9 +43,7 @@ def validate_frameworks(base_dir: Path) -> Tuple[bool, List[str]]:
         required_fields = ["name", "emoji", "requires_provider", "requires_model"]
         for field in required_fields:
             if field not in config:
-                errors.append(
-                    f"Framework '{framework_id}': Missing required field '{field}'"
-                )
+                errors.append(f"Framework '{framework_id}': Missing required field '{field}'")
 
         # Check provider logic
         if not config.get("requires_provider", True):
@@ -72,7 +70,7 @@ def validate_frameworks(base_dir: Path) -> Tuple[bool, List[str]]:
         for module_path in monitor_module_patterns:
             try:
                 importlib.import_module(module_path)
-                print(f"      ✅ Monitor module found: {module_path}")
+                print(f"       Monitor module found: {module_path}")
                 monitor_found = True
                 break
             except ImportError:
@@ -84,19 +82,19 @@ def validate_frameworks(base_dir: Path) -> Tuple[bool, List[str]]:
                 f"Framework '{framework_id}': Could not find monitor module (tried {monitor_module_patterns})"
             )
 
-        print(f"      ✅ {framework_id} validated")
+        print(f"       {framework_id} validated")
 
     # Print summary
     print(f"\n{'=' * 60}")
     if errors:
-        print(f"❌ Framework validation FAILED with {len(errors)} error(s):")
+        print(f" Framework validation FAILED with {len(errors)} error(s):")
         for err in errors:
             print(f"   • {err}")
     else:
-        print(f"✅ All {len(frameworks)} frameworks validated successfully")
+        print(f" All {len(frameworks)} frameworks validated successfully")
 
     if warnings:
-        print(f"\n⚠️  {len(warnings)} warning(s):")
+        print(f"\n  {len(warnings)} warning(s):")
         for warn in warnings:
             print(f"   • {warn}")
 
@@ -105,7 +103,7 @@ def validate_frameworks(base_dir: Path) -> Tuple[bool, List[str]]:
     return len(errors) == 0, errors
 
 
-def get_framework_monitor_types(base_dir: Path) -> List[str]:
+def get_framework_monitor_types(base_dir: Path) -> list[str]:
     """
     Get list of valid monitor types from framework registry.
 
@@ -158,7 +156,7 @@ if __name__ == "__main__":
     success, errors = validate_frameworks(base_dir)
 
     if success:
-        print("✅ Framework validation passed")
+        print(" Framework validation passed")
 
         # Test helper functions
         monitor_types = get_framework_monitor_types(base_dir)
@@ -168,6 +166,6 @@ if __name__ == "__main__":
             show_provider = should_show_provider(mt, base_dir)
             print(f"  {mt}: show_provider={show_provider}")
     else:
-        print("❌ Framework validation failed")
+        print(" Framework validation failed")
         for err in errors:
             print(f"  {err}")

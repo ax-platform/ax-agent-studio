@@ -6,7 +6,12 @@ Tests that Gemini can work with MCP tools from start to finish
 
 import asyncio
 import os
+
+import pytest
 from dotenv import load_dotenv
+
+# Mark all tests in this file as e2e tests
+pytestmark = pytest.mark.e2e
 
 load_dotenv()
 
@@ -29,7 +34,7 @@ async def test_gemini_tool_schema():
         print("3⃣ Checking tool schemas...")
         for tool in tools[:3]:  # Check first 3 tools
             # args_schema might be a Pydantic model or already a dict
-            if hasattr(tool.args_schema, 'model_json_schema'):
+            if hasattr(tool.args_schema, "model_json_schema"):
                 schema = tool.args_schema.model_json_schema()
             elif isinstance(tool.args_schema, dict):
                 schema = tool.args_schema
@@ -39,10 +44,10 @@ async def test_gemini_tool_schema():
             print(f"   • {tool.name}")
 
             # Check for array types with missing items
-            properties = schema.get('properties', {})
+            properties = schema.get("properties", {})
             for prop_name, prop_def in properties.items():
-                if prop_def.get('type') == 'array':
-                    if 'items' not in prop_def and 'anyOf' not in prop_def:
+                if prop_def.get("type") == "array":
+                    if "items" not in prop_def and "anyOf" not in prop_def:
                         raise ValueError(
                             f" Tool {tool.name} has array parameter '{prop_name}' "
                             f"without 'items' definition!"
@@ -75,7 +80,6 @@ async def test_gemini_tool_schema():
         print("6⃣ Testing tool schema validation...")
         try:
             # This will validate schemas without actually making API call
-            from langchain_core.messages import HumanMessage
 
             # Just validate that we can create a message with tools
             # Don't actually invoke to save API costs
@@ -96,8 +100,9 @@ async def test_gemini_simple_call():
         print("  GOOGLE_API_KEY not set, skipping")
         return
 
-    from ax_agent_studio.llm_factory import create_llm
     from langchain_core.messages import HumanMessage
+
+    from ax_agent_studio.llm_factory import create_llm
 
     print("1⃣ Creating Gemini LLM...")
     llm = create_llm("gemini", "gemini-2.0-flash-exp", temperature=0)
@@ -127,5 +132,6 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"\n Test failed: {e}")
         import traceback
+
         traceback.print_exc()
         exit(1)

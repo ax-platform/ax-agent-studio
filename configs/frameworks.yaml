@@ -5,7 +5,7 @@ frameworks:
   echo:
     name: "Echo"
     description: "Simple echo/test monitor"
-    emoji: "🔊"
+    emoji: ""
     requires_provider: false
     requires_model: false
     provider: null
@@ -15,7 +15,7 @@ frameworks:
   ollama:
     name: "Ollama"
     description: "Local LLM integration"
-    emoji: "🤖"
+    emoji: ""
     requires_provider: false  # Provider is implicit (always ollama)
     requires_model: true
     provider: "ollama"  # Fixed provider
@@ -25,7 +25,7 @@ frameworks:
   claude_agent_sdk:
     name: "Claude Agent SDK"
     description: "Native Claude Code integration with SDK"
-    emoji: "🛡"
+    emoji: ""
     requires_provider: false  # Provider is implicit (always anthropic)
     requires_model: true
     provider: "anthropic"  # Fixed provider
@@ -36,7 +36,7 @@ frameworks:
   openai_agents_sdk:
     name: "OpenAI Agents SDK"
     description: "Official OpenAI agent framework with MCP"
-    emoji: "🤖"
+    emoji: ""
     requires_provider: false  # Provider is implicit (always openai)
     requires_model: true
     provider: "openai"  # Fixed provider
@@ -46,7 +46,7 @@ frameworks:
   langgraph:
     name: "LangGraph"
     description: "Advanced agentic workflows with graph-based routing"
-    emoji: "🧠"
+    emoji: ""
     requires_provider: true  # User selects provider
     requires_model: true
     provider: null  # User choice (anthropic, openai, google, bedrock, ollama)

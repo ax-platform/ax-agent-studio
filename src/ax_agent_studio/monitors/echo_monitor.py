@@ -11,12 +11,14 @@ Example:
 """
 
 import asyncio
-import sys
 import re
 from datetime import datetime
+
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
+
 from ax_agent_studio.config import get_mcp_config, get_monitor_config
+
 
 async def echo_monitor(agent_name, config_path=None):
     """
@@ -30,7 +32,7 @@ async def echo_monitor(agent_name, config_path=None):
     # Determine MCP server endpoint from agent config or fallback to global config
     if config_path:
         import json
-        from pathlib import Path
+
         print(f" Loading agent config from: {config_path}")
         with open(config_path) as f:
             agent_config = json.load(f)
@@ -78,24 +80,27 @@ async def echo_monitor(agent_name, config_path=None):
     server_params = StdioServerParameters(
         command="npx",
         args=[
-            "-y", "mcp-remote@0.1.29",
+            "-y",
+            "mcp-remote@0.1.29",
             server_url,
-            "--transport", "http-only",
+            "--transport",
+            "http-only",
             "--allow-http",
-            "--oauth-server", oauth_server
-        ]
+            "--oauth-server",
+            oauth_server,
+        ],
     )
 
     print(f" Echo Monitor starting for @{agent_name}")
     print(f"   Server: {server_url}")
-    print(f"   Mode: FIFO queue")
-    print(f"   Press Ctrl+C to stop\n")
+    print("   Mode: FIFO queue")
+    print("   Press Ctrl+C to stop\n")
 
     try:
         async with stdio_client(server_params) as (read, write):
             async with ClientSession(read, write) as session:
                 await session.initialize()
-                print(f" Connected to MCP server\n")
+                print(" Connected to MCP server\n")
 
                 # Define message handler (pluggable function for QueueManager)
                 async def handle_message(msg: dict) -> str:
@@ -106,29 +111,29 @@ async def echo_monitor(agent_name, config_path=None):
 
                     try:
                         # Extract just the message text (after the @mention)
-                        match = re.search(r'@\S+\s+(.+)', content)
+                        match = re.search(r"@\S+\s+(.+)", content)
                         if match:
                             original_msg = match.group(1).strip()
                         else:
                             original_msg = content.strip()
 
                         # Remove trailing "..." if present
-                        if original_msg.endswith('...'):
+                        if original_msg.endswith("..."):
                             original_msg = original_msg[:-3]
 
                         # Filter out echo responses to prevent infinite loops
                         if "Echo received at" in original_msg:
-                            print(f"   Ignoring echo response (prevents loop)")
+                            print("   Ignoring echo response (prevents loop)")
                             return None  # Skip this message
 
                         # Echo back with timestamp and message ID
-                        timestamp = datetime.now().strftime('%H:%M:%S')
+                        timestamp = datetime.now().strftime("%H:%M:%S")
                         msg_id_short = msg_id[:8] if len(msg_id) > 8 else msg_id
                         return f"Echo received at {timestamp} from @{sender} [id:{msg_id_short}]: {original_msg} "
 
                     except Exception as e:
                         print(f"   Error parsing message: {e}")
-                        timestamp = datetime.now().strftime('%H:%M:%S')
+                        timestamp = datetime.now().strftime("%H:%M:%S")
                         return f"Echo received at {timestamp} from @{sender}! "
 
                 # Use QueueManager for FIFO processing
@@ -141,7 +146,7 @@ async def echo_monitor(agent_name, config_path=None):
                     mark_read=monitor_config.get("mark_read", False),
                     startup_sweep=monitor_config.get("startup_sweep", True),
                     startup_sweep_limit=monitor_config.get("startup_sweep_limit", 10),
-                    heartbeat_interval=monitor_config.get("heartbeat_interval", 240)
+                    heartbeat_interval=monitor_config.get("heartbeat_interval", 240),
                 )
 
                 print(" Starting FIFO queue manager...\n")
@@ -152,7 +157,9 @@ async def echo_monitor(agent_name, config_path=None):
     except Exception as e:
         print(f"\n Error: {e}")
         import traceback
+
         traceback.print_exc()
+
 
 if __name__ == "__main__":
     import argparse

@@ -38,15 +38,11 @@ def sanitize_agent_name(agent_name: str) -> str:
 
     # Ensure it's not empty after sanitization
     if not sanitized or sanitized.isspace():
-        raise ValueError(
-            f"Invalid agent_name '{agent_name}': must contain alphanumeric characters"
-        )
+        raise ValueError(f"Invalid agent_name '{agent_name}': must contain alphanumeric characters")
 
     # Prevent path traversal
     if ".." in agent_name or "/" in agent_name or "\\" in agent_name:
-        raise ValueError(
-            f"Invalid agent_name '{agent_name}': cannot contain path separators"
-        )
+        raise ValueError(f"Invalid agent_name '{agent_name}': cannot contain path separators")
 
     return sanitized
 
@@ -62,9 +58,7 @@ class ProcessManager:
         self.deployment_loader: DeploymentLoader = get_deployment_loader(base_dir)
         self.message_store = MessageStore()
 
-    def _resolve_system_prompt(
-        self, prompt_ref: str | None
-    ) -> tuple[str | None, str | None]:
+    def _resolve_system_prompt(self, prompt_ref: str | None) -> tuple[str | None, str | None]:
         """
         Resolve system prompt reference to actual text.
 
@@ -220,9 +214,7 @@ class ProcessManager:
                     "config_path": self.monitors.get(monitor_id, {}).get("config_path")
                     if monitor_id
                     else None,
-                    "model": self.monitors.get(monitor_id, {}).get("model")
-                    if monitor_id
-                    else None,
+                    "model": self.monitors.get(monitor_id, {}).get("model") if monitor_id else None,
                     "provider": self.monitors.get(monitor_id, {}).get("provider")
                     if monitor_id
                     else None,
@@ -231,19 +223,13 @@ class ProcessManager:
                     )
                     if monitor_id
                     else None,
-                    "mcp_servers": self.monitors.get(monitor_id, {}).get(
-                        "mcp_servers", []
-                    )
+                    "mcp_servers": self.monitors.get(monitor_id, {}).get("mcp_servers", [])
                     if monitor_id
                     else [],
-                    "environment": self.monitors.get(monitor_id, {}).get(
-                        "environment", "unknown"
-                    )
+                    "environment": self.monitors.get(monitor_id, {}).get("environment", "unknown")
                     if monitor_id
                     else "unknown",
-                    "deployment_group": self.monitors.get(monitor_id, {}).get(
-                        "deployment_group"
-                    )
+                    "deployment_group": self.monitors.get(monitor_id, {}).get("deployment_group")
                     if monitor_id
                     else None,
                     "tracked": tracked,  # Is dashboard tracking this?
@@ -361,10 +347,7 @@ class ProcessManager:
 
         # Kill any existing monitors for this agent (in our tracking)
         for monitor_id, info in list(self.monitors.items()):
-            if (
-                info.get("agent_name") == agent_name
-                and info.get("monitor_type") == monitor_type
-            ):
+            if info.get("agent_name") == agent_name and info.get("monitor_type") == monitor_type:
                 print(f"Stopping existing {monitor_type} monitor for {agent_name}")
                 await self.stop_monitor(monitor_id)
                 self.delete_monitor(monitor_id)
@@ -390,9 +373,7 @@ class ProcessManager:
                 try:
                     cmdline = proc.info.get("cmdline", [])
                     if cmdline and isinstance(cmdline, list):
-                        lower_args = [
-                            arg.lower() for arg in cmdline if isinstance(arg, str)
-                        ]
+                        lower_args = [arg.lower() for arg in cmdline if isinstance(arg, str)]
                         # Match monitor processes for this specific agent
                         if (
                             any("ax_agent_studio.monitors" in arg for arg in lower_args)
@@ -405,11 +386,7 @@ class ProcessManager:
                             )
                             proc.kill()
                             killed_count += 1
-                except (
-                    psutil.NoSuchProcess,
-                    psutil.AccessDenied,
-                    psutil.ZombieProcess,
-                ):
+                except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
                     pass
 
             if killed_count > 0:
@@ -522,9 +499,7 @@ class ProcessManager:
 
         # Prepare environment variables (include system prompt if provided)
         env = os.environ.copy()
-        env["PYTHONPATH"] = str(
-            self.base_dir / "src"
-        )  # Needed since we're not using uv run
+        env["PYTHONPATH"] = str(self.base_dir / "src")  # Needed since we're not using uv run
         if system_prompt:
             env["AGENT_SYSTEM_PROMPT"] = system_prompt
 
@@ -569,9 +544,7 @@ class ProcessManager:
                             for arg in args:
                                 if isinstance(arg, str) and "/mcp/agents/" in arg:
                                     # localhost = local, otherwise = production
-                                    environment = (
-                                        "local" if "localhost" in arg else "production"
-                                    )
+                                    environment = "local" if "localhost" in arg else "production"
                                     break
                             break
         except Exception as e:
@@ -603,12 +576,7 @@ class ProcessManager:
         self, agent_name: str, config_path: str | None = None
     ) -> dict[str, Any]:
         """Clear MCP backlog and local queue for a single agent."""
-        summary = {
-            "agent": agent_name,
-            "remote_cleared": 0,
-            "local_cleared": 0,
-            "errors": [],
-        }
+        summary = {"agent": agent_name, "remote_cleared": 0, "local_cleared": 0, "errors": []}
 
         if not config_path:
             try:
@@ -657,9 +625,7 @@ class ProcessManager:
             summary["errors"].append(f"remote: {e}")
 
         if summary["errors"]:
-            print(
-                f"Reset backlog warnings for {agent_name}: {', '.join(summary['errors'])}"
-            )
+            print(f"Reset backlog warnings for {agent_name}: {', '.join(summary['errors'])}")
 
         return summary
 
@@ -674,9 +640,7 @@ class ProcessManager:
             name = monitor.get("agent_name")
             if not name:
                 continue
-            state = agent_state.setdefault(
-                name, {"running": False, "environments": set()}
-            )
+            state = agent_state.setdefault(name, {"running": False, "environments": set()})
             if monitor.get("status") == "running":
                 state["running"] = True
             env = monitor.get("environment") or "any"
@@ -766,14 +730,10 @@ class ProcessManager:
             raise ValueError(f"Deployment group '{group_id}' not found")
 
         if environment and group.environment not in ("any", environment):
-            raise ValueError(
-                f"Group '{group_id}' is not available for environment '{environment}'"
-            )
+            raise ValueError(f"Group '{group_id}' is not available for environment '{environment}'")
 
         # Stop existing deployment if already running
-        if group_id in self.group_deployments and self.group_deployments[group_id].get(
-            "monitors"
-        ):
+        if group_id in self.group_deployments and self.group_deployments[group_id].get("monitors"):
             await self.stop_deployment_group(group_id)
 
         started_monitor_ids: list[str] = []
@@ -802,9 +762,7 @@ class ProcessManager:
                 "claude_agent_sdk",
                 "openai_agents_sdk",
             }:
-                raise ValueError(
-                    f"Unsupported monitor type '{monitor_type}' in group '{group_id}'"
-                )
+                raise ValueError(f"Unsupported monitor type '{monitor_type}' in group '{group_id}'")
 
             config_path = self._get_agent_config_path(agent.id)
             monitor_id = await self.start_monitor(
@@ -850,9 +808,7 @@ class ProcessManager:
 
         return stopped
 
-    def get_deployment_groups(
-        self, environment: str | None = None
-    ) -> list[dict[str, Any]]:
+    def get_deployment_groups(self, environment: str | None = None) -> list[dict[str, Any]]:
         """Return deployment groups with runtime status."""
         groups = self.deployment_loader.list_groups(environment)
         response: list[dict[str, Any]] = []
@@ -956,9 +912,7 @@ class ProcessManager:
                 try:
                     pgid = os.getpgid(pid)
                     os.killpg(pgid, signal.SIGTERM)
-                    print(
-                        f"Sent SIGTERM to process group {pgid} for monitor {monitor_id}"
-                    )
+                    print(f"Sent SIGTERM to process group {pgid} for monitor {monitor_id}")
                 except (ProcessLookupError, PermissionError, AttributeError):
                     # Fallback to single process
                     process.terminate()
@@ -974,9 +928,7 @@ class ProcessManager:
                     try:
                         pgid = os.getpgid(pid)
                         os.killpg(pgid, signal.SIGKILL)
-                        print(
-                            f"Force killed process group {pgid} for monitor {monitor_id}"
-                        )
+                        print(f"Force killed process group {pgid} for monitor {monitor_id}")
                     except (ProcessLookupError, PermissionError, AttributeError):
                         process.kill()
                 else:
@@ -1085,9 +1037,7 @@ class ProcessManager:
             # Log shutdown
             log_file = Path(info.get("log_file"))
             with open(log_file, "a", encoding="utf-8") as f:
-                f.write(
-                    f"\n=== Monitor killed (forced) at {datetime.now().isoformat()} ===\n"
-                )
+                f.write(f"\n=== Monitor killed (forced) at {datetime.now().isoformat()} ===\n")
 
             self._deregister_monitor_from_group(monitor_id)
 
@@ -1253,9 +1203,7 @@ class ProcessManager:
         if from_agent_environment:
             # Look up agent in specific environment
             configs = self.config_loader.list_configs(from_agent_environment)
-            from_agent_config = next(
-                (c for c in configs if c["agent_name"] == from_agent), None
-            )
+            from_agent_config = next((c for c in configs if c["agent_name"] == from_agent), None)
         else:
             # Fallback: search all environments
             all_configs = self.config_loader.list_configs()
@@ -1266,11 +1214,7 @@ class ProcessManager:
         if not from_agent_config:
             raise ValueError(
                 f"Test sender agent '{from_agent}' not found"
-                + (
-                    f" in environment '{from_agent_environment}'"
-                    if from_agent_environment
-                    else ""
-                )
+                + (f" in environment '{from_agent_environment}'" if from_agent_environment else "")
             )
 
         # Get server URL and OAuth URL from the agent's config
@@ -1278,9 +1222,7 @@ class ProcessManager:
         oauth_url = from_agent_config.get("oauth_url")
 
         if not server_url or not oauth_url:
-            raise ValueError(
-                f"Agent '{from_agent}' config is missing server_url or oauth_url"
-            )
+            raise ValueError(f"Agent '{from_agent}' config is missing server_url or oauth_url")
 
         server_params = StdioServerParameters(
             command="npx",
@@ -1304,13 +1246,9 @@ class ProcessManager:
                     # Send message with @mention
                     full_message = f"@{to_agent} {message}"
 
-                    await session.call_tool(
-                        "messages", {"action": "send", "content": full_message}
-                    )
+                    await session.call_tool("messages", {"action": "send", "content": full_message})
 
                     return True
         except Exception as e:
-            print(
-                f"Error sending message from {from_agent} ({from_agent_environment}): {e}"
-            )
+            print(f"Error sending message from {from_agent} ({from_agent_environment}): {e}")
             raise

@@ -9,19 +9,17 @@ Key principle: Each time agent receives a message, fetch last N messages
 from server to understand conversation context, then reply to current message.
 """
 
-import re
 import logging
-from typing import List, Dict, Optional
+import re
+
 from mcp import ClientSession
 
 logger = logging.getLogger(__name__)
 
 
 async def fetch_conversation_context(
-    session: ClientSession,
-    agent_name: str,
-    limit: int = 25
-) -> List[Dict[str, str]]:
+    session: ClientSession, agent_name: str, limit: int = 25
+) -> list[dict[str, str]]:
     """
     Fetch recent messages for conversation context.
 
@@ -38,13 +36,16 @@ async def fetch_conversation_context(
         # Fetch recent messages (single API call)
         # NOTE: Gets all messages in the conversation/channel for full context
         # This includes messages TO the agent and messages FROM the agent
-        result = await session.call_tool("messages", {
-            "action": "check",
-            "mode": "latest",  # Get latest messages, not unread
-            "limit": limit,
-            "wait": False,
-            "mark_read": False  # Don't mark as read, just fetching for context
-        })
+        result = await session.call_tool(
+            "messages",
+            {
+                "action": "check",
+                "mode": "latest",  # Get latest messages, not unread
+                "limit": limit,
+                "wait": False,
+                "mark_read": False,  # Don't mark as read, just fetching for context
+            },
+        )
 
         messages = []
 
@@ -54,7 +55,7 @@ async def fetch_conversation_context(
             return messages
 
         # Extract text from content
-        if hasattr(content, 'text'):
+        if hasattr(content, "text"):
             messages_data = content.text
         else:
             messages_data = str(content[0].text) if content else ""
@@ -68,7 +69,7 @@ async def fetch_conversation_context(
 
         # Parse each message from the formatted text
         # Format: • sender: @agent_name message_content [id:abc123]
-        pattern = r'• ([^:]+): @\S+\s+(.+?)\s+\[id:([a-f0-9-]+)\]'
+        pattern = r"• ([^:]+): @\S+\s+(.+?)\s+\[id:([a-f0-9-]+)\]"
         matches = re.finditer(pattern, messages_data, re.MULTILINE | re.DOTALL)
 
         for match in matches:
@@ -76,11 +77,7 @@ async def fetch_conversation_context(
             content = match.group(2).strip()
             msg_id = match.group(3).strip()
 
-            messages.append({
-                "sender": sender,
-                "content": content,
-                "id": msg_id
-            })
+            messages.append({"sender": sender, "content": content, "id": msg_id})
 
         logger.info(f" Fetched {len(messages)} messages for conversation context")
         return messages
@@ -91,11 +88,11 @@ async def fetch_conversation_context(
 
 
 def format_conversation_for_llm(
-    messages: List[Dict[str, str]],
-    current_message: Dict[str, str],
+    messages: list[dict[str, str]],
+    current_message: dict[str, str],
     agent_name: str,
-    system_prompt: str
-) -> List[Dict[str, str]]:
+    system_prompt: str,
+) -> list[dict[str, str]]:
     """
     Format conversation messages for LLM (OpenAI chat format).
 
@@ -108,9 +105,7 @@ def format_conversation_for_llm(
     Returns:
         List in OpenAI chat format: [{"role": "system|user|assistant", "content": "..."}]
     """
-    conversation = [
-        {"role": "system", "content": system_prompt}
-    ]
+    conversation = [{"role": "system", "content": system_prompt}]
 
     # Add past messages for context
     for msg in messages:
@@ -121,35 +116,32 @@ def format_conversation_for_llm(
         # Messages TO this agent are user messages
         if f"@{agent_name}" in content:
             # Extract message content (remove the @mention)
-            clean_content = re.sub(r'@\S+\s+', '', content).strip()
-            conversation.append({
-                "role": "user",
-                "content": f"@{sender} [id:{msg_id}] says: {clean_content}"
-            })
+            clean_content = re.sub(r"@\S+\s+", "", content).strip()
+            conversation.append(
+                {"role": "user", "content": f"@{sender} [id:{msg_id}] says: {clean_content}"}
+            )
 
         # Messages FROM this agent are assistant messages
         elif sender == agent_name:
-            conversation.append({
-                "role": "assistant",
-                "content": content
-            })
+            conversation.append({"role": "assistant", "content": content})
 
     # Add current message as the final user message
     current_sender = current_message["sender"]
     current_content = current_message["content"]
-    current_id = current_message["id"][:8] if len(current_message["id"]) > 8 else current_message["id"]
+    current_id = (
+        current_message["id"][:8] if len(current_message["id"]) > 8 else current_message["id"]
+    )
 
     # Extract clean content
-    clean_current = re.sub(r'@\S+\s+', '', current_content).strip()
-    conversation.append({
-        "role": "user",
-        "content": f"@{current_sender} [id:{current_id}] says: {clean_current}"
-    })
+    clean_current = re.sub(r"@\S+\s+", "", current_content).strip()
+    conversation.append(
+        {"role": "user", "content": f"@{current_sender} [id:{current_id}] says: {clean_current}"}
+    )
 
     return conversation
 
 
-def get_conversation_summary(messages: List[Dict[str, str]]) -> str:
+def get_conversation_summary(messages: list[dict[str, str]]) -> str:
     """Get a human-readable summary of conversation context."""
     if not messages:
         return "No conversation history"

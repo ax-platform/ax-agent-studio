@@ -9,16 +9,15 @@ Tests:
 4. Agent conversation flow
 """
 
-import asyncio
 import re
 from dataclasses import dataclass
-from typing import Optional, Tuple
 
 
 # Mock the message format we get from MCP server
 @dataclass
 class MockMCPResult:
     """Simulates MCP server response"""
+
     content: str
 
     class Text:
@@ -35,7 +34,7 @@ class TestMessageParser:
     def __init__(self, agent_name: str):
         self.agent_name = agent_name
 
-    def _parse_message_from_result(self, result) -> Optional[Tuple[str, str, str]]:
+    def _parse_message_from_result(self, result) -> tuple[str, str, str] | None:
         """
         Replicated from queue_manager.py to test parsing logic
 
@@ -44,7 +43,7 @@ class TestMessageParser:
         """
         try:
             # Extract message text
-            if hasattr(result.content[0], 'text'):
+            if hasattr(result.content[0], "text"):
                 messages_data = result.content[0].text
             else:
                 messages_data = str(result.content[0])
@@ -59,7 +58,7 @@ class TestMessageParser:
                 return None
 
             # Extract message ID from [id:xxxxxxxx] tags
-            message_id_match = re.search(r'\[id:([a-f0-9-]+)\]', messages_data)
+            message_id_match = re.search(r"\[id:([a-f0-9-]+)\]", messages_data)
             if not message_id_match:
                 print(" No message ID found in response")
                 return None
@@ -67,7 +66,7 @@ class TestMessageParser:
             message_id = message_id_match.group(1)
 
             # Verify there's an actual mention
-            mention_match = re.search(r'• ([^:]+): (@\S+)\s+(.+)', messages_data)
+            mention_match = re.search(r"• ([^:]+): (@\S+)\s+(.+)", messages_data)
             if not mention_match:
                 print("⏭  No actual mentions in response")
                 return None
@@ -100,9 +99,9 @@ class TestMessageParser:
 
 def test_normal_message():
     """Test: Normal message from another user"""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("TEST 1: Normal message from madtank to lunar_craft_128")
-    print("="*60)
+    print("=" * 60)
 
     parser = TestMessageParser("lunar_craft_128")
 
@@ -115,10 +114,10 @@ def test_normal_message():
 
     if result:
         msg_id, sender, content = result
-        print(f" PASS: Parsed message")
+        print(" PASS: Parsed message")
         print(f"   Message ID: {msg_id}")
         print(f"   Sender: {sender}")
-        print(f"   Expected sender: madtank")
+        print("   Expected sender: madtank")
         assert sender == "madtank", f"Expected sender 'madtank', got '{sender}'"
     else:
         print(" FAIL: Message was None (should have been parsed)")
@@ -127,16 +126,14 @@ def test_normal_message():
 
 def test_self_mention():
     """Test: Agent mentions itself (should be skipped)"""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("TEST 2: Self-mention - lunar_craft_128 mentions itself")
-    print("="*60)
+    print("=" * 60)
 
     parser = TestMessageParser("lunar_craft_128")
 
     # Simulate lunar_craft_128 mentioning itself
-    mock_result = MockMCPResult(
-        "[id:abc123] • lunar_craft_128: @lunar_craft_128 I'm ready!"
-    )
+    mock_result = MockMCPResult("[id:abc123] • lunar_craft_128: @lunar_craft_128 I'm ready!")
 
     result = parser._parse_message_from_result(mock_result)
 
@@ -144,16 +141,16 @@ def test_self_mention():
         print(" PASS: Self-mention was correctly skipped")
     else:
         msg_id, sender, content = result
-        print(f" FAIL: Self-mention was NOT skipped!")
+        print(" FAIL: Self-mention was NOT skipped!")
         print(f"   Sender: {sender}")
         assert False
 
 
 def test_agent_to_agent():
     """Test: One agent mentions another agent"""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("TEST 3: Agent-to-agent - orion_344 to lunar_craft_128")
-    print("="*60)
+    print("=" * 60)
 
     parser = TestMessageParser("lunar_craft_128")
 
@@ -166,9 +163,9 @@ def test_agent_to_agent():
 
     if result:
         msg_id, sender, content = result
-        print(f" PASS: Parsed agent-to-agent message")
+        print(" PASS: Parsed agent-to-agent message")
         print(f"   Sender: {sender}")
-        print(f"   Expected sender: orion_344")
+        print("   Expected sender: orion_344")
         assert sender == "orion_344", f"Expected sender 'orion_344', got '{sender}'"
     else:
         print(" FAIL: Message was None (should have been parsed)")
@@ -177,16 +174,14 @@ def test_agent_to_agent():
 
 def test_wrong_agent_mentioned():
     """Test: Message doesn't mention this agent (should be skipped)"""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("TEST 4: Wrong agent - message for orion_344, not lunar_craft_128")
-    print("="*60)
+    print("=" * 60)
 
     parser = TestMessageParser("lunar_craft_128")
 
     # Simulate message to orion_344 (not lunar_craft_128)
-    mock_result = MockMCPResult(
-        "[id:xyz789] • madtank: @orion_344 Hello there!"
-    )
+    mock_result = MockMCPResult("[id:xyz789] • madtank: @orion_344 Hello there!")
 
     result = parser._parse_message_from_result(mock_result)
 
@@ -194,16 +189,16 @@ def test_wrong_agent_mentioned():
         print(" PASS: Message for different agent was correctly skipped")
     else:
         msg_id, sender, content = result
-        print(f" FAIL: Message for different agent was NOT skipped!")
+        print(" FAIL: Message for different agent was NOT skipped!")
         print(f"   Content: {content}")
         assert False
 
 
 def test_sender_extraction():
     """Test: Verify sender name extraction is correct"""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("TEST 5: Sender extraction - various usernames")
-    print("="*60)
+    print("=" * 60)
 
     test_cases = [
         ("madtank", "[id:aaa] • madtank: @lunar_craft_128 test"),
@@ -231,9 +226,9 @@ def test_sender_extraction():
 
 def run_all_tests():
     """Run all tests"""
-    print("\n" + " "*20)
+    print("\n" + " " * 20)
     print("MESSAGE PARSING E2E TESTS")
-    print(" "*20)
+    print(" " * 20)
 
     try:
         test_normal_message()
@@ -242,14 +237,14 @@ def run_all_tests():
         test_wrong_agent_mentioned()
         test_sender_extraction()
 
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print(" ALL TESTS PASSED!")
-        print("="*60)
+        print("=" * 60)
 
-    except AssertionError as e:
-        print("\n" + "="*60)
+    except AssertionError:
+        print("\n" + "=" * 60)
         print(" TESTS FAILED!")
-        print("="*60)
+        print("=" * 60)
         raise
 
 

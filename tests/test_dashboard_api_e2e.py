@@ -5,11 +5,15 @@ Tests all agent types and their configuration requirements
 """
 
 import asyncio
-import sys
 import os
+import sys
 from pathlib import Path
+
 import httpx
 import pytest
+
+# Mark all tests in this file as e2e tests
+pytestmark = pytest.mark.e2e
 
 # Add src to path
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -153,7 +157,7 @@ class TestAgentTypeRequirements:
         # Echo is a simple passthrough, no AI configuration needed
         required_fields = {
             "provider": False,  # Not needed
-            "model": False,     # Not needed
+            "model": False,  # Not needed
         }
         assert required_fields["provider"] is False
         assert required_fields["model"] is False
@@ -163,7 +167,7 @@ class TestAgentTypeRequirements:
         # Ollama has implicit provider (always Ollama)
         required_fields = {
             "provider": False,  # Implicit (always ollama)
-            "model": True,      # User selects model
+            "model": True,  # User selects model
         }
         assert required_fields["provider"] is False
         assert required_fields["model"] is True
@@ -173,7 +177,7 @@ class TestAgentTypeRequirements:
         # Claude Agent SDK uses Anthropic models directly via SDK
         required_fields = {
             "provider": False,  # Implicit (always anthropic)
-            "model": True,      # User selects Claude model
+            "model": True,  # User selects Claude model
         }
         assert required_fields["provider"] is False
         assert required_fields["model"] is True
@@ -182,8 +186,8 @@ class TestAgentTypeRequirements:
         """LangGraph monitor should require both provider and model"""
         # LangGraph supports multiple providers
         required_fields = {
-            "provider": True,   # User selects provider
-            "model": True,      # User selects model
+            "provider": True,  # User selects provider
+            "model": True,  # User selects model
         }
         assert required_fields["provider"] is True
         assert required_fields["model"] is True
@@ -191,9 +195,9 @@ class TestAgentTypeRequirements:
 
 async def run_api_tests():
     """Run all dashboard API tests"""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print(" Dashboard API E2E Test Suite")
-    print("="*60)
+    print("=" * 60)
 
     print("\nℹ  Testing against:", DASHBOARD_URL)
     print("   Make sure the dashboard is running: uv run dashboard")
@@ -215,12 +219,9 @@ async def run_api_tests():
     # Run pytest programmatically
     import pytest
 
-    exit_code = pytest.main([
-        __file__,
-        "-v",
-        "--tb=short",
-        "-k", "TestDashboardAPI or TestAgentTypeRequirements"
-    ])
+    exit_code = pytest.main(
+        [__file__, "-v", "--tb=short", "-k", "TestDashboardAPI or TestAgentTypeRequirements"]
+    )
 
     return exit_code
 

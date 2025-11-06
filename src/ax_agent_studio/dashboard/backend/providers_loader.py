@@ -2,10 +2,11 @@
 Providers Loader - Load LLM provider configurations
 """
 
-import yaml
 import os
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Any
+
+import yaml
 from dotenv import load_dotenv
 
 # Load .env file
@@ -15,7 +16,7 @@ load_dotenv()
 PROJECT_ROOT = Path(__file__).parent.parent.parent.parent.parent
 
 
-def load_providers() -> Dict[str, Any]:
+def load_providers() -> dict[str, Any]:
     """Load provider configurations from providers.yaml"""
     providers_path = PROJECT_ROOT / "configs" / "providers.yaml"
 
@@ -23,14 +24,14 @@ def load_providers() -> Dict[str, Any]:
         return {"providers": {}, "defaults": {"provider": "gemini", "model": "gemini-2.5-flash"}}
 
     try:
-        with open(providers_path, 'r') as f:
+        with open(providers_path) as f:
             return yaml.safe_load(f)
     except Exception as e:
         print(f"Error loading providers: {e}")
         return {"providers": {}, "defaults": {"provider": "gemini", "model": "gemini-2.5-flash"}}
 
 
-def is_provider_configured(provider_id: str, provider_data: Dict[str, Any]) -> bool:
+def is_provider_configured(provider_id: str, provider_data: dict[str, Any]) -> bool:
     """Check if a provider is configured and available"""
 
     # Ollama is always available (local)
@@ -64,7 +65,7 @@ def is_provider_configured(provider_id: str, provider_data: Dict[str, Any]) -> b
     return False
 
 
-def get_providers_list(include_unavailable: bool = False) -> List[Dict[str, Any]]:
+def get_providers_list(include_unavailable: bool = False) -> list[dict[str, Any]]:
     """Get list of available providers with metadata
 
     Args:
@@ -81,20 +82,22 @@ def get_providers_list(include_unavailable: bool = False) -> List[Dict[str, Any]
         if not is_configured and not include_unavailable:
             continue
 
-        result.append({
-            "id": provider_id,
-            "name": provider_data.get("name", provider_id),
-            "description": provider_data.get("description", ""),
-            "requires_api_key": provider_data.get("requires_api_key", False),
-            "env_var": provider_data.get("env_var"),
-            "uses_aws_credentials": provider_data.get("uses_aws_credentials", False),
-            "configured": is_configured
-        })
+        result.append(
+            {
+                "id": provider_id,
+                "name": provider_data.get("name", provider_id),
+                "description": provider_data.get("description", ""),
+                "requires_api_key": provider_data.get("requires_api_key", False),
+                "env_var": provider_data.get("env_var"),
+                "uses_aws_credentials": provider_data.get("uses_aws_credentials", False),
+                "configured": is_configured,
+            }
+        )
 
     return result
 
 
-async def get_models_for_provider(provider_id: str) -> List[Dict[str, Any]]:
+async def get_models_for_provider(provider_id: str) -> list[dict[str, Any]]:
     """Get available models for a specific provider
 
     For Ollama: Dynamically loads models from `ollama list` command
@@ -103,6 +106,7 @@ async def get_models_for_provider(provider_id: str) -> List[Dict[str, Any]]:
     # Special case: Ollama uses dynamic model discovery
     if provider_id == "ollama":
         from .config_loader import ConfigLoader
+
         config_loader = ConfigLoader(PROJECT_ROOT)
         ollama_models = await config_loader.get_ollama_models()
 
@@ -113,7 +117,7 @@ async def get_models_for_provider(provider_id: str) -> List[Dict[str, Any]]:
                 "name": model,
                 "description": f"Ollama model: {model}",
                 "recommended": False,
-                "default": False  # Could check against config.yaml default_model
+                "default": False,  # Could check against config.yaml default_model
             }
             for model in ollama_models
         ]
@@ -135,22 +139,23 @@ async def get_models_for_provider(provider_id: str) -> List[Dict[str, Any]]:
             "name": model.get("name"),
             "description": model.get("description", ""),
             "recommended": model.get("recommended", False),
-            "default": model.get("id") == default_model if default_model else False
+            "default": model.get("id") == default_model if default_model else False,
         }
         for model in models
     ]
 
 
-def get_provider_config(provider_id: str) -> Optional[Dict[str, Any]]:
+def get_provider_config(provider_id: str) -> dict[str, Any] | None:
     """Get full configuration for a specific provider"""
     config = load_providers()
     providers = config.get("providers", {})
     return providers.get(provider_id)
 
 
-def get_defaults() -> Dict[str, str]:
+def get_defaults() -> dict[str, str]:
     """Get default provider, model, and agent type"""
     import os
+
     config = load_providers()
     defaults = config.get("defaults", {"provider": "gemini", "model": "gemini-2.5-flash"})
 

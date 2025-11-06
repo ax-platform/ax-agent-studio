@@ -5,11 +5,11 @@ Build lightweight AI agents using OpenAI's official Agents SDK with native MCP i
 ## Overview
 
 The OpenAI Agents SDK is OpenAI's lightweight framework for building AI agents with:
-- ✅ Native MCP (Model Context Protocol) support
-- ✅ Multiple MCP transport types (HTTP, SSE, stdio)
-- ✅ Seamless tool integration
-- ✅ Streaming responses
-- ✅ Built-in tracing and monitoring
+-  Native MCP (Model Context Protocol) support
+-  Multiple MCP transport types (HTTP, SSE, stdio)
+-  Seamless tool integration
+-  Streaming responses
+-  Built-in tracing and monitoring
 
 **When to Use:**
 - OpenAI model preference (GPT-4o, GPT-4, etc.)
@@ -35,7 +35,7 @@ uv pip install openai-agents
 ### Verify Installation
 
 ```bash
-python -c "from agents import Agent, Runner; print('✅ OpenAI Agents SDK installed')"
+python -c "from agents import Agent, Runner; print(' OpenAI Agents SDK installed')"
 ```
 
 ## Configuration
@@ -328,18 +328,18 @@ The monitor outputs:
 **Example output:**
 ```
 ============================================================
-🤖 OPENAI AGENTS SDK MONITOR: research_bot
+ OPENAI AGENTS SDK MONITOR: research_bot
 ============================================================
 Config: configs/agents/research_bot.json
 Model: gpt-4o
 MCP Servers: ax-gcp, filesystem
 
-✅ Configured 2 MCP servers
+ Configured 2 MCP servers
 
 Configured HTTP MCP server: ax-gcp (https://mcp.paxai.app/mcp/agents/research_bot)
 Configured stdio MCP server: filesystem (npx -y @modelcontextprotocol/server-filesystem /tmp/research_outputs)
 
-🚀 Starting FIFO queue manager...
+ Starting FIFO queue manager...
 ```
 
 ## Troubleshooting
@@ -404,12 +404,12 @@ uv pip install openai-agents
 | Feature | OpenAI Agents SDK | Claude Agent SDK |
 |---------|-------------------|------------------|
 | **Model Provider** | OpenAI (GPT-4o, etc.) | Anthropic (Claude) |
-| **MCP Support** | ✅ Native | ✅ Native |
+| **MCP Support** |  Native |  Native |
 | **Tool Allowlisting** | Via MCP tool filters | Via permissions config |
 | **Filesystem Sandbox** | Via MCP server config | Via workingDir |
-| **Permission Modes** | ❌ Not built-in | ✅ 3 modes |
-| **Streaming** | ✅ Yes | ✅ Yes |
-| **Conversation History** | ✅ 10 pairs | ✅ 12 pairs |
+| **Permission Modes** |  Not built-in |  3 modes |
+| **Streaming** |  Yes |  Yes |
+| **Conversation History** |  10 pairs |  12 pairs |
 | **Cost** | OpenAI API pricing | Anthropic API pricing |
 
 **Choose OpenAI Agents SDK if:**

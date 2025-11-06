@@ -27,11 +27,14 @@ async def test_agent_conversation():
     server_params = StdioServerParameters(
         command="npx",
         args=[
-            "-y", "mcp-remote@0.1.29",
+            "-y",
+            "mcp-remote@0.1.29",
             f"http://localhost:8002/mcp/agents/{agent_name}",
-            "--transport", "http-only",
-            "--oauth-server", "http://localhost:8001"
-        ]
+            "--transport",
+            "http-only",
+            "--oauth-server",
+            "http://localhost:8001",
+        ],
     )
 
     try:
@@ -43,22 +46,23 @@ async def test_agent_conversation():
 
                 # Test 1: Send initial message mentioning 2 agents
                 print(" Test 1: Initial message to @agent1 and @agent2")
-                result = await session.call_tool("messages", {
-                    "action": "send",
-                    "content": "@lunar_craft_128 @orion_344 Let's count to 5! @lunar_craft_128 says 1"
-                })
-                print(f"   Sent initial message\n")
+                result = await session.call_tool(
+                    "messages",
+                    {
+                        "action": "send",
+                        "content": "@lunar_craft_128 @orion_344 Let's count to 5! @lunar_craft_128 says 1",
+                    },
+                )
+                print("   Sent initial message\n")
 
                 # Wait and check for responses
                 await asyncio.sleep(5)
 
                 # Test 2: Check message history
                 print(" Test 2: Checking message history...")
-                result = await session.call_tool("messages", {
-                    "action": "check",
-                    "limit": 10,
-                    "since": "5m"
-                })
+                result = await session.call_tool(
+                    "messages", {"action": "check", "limit": 10, "since": "5m"}
+                )
 
                 messages_data = result.content[0].text if result.content else ""
                 message_count = messages_data.count("•")
@@ -84,6 +88,7 @@ async def test_agent_conversation():
     except Exception as e:
         print(f" Error: {e}")
         import traceback
+
         traceback.print_exc()
 
 
