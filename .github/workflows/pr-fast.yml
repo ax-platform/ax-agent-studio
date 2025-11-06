@@ -1,6 +1,7 @@
-name: PR Fast Check
+name: PR Pre-commit Check
 
-# Fast smoke tests for PR commits (~1-2 minutes)
+# Minimal check - just verify pre-commit hooks ran
+# Trust local pre-commit for linting/formatting
 # Full test suite runs on merge to main
 
 on:
@@ -8,8 +9,8 @@ on:
     branches: [ main ]
 
 jobs:
-  fast-checks:
-    name: Fast Checks (Lint + Critical Tests)
+  pre-commit-check:
+    name: Pre-commit Verification
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -20,39 +21,7 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Cache uv dependencies
-        uses: actions/cache@v4
+      - name: Run pre-commit on changed files only
+        uses: pre-commit/action@v3.0.1
         with:
-          path: ~/.cache/uv
-          key: uv-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}
-          restore-keys: |
-            uv-${{ runner.os }}-
-
-      - name: Install uv
-        run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-      - name: Install dependencies
-        run: |
-          uv pip install --system -e ".[dev]"
-
-      - name: Run Ruff linter
-        run: ruff check .
-
-      - name: Run Ruff formatter check
-        run: ruff format --check .
-
-      - name: Run Bandit security check
-        run: bandit -r src/ -c pyproject.toml --severity-level medium
-        continue-on-error: false
-
-      - name: Run mypy type checker
-        run: mypy src/ || true
-        shell: bash
-
-      - name: Run smoke tests only (no E2E)
-        run: |
-          # Only run fast unit tests, skip E2E
-          pytest tests/test_utf8_log_handling.py tests/test_message_parsing.py tests/test_message_store.py -v --tb=short
-        continue-on-error: false
+          extra_args: --show-diff-on-failure
