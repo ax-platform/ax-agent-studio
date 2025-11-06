@@ -104,9 +104,7 @@ async def test_utf8_in_tail_mode(tmp_path: Path):
     websocket = FakeWebSocket()
 
     # Start tailing in background
-    tail_task = asyncio.create_task(
-        streamer._tail_log_file(websocket, log_file, "test_monitor")
-    )
+    tail_task = asyncio.create_task(streamer._tail_log_file(websocket, log_file, "test_monitor"))
 
     # Give it time to start
     await asyncio.sleep(0.2)

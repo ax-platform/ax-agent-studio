@@ -60,7 +60,9 @@ class LogStreamer:
             for log_file in log_files:
                 try:
                     monitor_id = log_file.stem
-                    async with aiofiles.open(log_file, "r", encoding="utf-8", errors="replace") as f:
+                    async with aiofiles.open(
+                        log_file, "r", encoding="utf-8", errors="replace"
+                    ) as f:
                         content = await f.read()
                         if content:
                             await websocket.send_json(
