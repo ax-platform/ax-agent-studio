@@ -29,7 +29,7 @@ class LogStreamer:
 
             # Send existing logs first
             try:
-                async with aiofiles.open(log_file) as f:
+                async with aiofiles.open(log_file, "r", encoding="utf-8", errors="replace") as f:
                     content = await f.read()
                     if content:
                         await websocket.send_json(
@@ -60,7 +60,9 @@ class LogStreamer:
             for log_file in log_files:
                 try:
                     monitor_id = log_file.stem
-                    async with aiofiles.open(log_file) as f:
+                    async with aiofiles.open(
+                        log_file, "r", encoding="utf-8", errors="replace"
+                    ) as f:
                         content = await f.read()
                         if content:
                             await websocket.send_json(
@@ -95,7 +97,7 @@ class LogStreamer:
             return
 
         try:
-            async with aiofiles.open(log_file) as f:
+            async with aiofiles.open(log_file, "r", encoding="utf-8", errors="replace") as f:
                 # Seek to end
                 await f.seek(0, 2)
                 last_pos = await f.tell()
