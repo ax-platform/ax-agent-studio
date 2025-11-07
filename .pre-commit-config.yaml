@@ -50,3 +50,15 @@ repos:
   #       args: [-c, pyproject.toml]
   #       additional_dependencies: ["bandit[toml]"]
   #       exclude: ^tests/
+
+  # MCP Tests - Critical functionality tests
+  - repo: local
+    hooks:
+      - id: test-done-command
+        name: Test #done command (loop breaking)
+        entry: node tests/test-done-command.js
+        language: system
+        pass_filenames: false
+        files: '^(src/ax_agent_studio/queue_manager\.py|configs/prompts/_base\.yaml)$'
+        stages: [commit]
+        verbose: true

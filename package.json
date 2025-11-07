@@ -12,11 +12,7 @@
     "test:basic": "node tests/test-basic-message-exchange.js",
     "test:storm": "node tests/test-message-storm-coordination.js",
     "test:validate": "node tests/test-message-flow-validation.js",
-    "test:batch": "node tests/archived/test-batch-processing.js",
-    "test:context": "node tests/test-message-context-view.js",
-    "test:wait": "node tests/test-wait-context-behavior.js",
-    "test:e2e": "node tests/test-message-board-awareness.js",
-    "test:hybrid": "node tests/archived/test-hybrid-message-board.js"
+    "test:done": "node tests/test-done-command.js"
   },
   "repository": {
     "type": "git",
