@@ -446,6 +446,13 @@ class QueueManager:
 
                     # Only send if response is not empty (handler may return "" to skip)
                     if response and response.strip():
+                        # Strip @mentions from #done responses to prevent triggering other agents
+                        send_content = response
+                        if pause_detected:
+                            # Remove all @mentions from the response
+                            send_content = re.sub(r'@\w+', '', response)
+                            logger.info(f" Stripped @mentions from #done response")
+
                         # Determine which message to reply to (newest in batch)
                         reply_to_msg = all_pending[-1] if batch_size > 1 else all_pending[0]
 
@@ -454,7 +461,7 @@ class QueueManager:
                             "messages",
                             {
                                 "action": "send",
-                                "content": response,
+                                "content": send_content,
                                 "parent_message_id": reply_to_msg.id,  # Reply to the newest message
                             },
                         )
