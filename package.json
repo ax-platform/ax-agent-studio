@@ -17,7 +17,7 @@
     "test:wait": "node tests/test-wait-context-behavior.js",
     "test:e2e": "node tests/test-message-board-awareness.js",
     "test:hybrid": "node tests/archived/test-hybrid-message-board.js",
-    "test:done": "node tests/test-done-command.js"
+    "test:done": "uv run python tests/test_done_message_clearing.py"
   },
   "repository": {
     "type": "git",

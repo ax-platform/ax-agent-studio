@@ -51,14 +51,14 @@ repos:
   #       additional_dependencies: ["bandit[toml]"]
   #       exclude: ^tests/
 
-  # MCP Tests - Critical functionality tests
+  # Unit Tests - Critical functionality tests
   - repo: local
     hooks:
       - id: test-done-command
         name: Test #done command (loop breaking)
-        entry: node tests/test-done-command.js
+        entry: uv run python tests/test_done_message_clearing.py
         language: system
         pass_filenames: false
-        files: '^(src/ax_agent_studio/queue_manager\.py|configs/prompts/_base\.yaml)$'
+        files: '^(src/ax_agent_studio/message_store\.py|src/ax_agent_studio/queue_manager\.py|configs/prompts/_base\.yaml)$'
         stages: [commit]
         verbose: true
