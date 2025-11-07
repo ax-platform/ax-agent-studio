@@ -1,10 +1,11 @@
 /**
- * TEST: #done Command - Simple Two-Phase Test
+ * TEST: #done Command - Three-Phase Test
  *
  * PHASE 1: Normal - Agent CAN respond to messages
- * PHASE 2: After #done - Agent CANNOT respond to messages (paused)
+ * PHASE 2: After #done - Agent CANNOT respond (paused)
+ * PHASE 3: After auto-resume - Agent STILL doesn't respond to cleared messages
  *
- * Expected runtime: <10 seconds
+ * Expected runtime: ~65 seconds (includes 60-second auto-resume wait)
  */
 
 import { MCPClientManager } from '@mcpjam/sdk';
@@ -62,10 +63,11 @@ const config = {
 
 async function main() {
   console.log('\n' + '='.repeat(80));
-  console.log('TEST: #done Command - Two-Phase Validation');
+  console.log('TEST: #done Command - Three-Phase Validation');
   console.log('='.repeat(80));
   console.log('Phase 1: Agent responds normally (baseline)');
   console.log('Phase 2: After #done, agent stops responding (paused)');
+  console.log('Phase 3: After auto-resume, agent still ignores cleared messages');
   console.log('='.repeat(80) + '\n');
 
   try {
@@ -141,13 +143,57 @@ async function main() {
     }
     console.log('✅ PHASE 2 PASSED: Agent did NOT respond (correctly paused)\n');
 
+    // PHASE 3: Wait for auto-resume and verify message was cleared
+    console.log('='.repeat(80));
+    console.log('PHASE 3: Message Clearing After Auto-Resume');
+    console.log('='.repeat(80));
+    console.log('Waiting 60 seconds for auto-resume...');
+    console.log('(This verifies that the "message after done" was cleared)\n');
+    await sleep(60000);
+
+    // Send a NEW message to wake up the agent
+    await manager.executeTool('orion_344', 'messages', {
+      action: 'send',
+      content: '@lunar_craft_128 new message after resume'
+    });
+    console.log('✓ Sent: "@lunar_craft_128 new message after resume"');
+    await sleep(3000);
+
+    const p3Check = await manager.executeTool('orion_344', 'messages', {
+      action: 'check', since: '15m', limit: 60
+    });
+
+    // Agent should respond to NEW message but not the old "after done" message
+    const newMessageResponse = (p3Check.messages || []).filter(m =>
+      m.sender_name === 'lunar_craft_128' && m.content.includes('new message after resume')
+    );
+
+    const oldMessageResponse = (p3Check.messages || []).filter(m =>
+      m.sender_name === 'lunar_craft_128' && m.content.includes('message after done')
+    );
+
+    if (newMessageResponse.length === 0) {
+      console.log('❌ PHASE 3 FAILED: Agent did not respond to new message after resume\n');
+      await cleanup(manager);
+      process.exit(1);
+    }
+
+    if (oldMessageResponse.length > 0) {
+      console.log('❌ PHASE 3 FAILED: Agent responded to cleared message (should have been deleted)\n');
+      await cleanup(manager);
+      process.exit(1);
+    }
+
+    console.log('✅ PHASE 3 PASSED: Messages were cleared, agent only responded to new messages\n');
+
     // SUCCESS
     console.log('='.repeat(80));
     console.log('FINAL RESULT: ALL TESTS PASSED ✅');
     console.log('='.repeat(80));
     console.log('✓ Phase 1: Normal messaging works');
     console.log('✓ Phase 2: #done triggers pause, agent stops responding');
-    console.log('✓ Loop-breaking mechanism validated\n');
+    console.log('✓ Phase 3: Messages cleared, agent gets a real break');
+    console.log('✓ Loop-breaking mechanism fully validated\n');
     console.log('='.repeat(80) + '\n');
     await cleanup(manager);
     process.exit(0);
@@ -164,7 +210,7 @@ async function cleanup(manager) {
     await manager.disconnectServer('lunar_craft_128');
     await manager.disconnectServer('orion_344');
   }
-  stopMonitors();
+  stopMonitor();
   await sleep(1000);
 }
 

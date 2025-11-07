@@ -276,6 +276,20 @@ class MessageStore:
             conn.commit()
             return cursor.rowcount
 
+    def clear_pending_messages(self, agent: str) -> int:
+        """Delete all pending (unprocessed) messages for an agent.
+
+        This is used by #done to clear the backlog when an agent needs a break.
+        Only clears unprocessed messages - keeps processed ones for history.
+        """
+        with self._conn() as conn:
+            cursor = conn.execute(
+                "DELETE FROM messages WHERE agent = ? AND processed = 0",
+                (agent,),
+            )
+            conn.commit()
+            return cursor.rowcount
+
     def pause_agent(self, agent: str, reason: str = "", resume_at: float | None = None) -> bool:
         """
         Pause an agent (stop processing messages).

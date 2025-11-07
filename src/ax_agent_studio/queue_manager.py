@@ -426,10 +426,12 @@ class QueueManager:
                             resume_at = None  # Default: manual resume required
 
                             # Extract reason if provided after command
+                            is_done_command = False
                             if "#done" in response_lower:
                                 # #done = pause for 60 seconds (auto-resume)
                                 resume_at = time.time() + 60
                                 pause_reason = "Done: Auto-resuming in 60 seconds"
+                                is_done_command = True
                             elif "#pause" in response_lower:
                                 pause_idx = response_lower.find("#pause")
                                 reason_text = response[pause_idx:].split("\n")[0]
@@ -443,6 +445,12 @@ class QueueManager:
 
                             self.store.pause_agent(self.agent_name, reason=pause_reason, resume_at=resume_at)
                             logger.warning(f"⏸  {pause_reason}")
+
+                            # For #done, clear pending messages so agent gets a real break
+                            if is_done_command:
+                                cleared_count = self.store.clear_pending_messages(self.agent_name)
+                                if cleared_count > 0:
+                                    logger.info(f"  Cleared {cleared_count} pending message(s) from backlog")
 
                     # Only send if response is not empty (handler may return "" to skip)
                     if response and response.strip():
