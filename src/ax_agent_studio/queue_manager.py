@@ -418,6 +418,7 @@ class QueueManager:
 
                     # Detect self-pause commands (#pause, #stop, #done)
                     pause_detected = False
+                    is_done_command = False  # Initialize here so it's always defined
                     if response:
                         response_lower = response.lower()
                         if "#pause" in response_lower or "#stop" in response_lower or "#done" in response_lower:
@@ -426,7 +427,6 @@ class QueueManager:
                             resume_at = None  # Default: manual resume required
 
                             # Extract reason if provided after command
-                            is_done_command = False
                             if "#done" in response_lower:
                                 # #done = pause for 60 seconds (auto-resume)
                                 resume_at = time.time() + 60
