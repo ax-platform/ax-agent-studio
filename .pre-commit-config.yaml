@@ -71,3 +71,12 @@ repos:
         files: '^(src/ax_agent_studio/queue_manager\.py)$'
         stages: [commit]
         verbose: true
+
+      - id: test-e2e-echo-api
+        name: E2E Test - Echo deployment via Dashboard API
+        entry: uv run python tests/e2e/test_all_agent_types.py
+        language: system
+        pass_filenames: false
+        files: '^(src/ax_agent_studio/dashboard/backend/.*\.py|tests/e2e/helpers/.*\.py)$'
+        stages: [commit]
+        verbose: true
