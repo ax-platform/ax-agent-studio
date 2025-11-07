@@ -48,23 +48,23 @@ class AgentNameIndependenceE2ETest:
                 ghost_config = config
                 break
 
-        assert ghost_config is not None, (
-            "Real-world example not found: local_ghost.json should have agent_name ghost_ray_363"
-        )
+        assert (
+            ghost_config is not None
+        ), "Real-world example not found: local_ghost.json should have agent_name ghost_ray_363"
 
         # CRITICAL: agent_name must be extracted from URL, not filename
-        assert ghost_config["agent_name"] == "ghost_ray_363", (
-            f"Expected agent_name 'ghost_ray_363' from URL, got '{ghost_config['agent_name']}'"
-        )
+        assert (
+            ghost_config["agent_name"] == "ghost_ray_363"
+        ), f"Expected agent_name 'ghost_ray_363' from URL, got '{ghost_config['agent_name']}'"
 
-        assert ghost_config["filename"] == "local_ghost.json", (
-            f"Expected filename 'local_ghost.json', got '{ghost_config['filename']}'"
-        )
+        assert (
+            ghost_config["filename"] == "local_ghost.json"
+        ), f"Expected filename 'local_ghost.json', got '{ghost_config['filename']}'"
 
         # Verify agent name is in the URL
-        assert "/mcp/agents/ghost_ray_363" in ghost_config["server_url"], (
-            f"URL should contain '/mcp/agents/ghost_ray_363', got '{ghost_config['server_url']}'"
-        )
+        assert (
+            "/mcp/agents/ghost_ray_363" in ghost_config["server_url"]
+        ), f"URL should contain '/mcp/agents/ghost_ray_363', got '{ghost_config['server_url']}'"
 
         print(" Real-world config with mismatched filename:")
         print(f"   Filename: {ghost_config['filename']}")
@@ -137,9 +137,9 @@ class AgentNameIndependenceE2ETest:
             # This config should NOT appear (should be skipped)
             bad_config_found = any("bad_legacy" in config["filename"] for config in configs)
 
-            assert not bad_config_found, (
-                "Config without agent_name was loaded - should have been rejected!"
-            )
+            assert (
+                not bad_config_found
+            ), "Config without agent_name was loaded - should have been rejected!"
 
             print(" Legacy config without explicit agent_name was correctly rejected")
             print("   (not using filename as fallback)")

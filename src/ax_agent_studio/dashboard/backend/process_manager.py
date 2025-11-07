@@ -503,7 +503,7 @@ class ProcessManager:
         if system_prompt:
             env["AGENT_SYSTEM_PROMPT"] = system_prompt
 
-        with open(log_file, "w") as f:
+        with open(log_file, "w", encoding="utf-8") as f:
             f.write(f"=== Monitor started at {datetime.now().isoformat()} ===\n")
             f.write(f"Command: {' '.join(cmd)}\n")
             f.write(f"Agent: {safe_agent_name}\n")
@@ -886,9 +886,9 @@ class ProcessManager:
     async def _tail_process_output(self, monitor_id: str, process, log_file: Path):
         """Tail process output to log file"""
         try:
-            with open(log_file, "a") as f:
+            with open(log_file, "a", encoding="utf-8", errors="replace") as f:
                 async for line in process.stdout:
-                    f.write(line.decode())
+                    f.write(line.decode("utf-8", errors="replace"))
                     f.flush()
         except Exception as e:
             print(f"Error tailing output for {monitor_id}: {e}")
@@ -937,7 +937,7 @@ class ProcessManager:
 
             # Log shutdown
             log_file = Path(info.get("log_file"))
-            with open(log_file, "a") as f:
+            with open(log_file, "a", encoding="utf-8") as f:
                 f.write(f"\n=== Monitor stopped at {datetime.now().isoformat()} ===\n")
 
             self._deregister_monitor_from_group(monitor_id)
@@ -1036,7 +1036,7 @@ class ProcessManager:
 
             # Log shutdown
             log_file = Path(info.get("log_file"))
-            with open(log_file, "a") as f:
+            with open(log_file, "a", encoding="utf-8") as f:
                 f.write(f"\n=== Monitor killed (forced) at {datetime.now().isoformat()} ===\n")
 
             self._deregister_monitor_from_group(monitor_id)
@@ -1140,7 +1140,7 @@ class ProcessManager:
         else:
             raise ValueError(f"Unknown demo type: {demo_type}")
 
-        with open(log_file, "w") as f:
+        with open(log_file, "w", encoding="utf-8") as f:
             f.write(f"=== Demo started at {datetime.now().isoformat()} ===\n")
             f.write(f"Type: {demo_type}\n")
             f.write(f"Agents: {', '.join(safe_agents)}\n")

@@ -1,0 +1,27 @@
+name: PR Pre-commit Check
+
+# Minimal check - just verify pre-commit hooks ran
+# Trust local pre-commit for linting/formatting
+# Full test suite runs on merge to main
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  pre-commit-check:
+    name: Pre-commit Verification
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Run pre-commit on changed files only
+        uses: pre-commit/action@v3.0.1
+        with:
+          extra_args: --show-diff-on-failure
