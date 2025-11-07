@@ -22,6 +22,7 @@ Benefits:
 import asyncio
 import logging
 import re
+import time
 from collections.abc import Awaitable, Callable
 
 from mcp import ClientSession
@@ -415,16 +416,21 @@ class QueueManager:
                     if not isinstance(response, str):
                         response = str(response)
 
-                    # Detect self-pause commands (#pause, #stop)
+                    # Detect self-pause commands (#pause, #stop, #done)
                     pause_detected = False
                     if response:
                         response_lower = response.lower()
-                        if "#pause" in response_lower or "#stop" in response_lower:
+                        if "#pause" in response_lower or "#stop" in response_lower or "#done" in response_lower:
                             pause_detected = True
                             pause_reason = "Self-paused: Agent requested pause"
+                            resume_at = None  # Default: manual resume required
 
                             # Extract reason if provided after command
-                            if "#pause" in response_lower:
+                            if "#done" in response_lower:
+                                # #done = pause for 60 seconds (auto-resume)
+                                resume_at = time.time() + 60
+                                pause_reason = "Done: Auto-resuming in 60 seconds"
+                            elif "#pause" in response_lower:
                                 pause_idx = response_lower.find("#pause")
                                 reason_text = response[pause_idx:].split("\n")[0]
                                 if len(reason_text) > 6:  # More than just "#pause"
@@ -435,7 +441,7 @@ class QueueManager:
                                 if len(reason_text) > 5:  # More than just "#stop"
                                     pause_reason = f"Self-paused: {reason_text[6:].strip()}"
 
-                            self.store.pause_agent(self.agent_name, reason=pause_reason)
+                            self.store.pause_agent(self.agent_name, reason=pause_reason, resume_at=resume_at)
                             logger.warning(f"⏸  {pause_reason}")
 
                     # Only send if response is not empty (handler may return "" to skip)
