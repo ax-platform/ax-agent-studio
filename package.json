@@ -1,0 +1,36 @@
+{
+  "name": "ax-agent-studio",
+  "version": "1.0.0",
+  "description": "![aX Agent Studio Banner](assets/banner.png)",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "node tests/test-message-flow-validation.js",
+    "test:basic": "node tests/test-basic-message-exchange.js",
+    "test:storm": "node tests/test-message-storm-coordination.js",
+    "test:validate": "node tests/test-message-flow-validation.js",
+    "test:batch": "node tests/archived/test-batch-processing.js",
+    "test:context": "node tests/test-message-context-view.js",
+    "test:wait": "node tests/test-wait-context-behavior.js",
+    "test:e2e": "node tests/test-message-board-awareness.js",
+    "test:hybrid": "node tests/archived/test-hybrid-message-board.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ax-platform/ax-agent-studio.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/ax-platform/ax-agent-studio/issues"
+  },
+  "homepage": "https://github.com/ax-platform/ax-agent-studio#readme",
+  "devDependencies": {
+    "@mcpjam/sdk": "^0.1.4"
+  }
+}

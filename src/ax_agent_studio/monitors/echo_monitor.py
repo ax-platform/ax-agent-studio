@@ -1,82 +1,53 @@
 #!/usr/bin/env python3
 """
-Echo Monitor - Simplest MCP Monitor Template
-Monitors for @mentions and echoes them back - perfect for testing!
+Echo Monitor - Deterministic Testing Monitor
+
+Simple monitor that echoes back received messages with queue awareness.
+Perfect for deterministic E2E tests where you need predictable output.
 
 Usage:
-    python echo_monitor.py <agent_name>
+    uv run python -m ax_agent_studio.monitors.echo_monitor <agent_name> --config <config_path>
 
 Example:
-    python echo_monitor.py rigelz_334
+    uv run python -m ax_agent_studio.monitors.echo_monitor lunar_craft_128 \
+        --config configs/agents/lunar_craft_128.json
 """
 
+import argparse
 import asyncio
-import re
-from datetime import datetime
+import json
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
 from ax_agent_studio.config import get_mcp_config, get_monitor_config
+from ax_agent_studio.conversation_memory import (
+    prepare_batch_message_context,
+    prepare_message_board_context,
+)
+from ax_agent_studio.message_store import MessageStore
+from ax_agent_studio.queue_manager import QueueManager
 
 
-async def echo_monitor(agent_name, config_path=None):
-    """
-    Simple echo monitor that responds to @mentions
-    Perfect for testing and understanding the flow!
-    """
+async def echo_monitor(
+    agent_name: str,
+    server_url: str,
+    db_path: str = "data/message_backlog.db",
+):
+    """Echo monitor that returns deterministic responses with queue awareness"""
 
-    # Load configuration
-    monitor_config = get_monitor_config()
+    print(f"\n{'=' * 80}")
+    print(f"ECHO MONITOR: {agent_name}")
+    print(f"{'=' * 80}")
+    print(f"Server: {server_url}")
+    print("Mode: Deterministic Echo (for testing)")
+    print(f"Database: {db_path}")
+    print(f"{'=' * 80}\n")
 
-    # Determine MCP server endpoint from agent config or fallback to global config
-    if config_path:
-        import json
+    # Initialize message store
+    store = MessageStore(db_path=db_path)
 
-        print(f" Loading agent config from: {config_path}")
-        with open(config_path) as f:
-            agent_config = json.load(f)
-
-        # Get the primary MCP server (first one in mcpServers)
-        mcp_servers = agent_config.get("mcpServers", {})
-        if not mcp_servers:
-            print("  No mcpServers in agent config, falling back to global config.yaml")
-            mcp_config = get_mcp_config()
-            base_url = mcp_config.get("server_url", "http://localhost:8002")
-            server_url = f"{base_url}/mcp/agents/{agent_name}"
-            oauth_server = mcp_config.get("oauth_url", "http://localhost:8001")
-        else:
-            # Use the first MCP server as the primary one for messaging
-            primary_server_name = list(mcp_servers.keys())[0]
-            primary_server = mcp_servers[primary_server_name]
-
-            # Extract server URL from args (usually args[0] after npx command)
-            args = primary_server.get("args", [])
-            server_url = None
-            oauth_server = "http://localhost:8001"  # default
-
-            # Find the server URL in args (skip npx flags)
-            # The MCP server URL is the first http(s) URL, not preceded by a flag
-            for i, arg in enumerate(args):
-                if arg.startswith("http://") or arg.startswith("https://"):
-                    # Check if this is after --oauth-server flag
-                    if i > 0 and args[i - 1] == "--oauth-server":
-                        oauth_server = arg
-                    elif server_url is None:  # Only take the first non-oauth URL
-                        server_url = arg
-
-            if not server_url:
-                raise ValueError(f"Could not find server URL in config: {config_path}")
-
-            print(f" Using MCP server from agent config: {server_url}")
-    else:
-        # Fallback to global config.yaml
-        print("  No config path provided, using global config.yaml")
-        mcp_config = get_mcp_config()
-        base_url = mcp_config.get("server_url", "http://localhost:8002")
-        server_url = f"{base_url}/mcp/agents/{agent_name}"
-        oauth_server = mcp_config.get("oauth_url", "http://localhost:8001")
-
+    # MCP connection setup
     server_params = StdioServerParameters(
         command="npx",
         args=[
@@ -87,86 +58,121 @@ async def echo_monitor(agent_name, config_path=None):
             "http-only",
             "--allow-http",
             "--oauth-server",
-            oauth_server,
+            get_mcp_config().get("oauth_url", "http://localhost:8001"),
         ],
+        env=None,
     )
 
-    print(f" Echo Monitor starting for @{agent_name}")
-    print(f"   Server: {server_url}")
-    print("   Mode: FIFO queue")
-    print("   Press Ctrl+C to stop\n")
+    async with stdio_client(server_params) as (read, write):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+            print("✓ Connected to MCP server\n")
 
-    try:
-        async with stdio_client(server_params) as (read, write):
-            async with ClientSession(read, write) as session:
-                await session.initialize()
-                print(" Connected to MCP server\n")
+            # Define echo message handler
+            async def handle_message(msg: dict) -> str:
+                """Return deterministic echo with batch/queue information"""
 
-                # Define message handler (pluggable function for QueueManager)
-                async def handle_message(msg: dict) -> str:
-                    """Echo back the message"""
-                    sender = msg.get("sender", "unknown")
-                    content = msg.get("content", "")
-                    msg_id = msg.get("id", "")
+                sender = msg.get("sender", "unknown")
 
-                    try:
-                        # Extract just the message text (after the @mention)
-                        match = re.search(r"@\S+\s+(.+)", content)
-                        if match:
-                            original_msg = match.group(1).strip()
-                        else:
-                            original_msg = content.strip()
+                # CRITICAL: Never process our own messages (prevents infinite loop)
+                if sender == agent_name:
+                    print(f"⏭  Skipping self-message from {sender}")
+                    return ""  # Empty response = no action
 
-                        # Remove trailing "..." if present
-                        if original_msg.endswith("..."):
-                            original_msg = original_msg[:-3]
+                # Use new batch utilities
+                formatted_context, is_batch, history = prepare_batch_message_context(msg, agent_name)
+                content = msg.get("content", "")
 
-                        # Filter out echo responses to prevent infinite loops
-                        if "Echo received at" in original_msg:
-                            print("   Ignoring echo response (prevents loop)")
-                            return None  # Skip this message
+                # Build deterministic response
+                response_parts = []
 
-                        # Echo back with timestamp and message ID
-                        timestamp = datetime.now().strftime("%H:%M:%S")
-                        msg_id_short = msg_id[:8] if len(msg_id) > 8 else msg_id
-                        return f"Echo received at {timestamp} from @{sender} [id:{msg_id_short}]: {original_msg} "
+                if is_batch:
+                    # BATCH MODE: Multiple messages processed together
+                    response_parts.append(f"[ECHO - BATCH MODE] Processed {len(history) + 1} messages together")
+                    response_parts.append(f"[ECHO] Current message from @{sender}: {content}")
+                    response_parts.append(f"[ECHO] History: {len(history)} previous messages")
 
-                    except Exception as e:
-                        print(f"   Error parsing message: {e}")
-                        timestamp = datetime.now().strftime("%H:%M:%S")
-                        return f"Echo received at {timestamp} from @{sender}! "
+                    # List history messages
+                    if history:
+                        response_parts.append("[ECHO] Message history:")
+                        for i, h in enumerate(history, 1):
+                            h_sender = h.get("sender", "unknown")
+                            h_content = h.get("content", "")[:50]  # Truncate
+                            response_parts.append(f"  {i}. @{h_sender}: {h_content}...")
+                else:
+                    # SINGLE MODE: One message
+                    response_parts.append(f"[ECHO - SINGLE MODE] Received from @{sender}")
+                    response_parts.append(f"[ECHO] Content: {content}")
 
-                # Use QueueManager for FIFO processing
-                from ax_agent_studio.queue_manager import QueueManager
+                # Show formatted context (visual debug)
+                print("\n" + formatted_context)
 
-                queue_mgr = QueueManager(
-                    agent_name=agent_name,
-                    session=session,
-                    message_handler=handle_message,
-                    mark_read=monitor_config.get("mark_read", False),
-                    startup_sweep=monitor_config.get("startup_sweep", True),
-                    startup_sweep_limit=monitor_config.get("startup_sweep_limit", 10),
-                    heartbeat_interval=monitor_config.get("heartbeat_interval", 240),
-                )
+                return "\n".join(response_parts)
 
-                print(" Starting FIFO queue manager...\n")
-                await queue_mgr.run()
+            # Use QueueManager for FIFO processing
+            monitor_config = get_monitor_config()
 
-    except KeyboardInterrupt:
-        print("\n\n Echo monitor stopped by user")
-    except Exception as e:
-        print(f"\n Error: {e}")
-        import traceback
+            queue_mgr = QueueManager(
+                agent_name=agent_name,
+                session=session,
+                message_handler=handle_message,
+                store=store,
+                mark_read=monitor_config.get("mark_read", False),
+                startup_sweep=monitor_config.get("startup_sweep", True),
+                startup_sweep_limit=monitor_config.get("startup_sweep_limit", 10),
+                heartbeat_interval=monitor_config.get("heartbeat_interval", 240),
+            )
 
-        traceback.print_exc()
+            print("✓ Echo handler initialized")
+            print("✓ Starting FIFO queue manager...\n")
+            await queue_mgr.run()
 
 
 if __name__ == "__main__":
-    import argparse
-
-    parser = argparse.ArgumentParser(description="Echo Monitor - Simple MCP Monitor")
-    parser.add_argument("agent_name", help="Agent name to monitor")
-    parser.add_argument("--config", help="Path to agent config JSON file")
+    parser = argparse.ArgumentParser(description="Echo Monitor for deterministic testing")
+    parser.add_argument("agent_name", help="Name of the agent to monitor")
+    parser.add_argument("--config", required=True, help="Path to agent config JSON file")
+    parser.add_argument("--db", default="data/message_backlog.db", help="Database path")
 
     args = parser.parse_args()
-    asyncio.run(echo_monitor(args.agent_name, args.config))
+
+    # Load agent config to get server URL
+    with open(args.config) as f:
+        agent_config = json.load(f)
+
+    # Get the primary MCP server (first one in mcpServers)
+    mcp_servers = agent_config.get("mcpServers", {})
+    if not mcp_servers:
+        print("ERROR: No mcpServers in agent config")
+        exit(1)
+
+    # Use the first MCP server as the primary one for messaging
+    primary_server_name = list(mcp_servers.keys())[0]
+    primary_server = mcp_servers[primary_server_name]
+
+    # Extract server URL from args
+    server_url = None
+    args_list = primary_server.get("args", [])
+    for i, arg in enumerate(args_list):
+        if arg.startswith("http://") or arg.startswith("https://"):
+            # Skip oauth server
+            if i > 0 and args_list[i - 1] == "--oauth-server":
+                continue
+            server_url = arg
+            break
+
+    if not server_url:
+        # Fallback to global config
+        mcp_config = get_mcp_config()
+        base_url = mcp_config.get("server_url", "http://localhost:8002")
+        server_url = f"{base_url}/mcp/agents/{args.agent_name}"
+
+    try:
+        asyncio.run(echo_monitor(args.agent_name, server_url, args.db))
+    except KeyboardInterrupt:
+        print("\n\n🛑 Echo monitor stopped by user")
+    except Exception as e:
+        print(f"\n\n✗ Fatal error: {e}")
+        import traceback
+        traceback.print_exc()
+        raise

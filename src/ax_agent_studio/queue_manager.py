@@ -323,68 +323,180 @@ class QueueManager:
                     await asyncio.sleep(2)  # Check every 2 seconds
                     continue
 
-                # Get next pending message (FIFO order)
-                messages = self.store.get_pending_messages(self.agent_name, limit=1)
+                # Check if agent is paused
+                if self.store.is_agent_paused(self.agent_name):
+                    # Check for auto-resume
+                    if self.store.check_auto_resume(self.agent_name):
+                        logger.info(f"  Agent {self.agent_name} auto-resumed")
+                    else:
+                        agent_status = self.store.get_agent_status(self.agent_name)
+                        reason = agent_status.get("paused_reason", "Unknown")
+                        logger.debug(f"⏸  Agent paused: {reason}")
+                        await asyncio.sleep(2)  # Check every 2 seconds
+                        continue
 
-                if not messages:
+                # Get ALL pending messages (batch processing)
+                all_pending = self.store.get_pending_messages(self.agent_name, limit=100)
+
+                if not all_pending:
                     # Queue empty - brief pause
                     await asyncio.sleep(self.poll_interval)
                     continue
 
-                msg = messages[0]
+                batch_size = len(all_pending)
                 backlog = self.store.get_backlog_count(self.agent_name)
 
-                logger.info(
-                    f"  Processing message {msg.id[:8]} from {msg.sender} (backlog: {backlog})"
-                )
+                # Determine processing mode
+                if batch_size > 1:
+                    logger.info(
+                        f"📦 BATCH MODE: Processing {batch_size} messages together (backlog: {backlog})"
+                    )
+                else:
+                    logger.info(
+                        f"  SINGLE MODE: Processing message {all_pending[0].id[:8]} from {all_pending[0].sender} (backlog: {backlog})"
+                    )
 
-                # Mark as processing (prevents duplicate processing)
-                self.store.mark_processing_started(msg.id, self.agent_name)
+                # Mark all as processing (prevents duplicate processing)
+                for msg in all_pending:
+                    self.store.mark_processing_started(msg.id, self.agent_name)
 
                 try:
-                    # Call monitor's handler with full message context (pluggable!)
-                    # Pass dict with sender and content so handler knows who sent the message
-                    response = await self.handler(
-                        {
-                            "content": msg.content,
-                            "sender": msg.sender,
-                            "id": msg.id,
-                            "timestamp": msg.timestamp,
-                        }
-                    )
+                    # Prepare message context
+                    if batch_size > 1:
+                        # BATCH MODE: Current message (newest) + history (older ones)
+                        current_msg = all_pending[-1]  # Newest message
+                        history_msgs = all_pending[:-1]  # Older messages for context
+
+                        # Convert to dicts
+                        history_dicts = [
+                            {
+                                "id": m.id,
+                                "sender": m.sender,
+                                "content": m.content,
+                                "timestamp": m.timestamp,
+                            }
+                            for m in history_msgs
+                        ]
+
+                        response = await self.handler(
+                            {
+                                "content": current_msg.content,
+                                "sender": current_msg.sender,
+                                "id": current_msg.id,
+                                "timestamp": current_msg.timestamp,
+                                # Batch processing context
+                                "batch_mode": True,
+                                "batch_size": batch_size,
+                                "history_messages": history_dicts,  # Older messages for context
+                                "queue_status": {
+                                    "backlog_count": backlog,
+                                    "pending_messages": history_dicts,
+                                },
+                            }
+                        )
+                    else:
+                        # SINGLE MODE: Just one message
+                        msg = all_pending[0]
+                        response = await self.handler(
+                            {
+                                "content": msg.content,
+                                "sender": msg.sender,
+                                "id": msg.id,
+                                "timestamp": msg.timestamp,
+                                "batch_mode": False,
+                                "queue_status": {
+                                    "backlog_count": backlog,
+                                    "pending_messages": [],
+                                },
+                            }
+                        )
 
                     # Ensure response is a string
                     if not isinstance(response, str):
                         response = str(response)
 
+                    # Detect self-pause commands (#pause, #stop)
+                    pause_detected = False
+                    if response:
+                        response_lower = response.lower()
+                        if "#pause" in response_lower or "#stop" in response_lower:
+                            pause_detected = True
+                            pause_reason = "Self-paused: Agent requested pause"
+
+                            # Extract reason if provided after command
+                            if "#pause" in response_lower:
+                                pause_idx = response_lower.find("#pause")
+                                reason_text = response[pause_idx:].split("\n")[0]
+                                if len(reason_text) > 6:  # More than just "#pause"
+                                    pause_reason = f"Self-paused: {reason_text[7:].strip()}"
+                            elif "#stop" in response_lower:
+                                stop_idx = response_lower.find("#stop")
+                                reason_text = response[stop_idx:].split("\n")[0]
+                                if len(reason_text) > 5:  # More than just "#stop"
+                                    pause_reason = f"Self-paused: {reason_text[6:].strip()}"
+
+                            self.store.pause_agent(self.agent_name, reason=pause_reason)
+                            logger.warning(f"⏸  {pause_reason}")
+
                     # Only send if response is not empty (handler may return "" to skip)
                     if response and response.strip():
-                        # Send response as a REPLY to the original message (creates thread)
+                        # Determine which message to reply to (newest in batch)
+                        reply_to_msg = all_pending[-1] if batch_size > 1 else all_pending[0]
+
+                        # Send response as a REPLY to the newest message (creates thread)
                         await self.session.call_tool(
                             "messages",
                             {
                                 "action": "send",
                                 "content": response,
-                                "parent_message_id": msg.id,  # Reply to the message we received
+                                "parent_message_id": reply_to_msg.id,  # Reply to the newest message
                             },
                         )
-                        logger.info(f" Completed message {msg.id[:8]} (threaded reply): {response}")
+                        if pause_detected:
+                            if batch_size > 1:
+                                logger.info(
+                                    f" Completed BATCH of {batch_size} messages (threaded reply + PAUSED)"
+                                )
+                            else:
+                                logger.info(
+                                    f" Completed message {reply_to_msg.id[:8]} (threaded reply + PAUSED)"
+                                )
+                        else:
+                            if batch_size > 1:
+                                logger.info(
+                                    f" Completed BATCH of {batch_size} messages (threaded reply)"
+                                )
+                            else:
+                                logger.info(f" Completed message {reply_to_msg.id[:8]} (threaded reply)")
                     else:
                         # Handler returned empty response (e.g., blocked self-mention)
-                        logger.info(
-                            f" Completed message {msg.id[:8]}: (no response - handler blocked)"
-                        )
+                        if batch_size > 1:
+                            logger.info(
+                                f" Completed BATCH of {batch_size} messages: (no response - handler blocked)"
+                            )
+                        else:
+                            logger.info(
+                                f" Completed message {all_pending[0].id[:8]}: (no response - handler blocked)"
+                            )
 
-                    # Mark as processed (removes from queue)
-                    self.store.mark_processed(msg.id, self.agent_name)
+                    # Mark ALL messages as processed (removes from queue)
+                    for msg in all_pending:
+                        self.store.mark_processed(msg.id, self.agent_name)
 
                 except Exception as e:
-                    logger.error(f" Handler error for message {msg.id[:8]}: {e}")
+                    if batch_size > 1:
+                        logger.error(f" Handler error for BATCH of {batch_size} messages: {e}")
+                    else:
+                        logger.error(f" Handler error for message {all_pending[0].id[:8]}: {e}")
                     logger.error(f"   Error details: {type(e).__name__}: {e!s}")
-                    # Mark as processed to prevent infinite retry loop
+                    # Mark ALL as processed to prevent infinite retry loop
                     # TODO: Add retry limits and dead-letter queue for transient failures
-                    self.store.mark_processed(msg.id, self.agent_name)
-                    logger.warning(f"  Message {msg.id[:8]} marked as failed (won't retry)")
+                    for msg in all_pending:
+                        self.store.mark_processed(msg.id, self.agent_name)
+                    if batch_size > 1:
+                        logger.warning(f"  BATCH of {batch_size} messages marked as failed (won't retry)")
+                    else:
+                        logger.warning(f"  Message {all_pending[0].id[:8]} marked as failed (won't retry)")
 
             except asyncio.CancelledError:
                 logger.info("  Processor task cancelled")
