@@ -402,6 +402,9 @@ class MessageStore:
         Check if agent should be auto-resumed based on resume_at timestamp.
         If resume_at is set and current time >= resume_at, automatically resume.
 
+        For #done command (pause_reason starts with "Done:"), also clear any
+        messages that accumulated during the pause to ensure agent gets a fresh start.
+
         Args:
             agent: Agent name
 
@@ -412,6 +415,15 @@ class MessageStore:
 
         if status["status"] == "paused" and status["resume_at"]:
             if time.time() >= status["resume_at"]:
+                # If this was a #done pause, clear messages that arrived during pause
+                pause_reason = status.get("paused_reason", "")
+                if pause_reason.startswith("Done:"):
+                    cleared = self.clear_pending_messages(agent)
+                    if cleared > 0:
+                        import logging
+                        logger = logging.getLogger(__name__)
+                        logger.info(f"  Cleared {cleared} message(s) accumulated during #done pause")
+
                 self.resume_agent(agent)
                 return True
 

@@ -446,17 +446,12 @@ class QueueManager:
                             self.store.pause_agent(self.agent_name, reason=pause_reason, resume_at=resume_at)
                             logger.warning(f"⏸  {pause_reason}")
 
-                            # For #done, clear pending messages so agent gets a real break
-                            if is_done_command:
-                                cleared_count = self.store.clear_pending_messages(self.agent_name)
-                                if cleared_count > 0:
-                                    logger.info(f"  Cleared {cleared_count} pending message(s) from backlog")
-
                     # Only send if response is not empty (handler may return "" to skip)
                     if response and response.strip():
-                        # Strip @mentions from #done responses to prevent triggering other agents
+                        # Strip @mentions ONLY from #done responses to prevent triggering other agents
+                        # Keep @mentions for #pause/#stop so recipients get notified
                         send_content = response
-                        if pause_detected:
+                        if is_done_command:
                             # Remove all @mentions from the response
                             send_content = re.sub(r'@\w+', '', response)
                             logger.info(f" Stripped @mentions from #done response")
