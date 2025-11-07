@@ -30,45 +30,78 @@ class MessageStore:
     """SQLite-backed message store for mention queuing."""
 
     def __init__(self, db_path: str = "data/message_backlog.db"):
-        self.db_path = Path(db_path)
-        self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        self.db_path = Path(db_path) if db_path != ":memory:" else db_path
+        self._is_memory = (db_path == ":memory:")
+        self._memory_conn = None  # Keep persistent connection for in-memory DBs
+
+        # Only create directory for file-based databases
+        if db_path != ":memory:":
+            self.db_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Initialize database
         self._init_db()
 
     def _init_db(self):
         """Initialize database schema."""
-        with self._conn() as conn:
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS messages (
-                    id TEXT NOT NULL,
-                    agent TEXT NOT NULL,
-                    sender TEXT NOT NULL,
-                    content TEXT NOT NULL,
-                    timestamp REAL NOT NULL,
-                    processed INTEGER DEFAULT 0,
-                    processing_started_at REAL,
-                    processing_completed_at REAL,
-                    created_at REAL DEFAULT (strftime('%s', 'now')),
-                    PRIMARY KEY (id, agent)
-                )
-            """)
+        try:
+            with self._conn() as conn:
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS messages (
+                        id TEXT NOT NULL,
+                        agent TEXT NOT NULL,
+                        sender TEXT NOT NULL,
+                        content TEXT NOT NULL,
+                        timestamp REAL NOT NULL,
+                        processed INTEGER DEFAULT 0,
+                        processing_started_at REAL,
+                        processing_completed_at REAL,
+                        created_at REAL DEFAULT (strftime('%s', 'now')),
+                        PRIMARY KEY (id, agent)
+                    )
+                """)
 
-            # Index for efficient queries
-            conn.execute("""
-                CREATE INDEX IF NOT EXISTS idx_agent_processed
-                ON messages(agent, processed, timestamp)
-            """)
+                # Index for efficient queries
+                conn.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_agent_processed
+                    ON messages(agent, processed, timestamp)
+                """)
 
-            conn.commit()
+                # Agent status table for pause/resume functionality
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS agent_status (
+                        agent TEXT PRIMARY KEY,
+                        status TEXT NOT NULL DEFAULT 'active',
+                        paused_at REAL,
+                        paused_reason TEXT,
+                        resume_at REAL,
+                        updated_at REAL DEFAULT (strftime('%s', 'now'))
+                    )
+                """)
+
+                conn.commit()
+        except Exception as e:
+            import logging
+            logging.error(f"Failed to initialize database: {e}")
+            raise
 
     @contextmanager
     def _conn(self):
         """Context manager for database connections."""
-        conn = sqlite3.connect(str(self.db_path))
-        conn.row_factory = sqlite3.Row
-        try:
-            yield conn
-        finally:
-            conn.close()
+        # For in-memory databases, reuse the same connection
+        # (otherwise each connection creates a fresh empty database)
+        if self._is_memory:
+            if self._memory_conn is None:
+                self._memory_conn = sqlite3.connect(str(self.db_path))
+                self._memory_conn.row_factory = sqlite3.Row
+            yield self._memory_conn
+        else:
+            # For file-based databases, create new connection each time
+            conn = sqlite3.connect(str(self.db_path))
+            conn.row_factory = sqlite3.Row
+            try:
+                yield conn
+            finally:
+                conn.close()
 
     def store_message(self, msg_id: str, agent: str, sender: str, content: str) -> bool:
         """Store a new mention message."""
@@ -242,3 +275,130 @@ class MessageStore:
             )
             conn.commit()
             return cursor.rowcount
+
+    def pause_agent(self, agent: str, reason: str = "", resume_at: float | None = None) -> bool:
+        """
+        Pause an agent (stop processing messages).
+
+        Args:
+            agent: Agent name
+            reason: Optional reason for pause (e.g., "Self-paused: overwhelmed", "Manual pause")
+            resume_at: Optional timestamp for auto-resume (None = manual resume required)
+
+        Returns:
+            True if successful
+        """
+        try:
+            with self._conn() as conn:
+                conn.execute(
+                    """
+                    INSERT INTO agent_status (agent, status, paused_at, paused_reason, resume_at, updated_at)
+                    VALUES (?, 'paused', ?, ?, ?, ?)
+                    ON CONFLICT(agent) DO UPDATE SET
+                        status = 'paused',
+                        paused_at = excluded.paused_at,
+                        paused_reason = excluded.paused_reason,
+                        resume_at = excluded.resume_at,
+                        updated_at = excluded.updated_at
+                    """,
+                    (agent, time.time(), reason, resume_at, time.time()),
+                )
+                conn.commit()
+                return True
+        except sqlite3.Error:
+            return False
+
+    def resume_agent(self, agent: str) -> bool:
+        """
+        Resume an agent (continue processing messages).
+
+        Args:
+            agent: Agent name
+
+        Returns:
+            True if successful
+        """
+        try:
+            with self._conn() as conn:
+                conn.execute(
+                    """
+                    INSERT INTO agent_status (agent, status, paused_at, paused_reason, resume_at, updated_at)
+                    VALUES (?, 'active', NULL, NULL, NULL, ?)
+                    ON CONFLICT(agent) DO UPDATE SET
+                        status = 'active',
+                        paused_at = NULL,
+                        paused_reason = NULL,
+                        resume_at = NULL,
+                        updated_at = excluded.updated_at
+                    """,
+                    (agent, time.time()),
+                )
+                conn.commit()
+                return True
+        except sqlite3.Error:
+            return False
+
+    def get_agent_status(self, agent: str) -> dict:
+        """
+        Get current status of an agent.
+
+        Args:
+            agent: Agent name
+
+        Returns:
+            Dict with keys: status ('active'|'paused'), paused_at, paused_reason, resume_at
+        """
+        with self._conn() as conn:
+            row = conn.execute(
+                "SELECT status, paused_at, paused_reason, resume_at FROM agent_status WHERE agent = ?",
+                (agent,),
+            ).fetchone()
+
+            if not row:
+                # Agent not in table = active by default
+                return {
+                    "status": "active",
+                    "paused_at": None,
+                    "paused_reason": None,
+                    "resume_at": None,
+                }
+
+            return {
+                "status": row["status"],
+                "paused_at": row["paused_at"],
+                "paused_reason": row["paused_reason"],
+                "resume_at": row["resume_at"],
+            }
+
+    def is_agent_paused(self, agent: str) -> bool:
+        """
+        Check if agent is currently paused.
+
+        Args:
+            agent: Agent name
+
+        Returns:
+            True if paused, False if active
+        """
+        status = self.get_agent_status(agent)
+        return status["status"] == "paused"
+
+    def check_auto_resume(self, agent: str) -> bool:
+        """
+        Check if agent should be auto-resumed based on resume_at timestamp.
+        If resume_at is set and current time >= resume_at, automatically resume.
+
+        Args:
+            agent: Agent name
+
+        Returns:
+            True if agent was auto-resumed, False otherwise
+        """
+        status = self.get_agent_status(agent)
+
+        if status["status"] == "paused" and status["resume_at"]:
+            if time.time() >= status["resume_at"]:
+                self.resume_agent(agent)
+                return True
+
+        return False

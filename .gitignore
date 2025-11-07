@@ -103,6 +103,10 @@ data/
 *.db
 *.db-journal
 
+# Node modules (MCPJam testing)
+node_modules/
+package-lock.json
+
 # Local documentation (internal)
 docs/
 CLAUDE.md
