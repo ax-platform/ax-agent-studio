@@ -17,8 +17,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from tests.e2e.test_config import TEST_AGENTS
 
 
-def test_agent_can_send_message(agent_name: str) -> bool:
-    """Test that an agent can send a message via MCP JAM SDK"""
+def validate_agent_can_send_message(agent_name: str) -> bool:
+    """Validate that an agent can send a message via MCP JAM SDK"""
     print(f"\n{'─' * 80}")
     print(f"Testing: {agent_name}")
     print("─" * 80)
@@ -112,7 +112,7 @@ def main():
 
     results = {}
     for agent_name in TEST_AGENTS.keys():
-        results[agent_name] = test_agent_can_send_message(agent_name)
+        results[agent_name] = validate_agent_can_send_message(agent_name)
 
     # Summary
     print("\n" + "=" * 80)

@@ -23,7 +23,7 @@ from tests.e2e.test_config import TEST_AGENTS
 VALIDATION_SCRIPT = Path(__file__).parent / "validate-agent-response.js"
 
 
-def test_echo_on_agent(target_agent: str, sender_agent: str) -> bool:
+def validate_echo_on_agent(target_agent: str, sender_agent: str) -> bool:
     """Deploy Echo on target_agent, send @mention from sender_agent, verify response"""
     print(f"\n{'=' * 80}")
     print(f"Testing Echo on: {target_agent}")
@@ -118,7 +118,7 @@ def main():
 
     results = {}
     for target, sender in test_pairs:
-        results[target] = test_echo_on_agent(target, sender)
+        results[target] = validate_echo_on_agent(target, sender)
 
     # Cleanup
     print("\n" + "=" * 80)
