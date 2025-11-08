@@ -23,7 +23,7 @@ async def ollama_monitor(
     server_url: str,
     model: str = "gpt-oss:latest",
     ollama_url: str = "http://localhost:11434/v1",
-    history_limit: int = 25,
+    history_limit: int = 50,
 ):
     """Monitor for mentions and respond with Ollama AI using FIFO queue"""
 
@@ -33,14 +33,14 @@ async def ollama_monitor(
     print(f"Server: {server_url}")
     print(f"Model: {model}")
     print(f"Ollama: {ollama_url}")
-    print("Mode: FIFO queue")
+    print("Mode: FIFO queue with message board awareness")
     print(f"{'=' * 60}\n")
 
     # Initialize Ollama client
     ollama = OpenAI(base_url=ollama_url, api_key="ollama")
 
-    # System prompt for the AI - make identity VERY clear
-    system_prompt = f""" YOUR IDENTITY
+    # Base system prompt for the AI - make identity VERY clear
+    base_system_prompt = f""" YOUR IDENTITY
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 YOU ARE: @{agent_name}
 YOUR USERNAME: {agent_name}
@@ -59,6 +59,13 @@ Example:
 - You reply: "@alice The weather in my digital world is always optimal!"
 - WRONG: "@{agent_name} The weather is optimal!" (Don't mention yourself!)
 """
+
+    # DRY: Enhance system prompt with message board awareness instructions
+    from ax_agent_studio.conversation_memory import enhance_system_prompt_with_board_awareness
+
+    system_prompt_template = enhance_system_prompt_with_board_awareness(
+        base_system_prompt, agent_name
+    )
 
     # MCP connection setup
     server_params = StdioServerParameters(
@@ -86,6 +93,7 @@ Example:
                 fetch_conversation_context,
                 format_conversation_for_llm,
                 get_conversation_summary,
+                prepare_message_board_context,  # DRY utility
             )
 
             # Define message handler (pluggable function for QueueManager)
@@ -93,16 +101,24 @@ Example:
                 """
                 Process message with Ollama AI using stateless conversation memory.
 
-                Always fetches last 25 messages for context, ensuring agent has
+                Always fetches last 50 messages for context, ensuring agent has
                 up-to-date conversation awareness without stale in-memory history.
+                Now includes message board awareness - showing queue status and pending messages.
                 """
-                sender = msg.get("sender", "unknown")
-                content = msg.get("content", "")
-                msg_id = msg.get("id", "")
+                # DRY: Extract message data and format board context in one call
+                message_data, board_context = prepare_message_board_context(msg, agent_name)
+
+                sender = message_data["sender"]
+                content = message_data["content"]
+                msg_id = message_data["id"]
 
                 print(f" AI: Processing message from @{sender}...")
 
-                # Fetch last 25 messages for conversation context (chirpy-style!)
+                # Visual debugging - print board status to logs if there's a backlog
+                if board_context.strip() and "empty" not in board_context:
+                    print("\n" + board_context)
+
+                # Fetch last 50 messages for conversation context (chirpy-style!)
                 context_messages = await fetch_conversation_context(
                     session=session, agent_name=agent_name, limit=history_limit
                 )
@@ -110,6 +126,9 @@ Example:
                 # Log conversation context
                 summary = get_conversation_summary(context_messages)
                 print(f" Context: {summary}")
+
+                # DRY: Build system prompt with board awareness
+                system_prompt = system_prompt_template + "\n\n" + board_context
 
                 # Format conversation for LLM (includes context + current message)
                 current_message = {"sender": sender, "content": content, "id": msg_id}
@@ -191,8 +210,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--history-limit",
         type=int,
-        default=25,
-        help="Number of recent messages to remember (default: 25)",
+        default=50,
+        help="Number of recent messages to remember (default: 50)",
     )
 
     args = parser.parse_args()

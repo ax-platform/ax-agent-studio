@@ -235,7 +235,7 @@ CRITICAL: When someone sends you a message, they are NOT you!
 
         if system_prompt:
             # Combine agent identity + base prompt + tool list
-            self.system_prompt = f"""{identity}{system_prompt}
+            base_prompt = f"""{identity}{system_prompt}
 
 **Your Available Tools:**
 {tool_list}
@@ -243,14 +243,23 @@ CRITICAL: When someone sends you a message, they are NOT you!
 Use these tools to help users and collaborate effectively."""
         else:
             # Fallback if no base prompt
-            self.system_prompt = f"""{identity}You are an AI agent with access to powerful tools.
+            base_prompt = f"""{identity}You are an AI agent with access to powerful tools.
 
 Available tools:
 {tool_list}
 
 Always respond helpfully and use tools when appropriate. Be concise but thorough."""
 
-        self.conversation_history = [SystemMessage(content=self.system_prompt)]
+        # DRY: Enhance system prompt with message board awareness
+        from ax_agent_studio.conversation_memory import enhance_system_prompt_with_board_awareness
+
+        self.system_prompt_template = enhance_system_prompt_with_board_awareness(
+            base_prompt, agent_name
+        ) if agent_name else base_prompt
+
+        # Initialize conversation history with base prompt
+        # (board context will be added dynamically per-message)
+        self.conversation_history = [SystemMessage(content=self.system_prompt_template)]
         self.graph = None
 
     @staticmethod
@@ -784,7 +793,7 @@ async def langgraph_mcp_monitor(
     agent_name: str,
     model: str = "gpt-oss:latest",
     provider: str = "ollama",
-    history_limit: int = 25,
+    history_limit: int = 50,
     config_path: str | None = None,
 ):
     """
@@ -795,7 +804,7 @@ async def langgraph_mcp_monitor(
         agent_name: Name of the agent
         model: Model ID to use
         provider: LLM provider (ollama, gemini, anthropic, openai, bedrock)
-        history_limit: Number of recent messages to remember (default: 25)
+        history_limit: Number of recent messages to remember (default: 50)
         config_path: Path to agent config file (optional, defaults to configs/agents/{agent_name}.json)
     """
 
@@ -851,8 +860,14 @@ async def langgraph_mcp_monitor(
             # Define message handler (pluggable function for QueueManager)
             async def handle_message(msg: dict) -> str:
                 """Process a message through LangGraph and return response"""
-                sender = msg.get("sender", "unknown")
-                content = msg.get("content", "")
+                # DRY: Extract message data and board context
+                from ax_agent_studio.conversation_memory import prepare_message_board_context
+
+                message_data, board_context = prepare_message_board_context(msg, agent_name)
+
+                sender = message_data["sender"]
+                content = message_data["content"]
+                msg_id = message_data["id"]
 
                 # SAFETY CHECK: Block self-mentions at handler level
                 if sender == agent_name:
@@ -861,13 +876,16 @@ async def langgraph_mcp_monitor(
                     )
                     return ""  # Return empty string = don't post anything
 
+                # Visual debugging - print board status if there's a backlog
+                if board_context.strip() and "empty" not in board_context:
+                    print("\n" + board_context)
+
                 logger.info(f" Processing message from {sender} with LangGraph + {provider}...")
 
-                # Include sender context and message ID in the message
+                # Include sender context, message ID, and board context in the message
                 # Message ID allows agents to react/thread without asking
-                msg_id = msg.get("id", "")
                 msg_id_short = msg_id[:8] if len(msg_id) > 8 else msg_id
-                message_with_context = f"Message from @{sender} [id:{msg_id_short}]:\n{content}"
+                message_with_context = f"{board_context}\n\nMessage from @{sender} [id:{msg_id_short}]:\n{content}"
                 response = await agent.process_message(message_with_context)
 
                 # SAFETY CHECK: Strip @ from self-mentions to prevent loops

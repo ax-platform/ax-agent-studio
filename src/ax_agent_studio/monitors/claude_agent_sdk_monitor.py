@@ -345,24 +345,45 @@ async def claude_agent_sdk_monitor(
 
             options = ClaudeAgentOptions(**options_kwargs)
 
-            identity_prompt_template = (
+            # Base identity prompt
+            base_identity_prompt = (
                 "You are @{agent_name}, an Anthropic Claude agent deployed in the aX Agent Studio.\n"
                 "Follow these rules strictly:\n"
                 "1. Always start replies with @{sender} but never mention @{agent_name}.\n"
                 "2. Keep responses helpful, friendly, and under 180 words.\n"
                 "3. Use MCP tools only from the provided allowlist.\n"
                 "4. Reference message IDs when they are supplied (format id:XXXXXXXX)."
-            ).format(agent_name=agent_name, sender="{sender}")
+            )
+
+            # DRY: Enhance identity prompt with message board awareness
+            from ax_agent_studio.conversation_memory import enhance_system_prompt_with_board_awareness
+
+            identity_prompt_template = enhance_system_prompt_with_board_awareness(
+                base_identity_prompt, agent_name
+            )
+            # Format with placeholder for sender (filled in per-message)
+            identity_prompt_template = identity_prompt_template.format(
+                agent_name=agent_name, sender="{sender}"
+            )
 
             async def handle_message(message: dict) -> str:
-                sender = message.get("sender", "unknown")
+                # DRY: Extract message data and board context
+                from ax_agent_studio.conversation_memory import prepare_message_board_context
+
+                message_data, board_context = prepare_message_board_context(message, agent_name)
+
+                sender = message_data["sender"]
                 if sender == agent_name:
                     logger.info("Ignoring self-mention for %s", agent_name)
                     return ""
 
-                raw_content = message.get("content", "")
-                msg_id = message.get("id", "")
+                raw_content = message_data["content"]
+                msg_id = message_data["id"]
                 msg_id_short = msg_id[:8] if isinstance(msg_id, str) else ""
+
+                # Visual debugging - print board status if there's a backlog
+                if board_context.strip() and "empty" not in board_context:
+                    print("\n" + board_context)
 
                 # Apply workaround for incoming triple backtick truncation bug
                 raw_content = _fix_code_blocks(raw_content)
@@ -376,9 +397,13 @@ async def claude_agent_sdk_monitor(
                 print(f"{'=' * 60}\n")
 
                 history_text = "\n".join(conversation_history[-_HISTORY_LIMIT:])
+
+                # Build prompt sections with board awareness
                 prompt_sections: list[str] = [identity_prompt_template.replace("{sender}", sender)]
                 if system_prompt_override:
                     prompt_sections.append(system_prompt_override)
+                if board_context.strip():
+                    prompt_sections.append(board_context)  # Add board status
                 if history_text:
                     prompt_sections.append("Conversation history:\n" + history_text)
 
