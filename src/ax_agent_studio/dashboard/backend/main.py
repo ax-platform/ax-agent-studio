@@ -76,6 +76,12 @@ async def lifespan(app: FastAPI):
     signal.signal(signal.SIGTERM, signal_handler)
     print("✓ Signal handlers registered (Ctrl+C will gracefully stop all monitors)")
 
+    # Cleanup orphaned monitors from previous sessions
+    print("\n🧹 Checking for orphaned monitors from previous sessions...")
+    orphaned_count = await process_manager.cleanup_orphaned_monitors()
+    if orphaned_count == 0:
+        print("✓ No orphaned monitors found")
+
     yield  # Server runs here
 
     # Shutdown: cleanup
