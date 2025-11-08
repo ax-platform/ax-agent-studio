@@ -22,13 +22,15 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from tests.e2e.helpers.dashboard_api import DashboardAPI
 
 
-def run_javascript_validation(agent_name: str, sender_agent: str, timeout: int = 180) -> bool:
+def run_javascript_validation(
+    agent_name: str, sender_agent: str, test_description: str, timeout: int = 180
+) -> bool:
     """Run JavaScript MCP JAM SDK validation test
 
     Returns True if validation passed, False otherwise
     """
     script_path = Path(__file__).parent / "validate-agent-response.js"
-    test_message = f"E2E Test: Validating {agent_name}"
+    test_message = f"E2E Test: {test_description}"
 
     print("  🧪 Running MCP JAM SDK validation...")
     print(f"     Script: {script_path.name}")
@@ -86,16 +88,21 @@ def test_echo_monitor():
         print(f"  ✓ Monitor started: {result['monitor_id']}")
 
         # Wait for running
-        print("⏳ Waiting for monitor to reach RUNNING status...")
-        if api.wait_for_monitor_running("ghost_ray_363", timeout=10):
-            print("  ✓ Monitor is RUNNING")
+        print("⏳ Waiting for monitor to be READY...")
+        if api.wait_for_monitor_ready("ghost_ray_363", timeout=15):
+            print("  ✓ Monitor is READY")
         else:
-            print("  ❌ Monitor failed to start")
+            print("  ❌ Monitor failed to initialize")
             return False
 
         # Validate with MCP JAM SDK (Echo responds instantly, use short timeout)
         print("\n🧪 Validating with MCP JAM SDK...")
-        if run_javascript_validation("ghost_ray_363", "lunar_ray_510", timeout=10):
+        if run_javascript_validation(
+            "ghost_ray_363",
+            "lunar_ray_510",
+            "Echo Monitor - Testing instant echo response (no AI)",
+            timeout=15,
+        ):
             return True
         else:
             return False
@@ -119,21 +126,26 @@ def test_ollama_monitor():
             config_path="configs/agents/local_lunar_ray.json",
             monitor_type="ollama",
             provider="ollama",
-            model="gptoss",  # Latest Ollama model
+            model="gpt-oss:latest",  # Latest Ollama model
         )
         print(f"  ✓ Monitor started: {result['monitor_id']}")
 
         # Wait for running
-        print("⏳ Waiting for monitor to reach RUNNING status...")
-        if api.wait_for_monitor_running("lunar_ray_510", timeout=10):
-            print("  ✓ Monitor is RUNNING")
+        print("⏳ Waiting for monitor to be READY...")
+        if api.wait_for_monitor_ready("lunar_ray_510", timeout=15):
+            print("  ✓ Monitor is READY")
         else:
-            print("  ❌ Monitor failed to start")
+            print("  ❌ Monitor failed to initialize")
             return False
 
         # Validate with MCP JAM SDK (AI needs time to respond)
         print("\n🧪 Validating with MCP JAM SDK...")
-        if run_javascript_validation("lunar_ray_510", "ghost_ray_363", timeout=60):
+        if run_javascript_validation(
+            "lunar_ray_510",
+            "ghost_ray_363",
+            "Ollama Monitor (gpt-oss:latest) - Testing local AI response",
+            timeout=60,
+        ):
             return True
         else:
             return False
@@ -162,16 +174,21 @@ def test_claude_sdk_monitor():
         print(f"  ✓ Monitor started: {result['monitor_id']}")
 
         # Wait for running
-        print("⏳ Waiting for monitor to reach RUNNING status...")
-        if api.wait_for_monitor_running("ghost_ray_363", timeout=10):
-            print("  ✓ Monitor is RUNNING")
+        print("⏳ Waiting for monitor to be READY...")
+        if api.wait_for_monitor_ready("ghost_ray_363", timeout=15):
+            print("  ✓ Monitor is READY")
         else:
-            print("  ❌ Monitor failed to start")
+            print("  ❌ Monitor failed to initialize")
             return False
 
         # Validate with MCP JAM SDK (AI needs time to respond)
         print("\n🧪 Validating with MCP JAM SDK...")
-        if run_javascript_validation("ghost_ray_363", "lunar_ray_510", timeout=60):
+        if run_javascript_validation(
+            "ghost_ray_363",
+            "lunar_ray_510",
+            "Claude Agent SDK (claude-sonnet-4-5) - Testing cloud AI with security controls",
+            timeout=60,
+        ):
             return True
         else:
             return False
@@ -200,16 +217,21 @@ def test_openai_sdk_monitor():
         print(f"  ✓ Monitor started: {result['monitor_id']}")
 
         # Wait for running
-        print("⏳ Waiting for monitor to reach RUNNING status...")
-        if api.wait_for_monitor_running("lunar_ray_510", timeout=10):
-            print("  ✓ Monitor is RUNNING")
+        print("⏳ Waiting for monitor to be READY...")
+        if api.wait_for_monitor_ready("lunar_ray_510", timeout=15):
+            print("  ✓ Monitor is READY")
         else:
-            print("  ❌ Monitor failed to start")
+            print("  ❌ Monitor failed to initialize")
             return False
 
         # Validate with MCP JAM SDK (AI needs time to respond)
         print("\n🧪 Validating with MCP JAM SDK...")
-        if run_javascript_validation("lunar_ray_510", "ghost_ray_363", timeout=60):
+        if run_javascript_validation(
+            "lunar_ray_510",
+            "ghost_ray_363",
+            "OpenAI Agents SDK (gpt-4o-mini) - Testing OpenAI cloud AI",
+            timeout=60,
+        ):
             return True
         else:
             return False
@@ -238,16 +260,21 @@ def test_langgraph_monitor():
         print(f"  ✓ Monitor started: {result['monitor_id']}")
 
         # Wait for running
-        print("⏳ Waiting for monitor to reach RUNNING status...")
-        if api.wait_for_monitor_running("lunar_ray_510", timeout=10):
-            print("  ✓ Monitor is RUNNING")
+        print("⏳ Waiting for monitor to be READY...")
+        if api.wait_for_monitor_ready("lunar_ray_510", timeout=15):
+            print("  ✓ Monitor is READY")
         else:
-            print("  ❌ Monitor failed to start")
+            print("  ❌ Monitor failed to initialize")
             return False
 
         # Validate with MCP JAM SDK (AI + tools need time to respond)
         print("\n🧪 Validating with MCP JAM SDK...")
-        if run_javascript_validation("lunar_ray_510", "ghost_ray_363", timeout=90):
+        if run_javascript_validation(
+            "lunar_ray_510",
+            "ghost_ray_363",
+            "LangGraph (gemini-2.5-pro) - Testing AI with tool support",
+            timeout=90,
+        ):
             return True
         else:
             return False
