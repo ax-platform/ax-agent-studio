@@ -271,6 +271,15 @@ class QueueManager:
                 iteration += 1
                 logger.debug(f"[Poller] Waiting for messages... (iteration {iteration})")
 
+                # Check if agent is paused BEFORE fetching messages
+                # This avoids wasting API rate limits and keeps agent truly idle during #done pause
+                if self.store.is_agent_paused(self.agent_name):
+                    # Check if auto-resume timer expired (e.g., #done 60s pause)
+                    self.store.check_auto_resume(self.agent_name)
+                    # Sleep briefly and check again
+                    await asyncio.sleep(1)
+                    continue
+
                 # Block until message arrives (wait=true)
                 result = await self.session.call_tool(
                     "messages", {"action": "check", "wait": True, "mark_read": self.mark_read}
@@ -282,14 +291,6 @@ class QueueManager:
                     continue
 
                 msg_id, sender, content = parsed
-
-                # Check if agent is paused (e.g., during #done auto-pause)
-                # Don't queue messages during pause - they should be dropped to prevent accumulation
-                if self.store.is_agent_paused(self.agent_name):
-                    logger.info(
-                        f"  Dropping message {msg_id[:8]} from {sender} (agent paused, won't accumulate)"
-                    )
-                    continue
 
                 # Store in SQLite queue
                 success = self.store.store_message(
