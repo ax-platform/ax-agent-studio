@@ -232,7 +232,7 @@ def test_langgraph_monitor():
             agent_name="lunar_ray_510",
             config_path="configs/agents/local_lunar_ray.json",
             monitor_type="langgraph",
-            provider="google",
+            provider="gemini",
             model="gemini-2.5-pro",
         )
         print(f"  ✓ Monitor started: {result['monitor_id']}")
