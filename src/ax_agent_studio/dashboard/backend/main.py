@@ -559,9 +559,13 @@ async def start_monitor(request: StartMonitorRequest):
     """Start a new monitor"""
     try:
         # Check if agent already has a running monitor
+        # Only check monitors with status "running" - stopped monitors can be restarted
         existing_monitors = process_manager.get_all_monitors()
         for monitor in existing_monitors:
-            if monitor["agent_name"] == request.config.agent_name:
+            if (
+                monitor["agent_name"] == request.config.agent_name
+                and monitor.get("status") == "running"
+            ):
                 raise HTTPException(
                     status_code=409,
                     detail=f"Agent {request.config.agent_name} already has a running monitor (id: {monitor['id']}). Stop it first before starting a new one.",
