@@ -118,11 +118,17 @@ async def lifespan(app: FastAPI):
     signal.signal(signal.SIGTERM, signal_handler)
     print("✓ Signal handlers registered (Ctrl+C will gracefully stop all monitors)")
 
-    # Cleanup orphaned monitors from previous sessions
-    print("\n🧹 Checking for orphaned monitors from previous sessions...")
-    orphaned_count = await process_manager.cleanup_orphaned_monitors()
-    if orphaned_count == 0:
-        print("✓ No orphaned monitors found")
+    # DISABLED: Orphaned monitor cleanup
+    # TODO: Implement proper orphaned monitor detection with persistent state
+    # Current implementation kills ALL monitors (including from other dashboard instances)
+    # because self.monitors is empty on startup. Need to persist which monitors
+    # belong to THIS dashboard instance (e.g., .dashboard_monitors.json)
+    # See: https://github.com/ax-platform/ax-agent-studio/pull/25#issuecomment-3506962389
+    #
+    # print("\n🧹 Checking for orphaned monitors from previous sessions...")
+    # orphaned_count = await process_manager.cleanup_orphaned_monitors()
+    # if orphaned_count == 0:
+    #     print("✓ No orphaned monitors found")
 
     yield  # Server runs here
 
