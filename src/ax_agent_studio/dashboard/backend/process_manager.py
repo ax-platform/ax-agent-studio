@@ -883,6 +883,16 @@ class ProcessManager:
             record["status"] = "stopped"
             record["stopped_at"] = datetime.now().isoformat()
 
+    def _mark_monitor_inactive(self, monitor_id: str) -> None:
+        """Reset runtime metadata once a monitor stops or is killed."""
+        info = self.monitors.get(monitor_id)
+        if not info:
+            return
+
+        info["pid"] = None
+        info["process"] = None
+        info["stopped_at"] = datetime.now().isoformat()
+
     async def _tail_process_output(self, monitor_id: str, process, log_file: Path):
         """Tail process output to log file"""
         try:
@@ -902,7 +912,10 @@ class ProcessManager:
         pid = info.get("pid")
 
         if not pid or not psutil.pid_exists(pid):
-            return False
+            # Already stopped (or never fully started). Treat as success so UI can proceed.
+            self._mark_monitor_inactive(monitor_id)
+            self._deregister_monitor_from_group(monitor_id)
+            return True
 
         try:
             process = psutil.Process(pid)
@@ -940,6 +953,7 @@ class ProcessManager:
             with open(log_file, "a", encoding="utf-8") as f:
                 f.write(f"\n=== Monitor stopped at {datetime.now().isoformat()} ===\n")
 
+            self._mark_monitor_inactive(monitor_id)
             self._deregister_monitor_from_group(monitor_id)
 
             return True
@@ -987,6 +1001,10 @@ class ProcessManager:
 
     async def kill_monitor(self, monitor_id: str) -> bool:
         """Force kill a monitor immediately (kills entire process tree)"""
+        info = None
+        pid: int | None = None
+        tracked_monitor = False
+
         # Handle orphaned monitors (monitor_id format: "orphan_12345")
         if monitor_id.startswith("orphan_"):
             try:
@@ -995,14 +1013,19 @@ class ProcessManager:
                     return False
             except (ValueError, IndexError):
                 return False
-        elif monitor_id not in self.monitors:
-            return False
         else:
-            info = self.monitors[monitor_id]
+            info = self.monitors.get(monitor_id)
+            if not info:
+                return False
+
+            tracked_monitor = True
             pid = info.get("pid")
 
             if not pid or not psutil.pid_exists(pid):
-                return False
+                # Already dead - treat as success so caller can clean up dashboard state
+                self._mark_monitor_inactive(monitor_id)
+                self._deregister_monitor_from_group(monitor_id)
+                return True
 
         try:
             process = psutil.Process(pid)
@@ -1034,12 +1057,16 @@ class ProcessManager:
 
             process.wait()
 
-            # Log shutdown
-            log_file = Path(info.get("log_file"))
-            with open(log_file, "a", encoding="utf-8") as f:
-                f.write(f"\n=== Monitor killed (forced) at {datetime.now().isoformat()} ===\n")
+            if tracked_monitor and info:
+                log_file = info.get("log_file")
+                if log_file:
+                    with open(Path(log_file), "a", encoding="utf-8") as f:
+                        f.write(
+                            f"\n=== Monitor killed (forced) at {datetime.now().isoformat()} ===\n"
+                        )
 
-            self._deregister_monitor_from_group(monitor_id)
+                self._mark_monitor_inactive(monitor_id)
+                self._deregister_monitor_from_group(monitor_id)
 
             return True
 

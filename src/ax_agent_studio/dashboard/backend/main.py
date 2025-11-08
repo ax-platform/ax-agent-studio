@@ -46,30 +46,72 @@ async def lifespan(app: FastAPI):
     """Handle startup and shutdown events"""
 
     # Startup: register signal handlers for graceful shutdown
-    def signal_handler(signum, frame):
-        """Handle SIGINT (Ctrl+C) and SIGTERM by stopping all monitors"""
-        print("\n\n🛑 Received shutdown signal, stopping all monitors...")
-        try:
-            # Run async cleanup in event loop
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                # Create a task to stop monitors
-                asyncio.create_task(cleanup_monitors())
-            else:
-                # If loop not running, run synchronously
-                loop.run_until_complete(cleanup_monitors())
-        except Exception as e:
-            print(f"❌ Error during cleanup: {e}")
-        finally:
-            print("✓ Cleanup complete, exiting...")
+    cleanup_lock = asyncio.Lock()
+    cleanup_done = False
+    cleanup_task: asyncio.Task | None = None
+    shutdown_signal_seen = False
 
     async def cleanup_monitors():
-        """Stop all running monitors"""
+        """Stop all running monitors (idempotent)."""
+        nonlocal cleanup_done
+
+        async with cleanup_lock:
+            if cleanup_done:
+                return 0
+
+            try:
+                count = await process_manager.stop_all_monitors()
+                print(f"✓ Stopped {count} monitor(s)")
+            except Exception as e:
+                count = 0
+                print(f"⚠ Error stopping monitors: {e}")
+            finally:
+                cleanup_done = True
+                print("✓ Cleanup complete, exiting...")
+
+            return count
+
+    def schedule_cleanup(loop: asyncio.AbstractEventLoop) -> None:
+        nonlocal cleanup_task
+        if cleanup_task and not cleanup_task.done():
+            return
+
+        cleanup_task = loop.create_task(cleanup_monitors())
+
+    previous_handlers = {
+        signal.SIGINT: signal.getsignal(signal.SIGINT),
+        signal.SIGTERM: signal.getsignal(signal.SIGTERM),
+    }
+
+    def signal_handler(signum, frame):
+        """Handle SIGINT (Ctrl+C) and SIGTERM by stopping all monitors."""
+        nonlocal shutdown_signal_seen
+        print("\n\n🛑 Received shutdown signal, stopping all monitors...")
+        first_signal = not shutdown_signal_seen
+        shutdown_signal_seen = True
+
         try:
-            count = await process_manager.stop_all_monitors()
-            print(f"✓ Stopped {count} monitor(s)")
+            loop = asyncio.get_running_loop()
+            loop.call_soon_threadsafe(lambda: schedule_cleanup(loop))
+        except RuntimeError:
+            # No running loop (very early start/late shutdown)
+            asyncio.run(cleanup_monitors())
         except Exception as e:
-            print(f"⚠ Error stopping monitors: {e}")
+            print(f"❌ Error during cleanup: {e}")
+
+        if not first_signal:
+            print("⚠ Shutdown already in progress; forcing exit now.")
+            os._exit(130)
+
+        previous = previous_handlers.get(signum)
+        if callable(previous):
+            previous(signum, frame)
+        elif previous == signal.SIG_DFL:
+            if signum == signal.SIGINT:
+                raise KeyboardInterrupt
+            else:
+                raise SystemExit(0)
+        # Ignore SIG_IGN (nothing else to do)
 
     # Register signal handlers
     signal.signal(signal.SIGINT, signal_handler)
@@ -784,6 +826,9 @@ async def websocket_logs(websocket: WebSocket, monitor_id: str):
         await log_streamer.stream_logs(websocket, monitor_id)
     except WebSocketDisconnect:
         print(f"Client disconnected from logs for {monitor_id}")
+    except asyncio.CancelledError:
+        # Lifespan shutdown cancelled the task - close quietly
+        await websocket.close()
     except Exception as e:
         print(f"Error streaming logs for {monitor_id}: {e}")
         await websocket.close()
@@ -797,6 +842,8 @@ async def websocket_all_logs(websocket: WebSocket):
         await log_streamer.stream_all_logs(websocket)
     except WebSocketDisconnect:
         print("Client disconnected from all logs")
+    except asyncio.CancelledError:
+        await websocket.close()
     except Exception as e:
         print(f"Error streaming all logs: {e}")
         await websocket.close()
