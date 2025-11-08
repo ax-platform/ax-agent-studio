@@ -75,11 +75,11 @@ MONITOR_TYPES = [
     {
         "name": "LangGraph",
         "monitor_type": "langgraph",
-        "provider": "google",
+        "provider": "gemini",  # Fixed: should be "gemini" not "google"
         "model": "gemini-2.5-pro",
         "target_agent": "lunar_ray_510",
         "sender_agent": "ghost_ray_363",
         "timeout": 90,  # AI + tools need more time
-        "description": "LangGraph with tool support",
+        "description": "LangGraph with tool support (Gemini)",
     },
 ]
