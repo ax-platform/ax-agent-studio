@@ -283,6 +283,14 @@ class QueueManager:
 
                 msg_id, sender, content = parsed
 
+                # Check if agent is paused (e.g., during #done auto-pause)
+                # Don't queue messages during pause - they should be dropped to prevent accumulation
+                if self.store.is_agent_paused(self.agent_name):
+                    logger.info(
+                        f"  Dropping message {msg_id[:8]} from {sender} (agent paused, won't accumulate)"
+                    )
+                    continue
+
                 # Store in SQLite queue
                 success = self.store.store_message(
                     msg_id=msg_id, agent=self.agent_name, sender=sender, content=content
@@ -421,7 +429,11 @@ class QueueManager:
                     is_done_command = False  # Initialize here so it's always defined
                     if response:
                         response_lower = response.lower()
-                        if "#pause" in response_lower or "#stop" in response_lower or "#done" in response_lower:
+                        if (
+                            "#pause" in response_lower
+                            or "#stop" in response_lower
+                            or "#done" in response_lower
+                        ):
                             pause_detected = True
                             pause_reason = "Self-paused: Agent requested pause"
                             resume_at = None  # Default: manual resume required
@@ -443,7 +455,9 @@ class QueueManager:
                                 if len(reason_text) > 5:  # More than just "#stop"
                                     pause_reason = f"Self-paused: {reason_text[6:].strip()}"
 
-                            self.store.pause_agent(self.agent_name, reason=pause_reason, resume_at=resume_at)
+                            self.store.pause_agent(
+                                self.agent_name, reason=pause_reason, resume_at=resume_at
+                            )
                             logger.warning(f"⏸  {pause_reason}")
 
                     # Only send if response is not empty (handler may return "" to skip)
@@ -453,8 +467,8 @@ class QueueManager:
                         send_content = response
                         if is_done_command:
                             # Remove all @mentions from the response
-                            send_content = re.sub(r'@\w+', '', response)
-                            logger.info(f" Stripped @mentions from #done response")
+                            send_content = re.sub(r"@\w+", "", response)
+                            logger.info(" Stripped @mentions from #done response")
 
                         # Determine which message to reply to (newest in batch)
                         reply_to_msg = all_pending[-1] if batch_size > 1 else all_pending[0]
@@ -483,7 +497,9 @@ class QueueManager:
                                     f" Completed BATCH of {batch_size} messages (threaded reply)"
                                 )
                             else:
-                                logger.info(f" Completed message {reply_to_msg.id[:8]} (threaded reply)")
+                                logger.info(
+                                    f" Completed message {reply_to_msg.id[:8]} (threaded reply)"
+                                )
                     else:
                         # Handler returned empty response (e.g., blocked self-mention)
                         if batch_size > 1:
@@ -510,9 +526,13 @@ class QueueManager:
                     for msg in all_pending:
                         self.store.mark_processed(msg.id, self.agent_name)
                     if batch_size > 1:
-                        logger.warning(f"  BATCH of {batch_size} messages marked as failed (won't retry)")
+                        logger.warning(
+                            f"  BATCH of {batch_size} messages marked as failed (won't retry)"
+                        )
                     else:
-                        logger.warning(f"  Message {all_pending[0].id[:8]} marked as failed (won't retry)")
+                        logger.warning(
+                            f"  Message {all_pending[0].id[:8]} marked as failed (won't retry)"
+                        )
 
             except asyncio.CancelledError:
                 logger.info("  Processor task cancelled")
