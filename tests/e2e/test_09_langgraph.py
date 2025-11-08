@@ -25,19 +25,19 @@ from tests.e2e.test_config import TEST_AGENTS
 VALIDATION_SCRIPT = Path(__file__).parent / "validate-agent-response.js"
 
 
-def test_langgraph() -> bool:
+def run_langgraph_test() -> bool:
     """Deploy LangGraph on agent, verify AI response"""
 
     target_agent = "lunar_ray_510"
     sender_agent = "ghost_ray_363"
 
     print(f"\n{'=' * 80}")
-    print(f"TEST 9: LangGraph with Gemini")
-    print('=' * 80)
+    print("TEST 9: LangGraph with Gemini")
+    print("=" * 80)
     print(f"Target Agent: {target_agent} (will run LangGraph)")
     print(f"Sender Agent: {sender_agent} (will send test message)")
-    print(f"Model: gemini-2.5-pro (with tool support)")
-    print('=' * 80)
+    print("Model: gemini-2.5-pro (with tool support)")
+    print("=" * 80)
 
     target_config = TEST_AGENTS[target_agent]
 
@@ -59,7 +59,7 @@ def test_langgraph() -> bool:
             print(f"  ✓ Monitor started: {result['monitor_id']}")
 
             # 3. Wait for monitor to be fully ready
-            print(f"\n⏳ Waiting for LangGraph to initialize...")
+            print("\n⏳ Waiting for LangGraph to initialize...")
             print("   (LangGraph + tools may take longer to initialize)")
             if not api.wait_for_monitor_ready(target_agent, timeout=45):
                 print("  ❌ Monitor failed to initialize")
@@ -67,8 +67,8 @@ def test_langgraph() -> bool:
             print("  ✓ Monitor is READY")
 
             # 4. Send question and wait for Gemini's response
-            print(f"\n💬 Sending question to Gemini via LangGraph...")
-            print(f"   Question: 'What is the tallest mountain in the world?'")
+            print("\n💬 Sending question to Gemini via LangGraph...")
+            print("   Question: 'What is the tallest mountain in the world?'")
 
             result = subprocess.run(
                 [
@@ -91,10 +91,10 @@ def test_langgraph() -> bool:
                         print(f"   {line}")
 
             if result.returncode == 0:
-                print(f"\n✅ LangGraph PASSED - AI responded!")
+                print("\n✅ LangGraph PASSED - AI responded!")
                 return True
             else:
-                print(f"\n❌ LangGraph FAILED")
+                print("\n❌ LangGraph FAILED")
                 if result.stderr:
                     print("Error:", result.stderr)
                 return False
@@ -113,7 +113,7 @@ def main():
     print("E2E TEST 9: LangGraph with Gemini")
     print("=" * 80)
 
-    success = test_langgraph()
+    success = run_langgraph_test()
 
     print("\n" + "=" * 80)
     print("🧹 Cleanup")

@@ -67,7 +67,7 @@ def run_javascript_validation(
         return False
 
 
-def test_echo_monitor():
+def run_echo_monitor_test():
     """Test Echo monitor deployment"""
     print("\n" + "=" * 80)
     print("TEST 1: Echo Monitor (Simple)")
@@ -108,7 +108,7 @@ def test_echo_monitor():
             return False
 
 
-def test_ollama_monitor():
+def run_ollama_monitor_test():
     """Test Ollama monitor deployment"""
     print("\n" + "=" * 80)
     print("TEST 2: Ollama Monitor (AI)")
@@ -151,7 +151,7 @@ def test_ollama_monitor():
             return False
 
 
-def test_claude_sdk_monitor():
+def run_claude_sdk_monitor_test():
     """Test Claude Agent SDK monitor deployment"""
     print("\n" + "=" * 80)
     print("TEST 3: Claude Agent SDK (Secure)")
@@ -194,7 +194,7 @@ def test_claude_sdk_monitor():
             return False
 
 
-def test_openai_sdk_monitor():
+def run_openai_sdk_monitor_test():
     """Test OpenAI Agents SDK monitor deployment"""
     print("\n" + "=" * 80)
     print("TEST 4: OpenAI Agents SDK")
@@ -237,7 +237,7 @@ def test_openai_sdk_monitor():
             return False
 
 
-def test_langgraph_monitor():
+def run_langgraph_monitor_test():
     """Test LangGraph monitor deployment"""
     print("\n" + "=" * 80)
     print("TEST 5: LangGraph (Tools)")
@@ -290,11 +290,11 @@ def main():
     print("=" * 80)
 
     tests = [
-        ("Echo Monitor", test_echo_monitor),
-        ("Ollama Monitor", test_ollama_monitor),
-        ("Claude SDK Monitor", test_claude_sdk_monitor),
-        ("OpenAI SDK Monitor", test_openai_sdk_monitor),
-        ("LangGraph Monitor", test_langgraph_monitor),  # Now using lunar_ray_510 (local)
+        ("Echo Monitor", run_echo_monitor_test),
+        ("Ollama Monitor", run_ollama_monitor_test),
+        ("Claude SDK Monitor", run_claude_sdk_monitor_test),
+        ("OpenAI SDK Monitor", run_openai_sdk_monitor_test),
+        ("LangGraph Monitor", run_langgraph_monitor_test),  # Now using lunar_ray_510 (local)
     ]
 
     results = {}

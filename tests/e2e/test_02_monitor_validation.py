@@ -27,7 +27,7 @@ from tests.e2e.test_config import MONITOR_TYPES, TEST_AGENTS
 VALIDATION_SCRIPT = Path(__file__).parent / "validate-agent-response.js"
 
 
-def test_monitor(config: dict) -> bool:
+def validate_monitor(config: dict) -> bool:
     """Test a monitor type: deploy, send @mention, verify response"""
     print(f"\n{'=' * 80}")
     print(f"TEST: {config['name']}")
@@ -181,7 +181,7 @@ Available Monitor Types:
 
     results = {}
     for config in tests:
-        results[config["name"]] = test_monitor(config)
+        results[config["name"]] = validate_monitor(config)
 
     # Cleanup
     print("\n" + "=" * 80)
