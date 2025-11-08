@@ -51,7 +51,7 @@ def test_duplicate_agent_prevention():
             except Exception as e:
                 error_msg = str(e)
                 if "409" in error_msg and "already has a running monitor" in error_msg:
-                    print(f"   ✓ Correctly rejected with HTTP 409")
+                    print("   ✓ Correctly rejected with HTTP 409")
                     print(f"   ✓ Error message: {error_msg}")
                 else:
                     print(f"   ❌ Wrong error type: {error_msg}")
@@ -91,6 +91,7 @@ def test_duplicate_agent_prevention():
         except Exception as e:
             print(f"\n❌ ERROR: {e}")
             import traceback
+
             traceback.print_exc()
             return False
         finally:
