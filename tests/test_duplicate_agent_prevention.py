@@ -83,6 +83,18 @@ def test_duplicate_agent_prevention():
             monitor_id_2 = result2["monitor_id"]
             print(f"   ✓ New monitor started successfully: {monitor_id_2}")
 
+            # 7. Verify it's a NEW monitor (different ID from first one)
+            print("\n7. Verifying it's a new monitor process...")
+            if not monitor_id_2:
+                print("   ❌ Monitor ID is empty")
+                return False
+            if monitor_id_2 == monitor_id_1:
+                print(f"   ❌ Same monitor ID as before: {monitor_id_2}")
+                print("   (Should be a new monitor, not reusing old one)")
+                return False
+            print(f"   ✓ New monitor ID confirmed: {monitor_id_2}")
+            print(f"   ✓ Different from first monitor: {monitor_id_1}")
+
             print("\n" + "=" * 80)
             print("✅ TEST PASSED: Duplicate agent prevention working correctly")
             print("=" * 80)
