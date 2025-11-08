@@ -3,7 +3,10 @@ Monitor Dashboard Backend
 FastAPI server for managing MCP monitor processes
 """
 
+import asyncio
 import os
+import signal
+from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
 from typing import Literal
@@ -30,7 +33,57 @@ from ax_agent_studio.dashboard.backend.providers_loader import (
     get_providers_list,
 )
 
-app = FastAPI(title="MCP Monitor Dashboard", version="1.0.0")
+# Initialize managers (done before app creation for lifespan)
+# Project root is 4 levels up: backend -> dashboard -> ax_agent_studio -> src -> root
+PROJECT_ROOT = Path(__file__).parent.parent.parent.parent.parent
+process_manager = ProcessManager(PROJECT_ROOT)
+config_loader = ConfigLoader(PROJECT_ROOT)
+log_streamer = LogStreamer(PROJECT_ROOT / "logs")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Handle startup and shutdown events"""
+
+    # Startup: register signal handlers for graceful shutdown
+    def signal_handler(signum, frame):
+        """Handle SIGINT (Ctrl+C) and SIGTERM by stopping all monitors"""
+        print("\n\n🛑 Received shutdown signal, stopping all monitors...")
+        try:
+            # Run async cleanup in event loop
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                # Create a task to stop monitors
+                asyncio.create_task(cleanup_monitors())
+            else:
+                # If loop not running, run synchronously
+                loop.run_until_complete(cleanup_monitors())
+        except Exception as e:
+            print(f"❌ Error during cleanup: {e}")
+        finally:
+            print("✓ Cleanup complete, exiting...")
+
+    async def cleanup_monitors():
+        """Stop all running monitors"""
+        try:
+            count = await process_manager.stop_all_monitors()
+            print(f"✓ Stopped {count} monitor(s)")
+        except Exception as e:
+            print(f"⚠ Error stopping monitors: {e}")
+
+    # Register signal handlers
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+    print("✓ Signal handlers registered (Ctrl+C will gracefully stop all monitors)")
+
+    yield  # Server runs here
+
+    # Shutdown: cleanup
+    print("\n🛑 Dashboard shutting down, cleaning up monitors...")
+    await cleanup_monitors()
+
+
+app = FastAPI(title="MCP Monitor Dashboard", version="1.0.0", lifespan=lifespan)
 
 # CORS for development
 app.add_middleware(
@@ -40,13 +93,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Initialize managers
-# Project root is 4 levels up: backend -> dashboard -> ax_agent_studio -> src -> root
-PROJECT_ROOT = Path(__file__).parent.parent.parent.parent.parent
-process_manager = ProcessManager(PROJECT_ROOT)
-config_loader = ConfigLoader(PROJECT_ROOT)
-log_streamer = LogStreamer(PROJECT_ROOT / "logs")
 
 
 # Pydantic models

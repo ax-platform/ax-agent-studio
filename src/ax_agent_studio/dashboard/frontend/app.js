@@ -783,7 +783,17 @@ async function testMonitor(agentName, monitorType, environment) {
             "Tell me a quick joke!",
             "What's the weather like in your digital world?",
             "If you could have any superpower, what would it be?",
-            "What's your favorite programming language and why?"
+            "What's your favorite programming language and why?",
+            "Explain quantum computing in one sentence.",
+            "What's the meaning of life in 10 words or less?",
+            "Write a haiku about coffee.",
+            "If you were a dessert, what would you be and why?",
+            "What's the best invention of the 21st century?",
+            "Can you recommend a good book?",
+            "What makes a good team collaboration?",
+            "How would you explain the internet to someone from the 1800s?",
+            "What's your take on pineapple on pizza?",
+            "If you could visit any place in the universe, where would it be?"
         ];
         const randomQuestion = aiQuestions[Math.floor(Math.random() * aiQuestions.length)];
         testMessage = randomQuestion;
