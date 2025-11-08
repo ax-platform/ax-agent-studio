@@ -522,6 +522,8 @@ async def start_monitor(request: StartMonitorRequest):
             "monitor_id": monitor_id,
             "message": f"Monitor started for {request.config.agent_name}",
         }
+    except HTTPException:
+        raise  # Re-raise HTTPException as-is (e.g., 409 for duplicate agent)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
