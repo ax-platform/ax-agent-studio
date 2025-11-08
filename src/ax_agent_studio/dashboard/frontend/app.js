@@ -1005,7 +1005,8 @@ function renderMonitors() {
         const pauseOrStartControl = hasMonitorId
             ? (isRunning
                 ? `<button class="btn btn-secondary btn-sm" title="Pause agent" onclick="pauseMonitor('${escapeAttr(monitor.id)}')">⏸ Pause</button>`
-                : `<button class="btn btn-primary btn-sm" title="Start agent" onclick="startMonitorFromStatus('${escapeAttr(monitor.id)}')">▶️ Start</button>`)
+                : `<button class="btn btn-primary btn-sm" title="Resume agent" onclick="startMonitorFromStatus('${escapeAttr(monitor.id)}')">▶️ Start</button>
+                   <button class="btn btn-danger btn-sm" title="Stop agent" onclick="stopMonitor('${escapeAttr(monitor.id)}')">⏹ Stop</button>`)
             : '';
 
         const resetControl = monitor.agent_name

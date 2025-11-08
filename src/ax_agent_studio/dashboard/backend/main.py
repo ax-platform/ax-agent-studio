@@ -464,6 +464,15 @@ def load_base_prompt() -> str:
 async def start_monitor(request: StartMonitorRequest):
     """Start a new monitor"""
     try:
+        # Check if agent already has a running monitor
+        existing_monitors = process_manager.get_all_monitors()
+        for monitor in existing_monitors:
+            if monitor["agent_name"] == request.config.agent_name:
+                raise HTTPException(
+                    status_code=409,
+                    detail=f"Agent {request.config.agent_name} already has a running monitor (id: {monitor['id']}). Stop it first before starting a new one.",
+                )
+
         # Validate against framework registry
         framework_info = get_framework_info(request.config.monitor_type)
 
