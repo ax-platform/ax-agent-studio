@@ -67,7 +67,16 @@ class DashboardAPI:
         }
 
         response = self.client.post("/api/monitors/start", json=payload)
-        response.raise_for_status()
+        try:
+            response.raise_for_status()
+        except httpx.HTTPStatusError as e:
+            # Include detail message from response body in error
+            try:
+                error_data = e.response.json()
+                detail = error_data.get("detail", str(e))
+            except Exception:
+                detail = str(e)
+            raise Exception(f"HTTP {e.response.status_code}: {detail}") from None
         return response.json()
 
     def stop_monitor(self, monitor_id: str) -> dict:
