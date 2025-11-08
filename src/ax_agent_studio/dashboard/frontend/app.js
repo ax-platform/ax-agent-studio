@@ -1061,9 +1061,17 @@ function renderMonitors() {
 
 // Helper function to determine if provider should be shown for a monitor type
 function shouldShowProvider(monitorType) {
-    // Framework-specific monitors (OpenAI SDK, Claude SDK) have implicit providers
-    // These should NOT show provider field in monitor card
-    const frameworkSpecificMonitors = ['openai_agents_sdk', 'openai_agents', 'claude_agent_sdk'];
+    // Use framework registry to determine if provider is user-selectable
+    if (frameworkRegistry && frameworkRegistry.frameworks[monitorType]) {
+        const framework = frameworkRegistry.frameworks[monitorType];
+        // Only show provider if the framework requires user to select one (e.g., LangGraph)
+        // Don't show for frameworks with implicit providers (Claude SDK, OpenAI SDK, Ollama)
+        // Don't show for frameworks with no provider (Echo)
+        return framework.requires_provider === true;
+    }
+
+    // Fallback: hide provider for known framework-specific monitors
+    const frameworkSpecificMonitors = ['echo', 'ollama', 'openai_agents_sdk', 'openai_agents', 'claude_agent_sdk'];
     return !frameworkSpecificMonitors.includes(monitorType);
 }
 

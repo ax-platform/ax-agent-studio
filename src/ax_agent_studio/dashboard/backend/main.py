@@ -464,6 +464,30 @@ def load_base_prompt() -> str:
 async def start_monitor(request: StartMonitorRequest):
     """Start a new monitor"""
     try:
+        # Validate against framework registry
+        framework_info = get_framework_info(request.config.monitor_type)
+
+        # Clean up provider/model based on framework requirements
+        provider = request.config.provider
+        model = request.config.model
+
+        # Echo monitor: no provider, no model
+        if not framework_info["requires_provider"] and not framework_info["requires_model"]:
+            provider = None
+            model = None
+
+        # Framework with implicit provider (Ollama, Claude SDK, OpenAI SDK)
+        elif not framework_info["requires_provider"] and framework_info.get("provider"):
+            provider = framework_info["provider"]  # Use implicit provider
+
+        # LangGraph: user must select provider
+        elif framework_info["requires_provider"]:
+            if not provider:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"{request.config.monitor_type} requires a provider to be selected",
+                )
+
         # Load base prompt and combine with user-selected prompt
         base_prompt = load_base_prompt()
 
@@ -478,8 +502,8 @@ async def start_monitor(request: StartMonitorRequest):
             agent_name=request.config.agent_name,
             config_path=request.config.config_path,
             monitor_type=request.config.monitor_type,
-            model=request.config.model,
-            provider=request.config.provider,
+            model=model,
+            provider=provider,
             system_prompt=combined_prompt,
             system_prompt_name=request.config.system_prompt_name,
             history_limit=request.config.history_limit,
