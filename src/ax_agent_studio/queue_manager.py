@@ -345,9 +345,22 @@ class QueueManager:
                         await asyncio.sleep(2)  # Check every 2 seconds
                         continue
 
-                # Get ALL pending messages (batch processing)
+                # Check backlog to determine processing order
+                backlog = self.store.get_backlog_count(self.agent_name)
+
+                # Hybrid FILO/FIFO: If backlog exceeds batch limit, drain oldest first
+                # to prevent starvation. Otherwise, process newest first (FILO).
+                if backlog > 100:
+                    # High load: Switch to FIFO to drain backlog
+                    processing_order = "asc"
+                    logger.info(f"High backlog ({backlog} messages) - switching to FIFO to drain")
+                else:
+                    # Normal load: FILO processing (newest first)
+                    processing_order = "desc"
+
+                # Get pending messages with appropriate ordering
                 all_pending = self.store.get_pending_messages(
-                    self.agent_name, limit=100, order="desc"
+                    self.agent_name, limit=100, order=processing_order
                 )
 
                 if not all_pending:
@@ -356,9 +369,16 @@ class QueueManager:
                     continue
 
                 batch_size = len(all_pending)
-                backlog = self.store.get_backlog_count(self.agent_name)
 
-                # Precompute queue snapshot for handler + board context (newest → oldest)
+                # Precompute queue snapshot for handler + board context
+                # Always in chronological order (oldest → newest) for consistency
+                if processing_order == "desc":
+                    # FILO: Reverse to get chronological order
+                    snapshot_msgs = list(reversed(all_pending))
+                else:
+                    # FIFO: Already chronological
+                    snapshot_msgs = all_pending
+
                 queue_snapshot = [
                     {
                         "id": msg.id,
@@ -366,7 +386,7 @@ class QueueManager:
                         "content": msg.content,
                         "timestamp": msg.timestamp,
                     }
-                    for msg in all_pending
+                    for msg in snapshot_msgs
                 ]
 
                 # Determine processing mode
@@ -386,11 +406,18 @@ class QueueManager:
                 try:
                     # Prepare message context
                     if batch_size > 1:
-                        # BATCH MODE: Current message (newest) + history (older ones)
-                        current_msg = all_pending[0]  # Newest message
-                        history_msgs = all_pending[1:]  # Older messages for context
+                        # BATCH MODE: Current message + history
+                        # In FILO mode (desc): current = newest, history = older
+                        # In FIFO mode (asc): current = oldest, history = newer
+                        current_msg = all_pending[0]  # First message in fetch order
+                        history_msgs = all_pending[1:]  # Remaining messages
 
-                        # Convert history to chronological order (oldest → newest)
+                        # Always provide history in chronological order (oldest → newest)
+                        if processing_order == "desc":
+                            # FILO: Reverse to get chronological order
+                            history_msgs = list(reversed(history_msgs))
+                        # FIFO: Already in chronological order, no reversal needed
+
                         history_dicts = [
                             {
                                 "id": m.id,
@@ -398,7 +425,7 @@ class QueueManager:
                                 "content": m.content,
                                 "timestamp": m.timestamp,
                             }
-                            for m in reversed(history_msgs)
+                            for m in history_msgs
                         ]
 
                         response = await self.handler(
