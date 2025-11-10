@@ -783,7 +783,17 @@ async function testMonitor(agentName, monitorType, environment) {
             "Tell me a quick joke!",
             "What's the weather like in your digital world?",
             "If you could have any superpower, what would it be?",
-            "What's your favorite programming language and why?"
+            "What's your favorite programming language and why?",
+            "Explain quantum computing in one sentence.",
+            "What's the meaning of life in 10 words or less?",
+            "Write a haiku about coffee.",
+            "If you were a dessert, what would you be and why?",
+            "What's the best invention of the 21st century?",
+            "Can you recommend a good book?",
+            "What makes a good team collaboration?",
+            "How would you explain the internet to someone from the 1800s?",
+            "What's your take on pineapple on pizza?",
+            "If you could visit any place in the universe, where would it be?"
         ];
         const randomQuestion = aiQuestions[Math.floor(Math.random() * aiQuestions.length)];
         testMessage = randomQuestion;
@@ -1005,7 +1015,8 @@ function renderMonitors() {
         const pauseOrStartControl = hasMonitorId
             ? (isRunning
                 ? `<button class="btn btn-secondary btn-sm" title="Pause agent" onclick="pauseMonitor('${escapeAttr(monitor.id)}')">⏸ Pause</button>`
-                : `<button class="btn btn-primary btn-sm" title="Start agent" onclick="startMonitorFromStatus('${escapeAttr(monitor.id)}')">▶️ Start</button>`)
+                : `<button class="btn btn-primary btn-sm" title="Resume agent" onclick="startMonitorFromStatus('${escapeAttr(monitor.id)}')">▶️ Start</button>
+                   <button class="btn btn-danger btn-sm" title="Stop agent" onclick="stopMonitor('${escapeAttr(monitor.id)}')">⏹ Stop</button>`)
             : '';
 
         const resetControl = monitor.agent_name
@@ -1061,9 +1072,17 @@ function renderMonitors() {
 
 // Helper function to determine if provider should be shown for a monitor type
 function shouldShowProvider(monitorType) {
-    // Framework-specific monitors (OpenAI SDK, Claude SDK) have implicit providers
-    // These should NOT show provider field in monitor card
-    const frameworkSpecificMonitors = ['openai_agents_sdk', 'openai_agents', 'claude_agent_sdk'];
+    // Use framework registry to determine if provider is user-selectable
+    if (frameworkRegistry && frameworkRegistry.frameworks[monitorType]) {
+        const framework = frameworkRegistry.frameworks[monitorType];
+        // Only show provider if the framework requires user to select one (e.g., LangGraph)
+        // Don't show for frameworks with implicit providers (Claude SDK, OpenAI SDK, Ollama)
+        // Don't show for frameworks with no provider (Echo)
+        return framework.requires_provider === true;
+    }
+
+    // Fallback: hide provider for known framework-specific monitors
+    const frameworkSpecificMonitors = ['echo', 'ollama', 'openai_agents_sdk', 'openai_agents', 'claude_agent_sdk'];
     return !frameworkSpecificMonitors.includes(monitorType);
 }
 

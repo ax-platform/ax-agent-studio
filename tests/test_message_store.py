@@ -261,6 +261,79 @@ def test_mark_processing_methods():
         Path(db_path).unlink(missing_ok=True)
 
 
+class TestDoneCommandMessageClearing:
+    """Test #done command auto-resume message clearing."""
+
+    @pytest.fixture
+    def temp_db(self):
+        """Create a temporary database for testing."""
+        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
+            db_path = f.name
+        yield db_path
+        Path(db_path).unlink(missing_ok=True)
+
+    @pytest.fixture
+    def store(self, temp_db):
+        """Create a MessageStore instance with temp database."""
+        return MessageStore(db_path=temp_db)
+
+    def test_done_clears_messages_on_resume(self, store):
+        """Test that #done command clears pending messages on auto-resume."""
+        agent = "test_agent"
+
+        # Store some messages
+        store.store_message("msg1", agent, "user", "Message 1")
+        store.store_message("msg2", agent, "user", "Message 2")
+        assert len(store.get_pending_messages(agent)) == 2
+
+        # Pause with #done (auto-resume in 1 second)
+        resume_at = time.time() + 1
+        store.pause_agent(agent, reason="Done: Auto-resuming", resume_at=resume_at)
+
+        # Add more messages while paused
+        store.store_message("msg3", agent, "user", "Message 3")
+        store.store_message("msg4", agent, "user", "Message 4")
+        assert len(store.get_pending_messages(agent)) == 4  # All 4 messages still there
+
+        # Wait for auto-resume time
+        time.sleep(1.1)
+
+        # check_auto_resume should resume AND clear messages
+        was_resumed = store.check_auto_resume(agent)
+        assert was_resumed is True
+
+        # Messages should be cleared now
+        pending = store.get_pending_messages(agent)
+        assert len(pending) == 0, f"Expected 0 messages after #done resume, got {len(pending)}"
+
+        # Agent should be active again
+        assert store.is_agent_paused(agent) is False
+
+    def test_regular_pause_doesnt_clear_messages(self, store):
+        """Test that regular #pause doesn't clear messages on resume."""
+        agent = "test_agent"
+
+        # Store some messages
+        store.store_message("msg1", agent, "user", "Message 1")
+        store.store_message("msg2", agent, "user", "Message 2")
+
+        # Pause with regular #pause (auto-resume in 1 second, but different reason)
+        resume_at = time.time() + 1
+        store.pause_agent(agent, reason="Self-paused: taking a break", resume_at=resume_at)
+
+        # Add more messages while paused
+        store.store_message("msg3", agent, "user", "Message 3")
+
+        # Wait and resume
+        time.sleep(1.1)
+        was_resumed = store.check_auto_resume(agent)
+        assert was_resumed is True
+
+        # Messages should NOT be cleared for regular pause
+        pending = store.get_pending_messages(agent)
+        assert len(pending) == 3, f"Expected 3 messages after regular pause, got {len(pending)}"
+
+
 if __name__ == "__main__":
     import sys
 

@@ -3,7 +3,10 @@ Monitor Dashboard Backend
 FastAPI server for managing MCP monitor processes
 """
 
+import asyncio
 import os
+import signal
+from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
 from typing import Literal
@@ -30,7 +33,111 @@ from ax_agent_studio.dashboard.backend.providers_loader import (
     get_providers_list,
 )
 
-app = FastAPI(title="MCP Monitor Dashboard", version="1.0.0")
+# Initialize managers (done before app creation for lifespan)
+# Project root is 4 levels up: backend -> dashboard -> ax_agent_studio -> src -> root
+PROJECT_ROOT = Path(__file__).parent.parent.parent.parent.parent
+process_manager = ProcessManager(PROJECT_ROOT)
+config_loader = ConfigLoader(PROJECT_ROOT)
+log_streamer = LogStreamer(PROJECT_ROOT / "logs")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Handle startup and shutdown events"""
+
+    # Startup: register signal handlers for graceful shutdown
+    cleanup_lock = asyncio.Lock()
+    cleanup_done = False
+    cleanup_task: asyncio.Task | None = None
+    shutdown_signal_seen = False
+
+    async def cleanup_monitors():
+        """Stop all running monitors (idempotent)."""
+        nonlocal cleanup_done
+
+        async with cleanup_lock:
+            if cleanup_done:
+                return 0
+
+            try:
+                count = await process_manager.stop_all_monitors()
+                print(f"✓ Stopped {count} monitor(s)")
+            except Exception as e:
+                count = 0
+                print(f"⚠ Error stopping monitors: {e}")
+            finally:
+                cleanup_done = True
+                print("✓ Cleanup complete, exiting...")
+
+            return count
+
+    def schedule_cleanup(loop: asyncio.AbstractEventLoop) -> None:
+        nonlocal cleanup_task
+        if cleanup_task and not cleanup_task.done():
+            return
+
+        cleanup_task = loop.create_task(cleanup_monitors())
+
+    previous_handlers = {
+        signal.SIGINT: signal.getsignal(signal.SIGINT),
+        signal.SIGTERM: signal.getsignal(signal.SIGTERM),
+    }
+
+    def signal_handler(signum, frame):
+        """Handle SIGINT (Ctrl+C) and SIGTERM by stopping all monitors."""
+        nonlocal shutdown_signal_seen
+        print("\n\n🛑 Received shutdown signal, stopping all monitors...")
+        first_signal = not shutdown_signal_seen
+        shutdown_signal_seen = True
+
+        try:
+            loop = asyncio.get_running_loop()
+            loop.call_soon_threadsafe(lambda: schedule_cleanup(loop))
+        except RuntimeError:
+            # No running loop (very early start/late shutdown)
+            asyncio.run(cleanup_monitors())
+        except Exception as e:
+            print(f"❌ Error during cleanup: {e}")
+
+        if not first_signal:
+            print("⚠ Shutdown already in progress; forcing exit now.")
+            os._exit(130)
+
+        previous = previous_handlers.get(signum)
+        if callable(previous):
+            previous(signum, frame)
+        elif previous == signal.SIG_DFL:
+            if signum == signal.SIGINT:
+                raise KeyboardInterrupt
+            else:
+                raise SystemExit(0)
+        # Ignore SIG_IGN (nothing else to do)
+
+    # Register signal handlers
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+    print("✓ Signal handlers registered (Ctrl+C will gracefully stop all monitors)")
+
+    # DISABLED: Orphaned monitor cleanup
+    # TODO: Implement proper orphaned monitor detection with persistent state
+    # Current implementation kills ALL monitors (including from other dashboard instances)
+    # because self.monitors is empty on startup. Need to persist which monitors
+    # belong to THIS dashboard instance (e.g., .dashboard_monitors.json)
+    # See: https://github.com/ax-platform/ax-agent-studio/pull/25#issuecomment-3506962389
+    #
+    # print("\n🧹 Checking for orphaned monitors from previous sessions...")
+    # orphaned_count = await process_manager.cleanup_orphaned_monitors()
+    # if orphaned_count == 0:
+    #     print("✓ No orphaned monitors found")
+
+    yield  # Server runs here
+
+    # Shutdown: cleanup
+    print("\n🛑 Dashboard shutting down, cleaning up monitors...")
+    await cleanup_monitors()
+
+
+app = FastAPI(title="MCP Monitor Dashboard", version="1.0.0", lifespan=lifespan)
 
 # CORS for development
 app.add_middleware(
@@ -40,13 +147,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Initialize managers
-# Project root is 4 levels up: backend -> dashboard -> ax_agent_studio -> src -> root
-PROJECT_ROOT = Path(__file__).parent.parent.parent.parent.parent
-process_manager = ProcessManager(PROJECT_ROOT)
-config_loader = ConfigLoader(PROJECT_ROOT)
-log_streamer = LogStreamer(PROJECT_ROOT / "logs")
 
 
 # Pydantic models
@@ -464,6 +564,43 @@ def load_base_prompt() -> str:
 async def start_monitor(request: StartMonitorRequest):
     """Start a new monitor"""
     try:
+        # Check if agent already has a running monitor
+        # Only check monitors with status "running" - stopped monitors can be restarted
+        existing_monitors = process_manager.get_all_monitors()
+        for monitor in existing_monitors:
+            if (
+                monitor["agent_name"] == request.config.agent_name
+                and monitor.get("status") == "running"
+            ):
+                raise HTTPException(
+                    status_code=409,
+                    detail=f"Agent {request.config.agent_name} already has a running monitor (id: {monitor['id']}). Stop it first before starting a new one.",
+                )
+
+        # Validate against framework registry
+        framework_info = get_framework_info(request.config.monitor_type)
+
+        # Clean up provider/model based on framework requirements
+        provider = request.config.provider
+        model = request.config.model
+
+        # Echo monitor: no provider, no model
+        if not framework_info["requires_provider"] and not framework_info["requires_model"]:
+            provider = None
+            model = None
+
+        # Framework with implicit provider (Ollama, Claude SDK, OpenAI SDK)
+        elif not framework_info["requires_provider"] and framework_info.get("provider"):
+            provider = framework_info["provider"]  # Use implicit provider
+
+        # LangGraph: user must select provider
+        elif framework_info["requires_provider"]:
+            if not provider:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"{request.config.monitor_type} requires a provider to be selected",
+                )
+
         # Load base prompt and combine with user-selected prompt
         base_prompt = load_base_prompt()
 
@@ -478,8 +615,8 @@ async def start_monitor(request: StartMonitorRequest):
             agent_name=request.config.agent_name,
             config_path=request.config.config_path,
             monitor_type=request.config.monitor_type,
-            model=request.config.model,
-            provider=request.config.provider,
+            model=model,
+            provider=provider,
             system_prompt=combined_prompt,
             system_prompt_name=request.config.system_prompt_name,
             history_limit=request.config.history_limit,
@@ -489,6 +626,8 @@ async def start_monitor(request: StartMonitorRequest):
             "monitor_id": monitor_id,
             "message": f"Monitor started for {request.config.agent_name}",
         }
+    except HTTPException:
+        raise  # Re-raise HTTPException as-is (e.g., 409 for duplicate agent)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -697,6 +836,9 @@ async def websocket_logs(websocket: WebSocket, monitor_id: str):
         await log_streamer.stream_logs(websocket, monitor_id)
     except WebSocketDisconnect:
         print(f"Client disconnected from logs for {monitor_id}")
+    except asyncio.CancelledError:
+        # Lifespan shutdown cancelled the task - close quietly
+        await websocket.close()
     except Exception as e:
         print(f"Error streaming logs for {monitor_id}: {e}")
         await websocket.close()
@@ -710,6 +852,8 @@ async def websocket_all_logs(websocket: WebSocket):
         await log_streamer.stream_all_logs(websocket)
     except WebSocketDisconnect:
         print("Client disconnected from all logs")
+    except asyncio.CancelledError:
+        await websocket.close()
     except Exception as e:
         print(f"Error streaming all logs: {e}")
         await websocket.close()

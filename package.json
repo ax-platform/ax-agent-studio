@@ -16,7 +16,12 @@
     "test:context": "node tests/test-message-context-view.js",
     "test:wait": "node tests/test-wait-context-behavior.js",
     "test:e2e": "node tests/test-message-board-awareness.js",
-    "test:hybrid": "node tests/archived/test-hybrid-message-board.js"
+    "test:e2e:dashboard": "uv run python tests/test_e2e_dashboard_automation.py",
+    "test:e2e:echo": "node tests/e2e/test-01-echo-deployment.js",
+    "test:e2e:all-types": "uv run python tests/e2e/test_all_agent_types.py",
+    "test:e2e:ui-wiring": "uv run python tests/e2e/test_ui_api_wiring.py",
+    "test:hybrid": "node tests/archived/test-hybrid-message-board.js",
+    "test:done": "uv run python tests/test_done_message_clearing.py"
   },
   "repository": {
     "type": "git",

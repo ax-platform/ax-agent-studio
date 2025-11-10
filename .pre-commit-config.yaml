@@ -50,3 +50,33 @@ repos:
   #       args: [-c, pyproject.toml]
   #       additional_dependencies: ["bandit[toml]"]
   #       exclude: ^tests/
+
+  # Unit Tests - Critical functionality tests
+  - repo: local
+    hooks:
+      - id: test-done-command
+        name: Test #done command (loop breaking)
+        entry: uv run python tests/test_done_message_clearing.py
+        language: system
+        pass_filenames: false
+        files: '^(src/ax_agent_studio/message_store\.py|src/ax_agent_studio/queue_manager\.py|configs/prompts/_base\.yaml)$'
+        stages: [commit]
+        verbose: true
+
+      - id: test-queue-manager-smoke
+        name: Test QueueManager runtime (smoke test - catches UnboundLocalError)
+        entry: uv run python tests/test_queue_manager_smoke.py
+        language: system
+        pass_filenames: false
+        files: '^(src/ax_agent_studio/queue_manager\.py)$'
+        stages: [commit]
+        verbose: true
+
+      - id: test-e2e-echo-api
+        name: E2E Test - Echo deployment via Dashboard API (skips if env not ready)
+        entry: uv run python tests/e2e/pre_commit_wrapper.py
+        language: system
+        pass_filenames: false
+        files: '^(src/ax_agent_studio/dashboard/backend/.*\.py|tests/e2e/helpers/.*\.py)$'
+        stages: [commit]
+        verbose: true

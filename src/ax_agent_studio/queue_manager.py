@@ -22,6 +22,7 @@ Benefits:
 import asyncio
 import logging
 import re
+import time
 from collections.abc import Awaitable, Callable
 
 from mcp import ClientSession
@@ -270,6 +271,15 @@ class QueueManager:
                 iteration += 1
                 logger.debug(f"[Poller] Waiting for messages... (iteration {iteration})")
 
+                # Check if agent is paused BEFORE fetching messages
+                # This avoids wasting API rate limits and keeps agent truly idle during #done pause
+                if self.store.is_agent_paused(self.agent_name):
+                    # Check if auto-resume timer expired (e.g., #done 60s pause)
+                    self.store.check_auto_resume(self.agent_name)
+                    # Sleep briefly and check again
+                    await asyncio.sleep(1)
+                    continue
+
                 # Block until message arrives (wait=true)
                 result = await self.session.call_tool(
                     "messages", {"action": "check", "wait": True, "mark_read": self.mark_read}
@@ -415,16 +425,27 @@ class QueueManager:
                     if not isinstance(response, str):
                         response = str(response)
 
-                    # Detect self-pause commands (#pause, #stop)
+                    # Detect self-pause commands (#pause, #stop, #done)
                     pause_detected = False
+                    is_done_command = False  # Initialize here so it's always defined
                     if response:
                         response_lower = response.lower()
-                        if "#pause" in response_lower or "#stop" in response_lower:
+                        if (
+                            "#pause" in response_lower
+                            or "#stop" in response_lower
+                            or "#done" in response_lower
+                        ):
                             pause_detected = True
                             pause_reason = "Self-paused: Agent requested pause"
+                            resume_at = None  # Default: manual resume required
 
                             # Extract reason if provided after command
-                            if "#pause" in response_lower:
+                            if "#done" in response_lower:
+                                # #done = pause for 60 seconds (auto-resume)
+                                resume_at = time.time() + 60
+                                pause_reason = "Done: Auto-resuming in 60 seconds"
+                                is_done_command = True
+                            elif "#pause" in response_lower:
                                 pause_idx = response_lower.find("#pause")
                                 reason_text = response[pause_idx:].split("\n")[0]
                                 if len(reason_text) > 6:  # More than just "#pause"
@@ -435,11 +456,21 @@ class QueueManager:
                                 if len(reason_text) > 5:  # More than just "#stop"
                                     pause_reason = f"Self-paused: {reason_text[6:].strip()}"
 
-                            self.store.pause_agent(self.agent_name, reason=pause_reason)
+                            self.store.pause_agent(
+                                self.agent_name, reason=pause_reason, resume_at=resume_at
+                            )
                             logger.warning(f"⏸  {pause_reason}")
 
                     # Only send if response is not empty (handler may return "" to skip)
                     if response and response.strip():
+                        # Strip @mentions ONLY from #done responses to prevent triggering other agents
+                        # Keep @mentions for #pause/#stop so recipients get notified
+                        send_content = response
+                        if is_done_command:
+                            # Remove all @mentions from the response
+                            send_content = re.sub(r"@\w+", "", response)
+                            logger.info(" Stripped @mentions from #done response")
+
                         # Determine which message to reply to (newest in batch)
                         reply_to_msg = all_pending[-1] if batch_size > 1 else all_pending[0]
 
@@ -448,7 +479,7 @@ class QueueManager:
                             "messages",
                             {
                                 "action": "send",
-                                "content": response,
+                                "content": send_content,
                                 "parent_message_id": reply_to_msg.id,  # Reply to the newest message
                             },
                         )
@@ -467,7 +498,9 @@ class QueueManager:
                                     f" Completed BATCH of {batch_size} messages (threaded reply)"
                                 )
                             else:
-                                logger.info(f" Completed message {reply_to_msg.id[:8]} (threaded reply)")
+                                logger.info(
+                                    f" Completed message {reply_to_msg.id[:8]} (threaded reply)"
+                                )
                     else:
                         # Handler returned empty response (e.g., blocked self-mention)
                         if batch_size > 1:
@@ -494,9 +527,13 @@ class QueueManager:
                     for msg in all_pending:
                         self.store.mark_processed(msg.id, self.agent_name)
                     if batch_size > 1:
-                        logger.warning(f"  BATCH of {batch_size} messages marked as failed (won't retry)")
+                        logger.warning(
+                            f"  BATCH of {batch_size} messages marked as failed (won't retry)"
+                        )
                     else:
-                        logger.warning(f"  Message {all_pending[0].id[:8]} marked as failed (won't retry)")
+                        logger.warning(
+                            f"  Message {all_pending[0].id[:8]} marked as failed (won't retry)"
+                        )
 
             except asyncio.CancelledError:
                 logger.info("  Processor task cancelled")

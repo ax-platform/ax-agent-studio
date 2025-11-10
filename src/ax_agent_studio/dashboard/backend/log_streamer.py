@@ -46,6 +46,9 @@ class LogStreamer:
         except WebSocketDisconnect:
             # Client disconnected - exit quietly
             return
+        except asyncio.CancelledError:
+            # Client disconnected - exit quietly
+            return
 
     async def stream_all_logs(self, websocket: WebSocket):
         """Stream logs from all monitors via WebSocket"""
@@ -79,6 +82,9 @@ class LogStreamer:
             await asyncio.gather(*tasks, return_exceptions=True)
         except WebSocketDisconnect:
             # Client disconnected - exit quietly
+            return
+        except asyncio.CancelledError:
+            # Lifespan shutdown cancelled the task - exit quietly
             return
 
     async def _tail_log_file(self, websocket: WebSocket, log_file: Path, monitor_id: str):
