@@ -1074,38 +1074,11 @@ class ProcessManager:
             print(f"Error killing monitor {monitor_id}: {e}")
             return False
 
-    async def cleanup_orphaned_monitors(self) -> int:
-        """
-        Detect and kill all orphaned monitors on startup.
-
-        Orphaned monitors are processes left running from a previous
-        dashboard session (ungraceful shutdown, crash, kill -9, etc).
-
-        Returns count of orphaned monitors killed.
-        """
-        all_monitors = self.get_all_monitors()
-        orphaned = [m for m in all_monitors if not m.get("tracked", True)]
-
-        killed_count = 0
-        for monitor in orphaned:
-            monitor_id = monitor["id"]
-            agent_name = monitor["agent_name"]
-            print(f"🧹 Cleaning up orphaned monitor: {agent_name} (PID: {monitor['pid']})")
-
-            try:
-                success = await self.kill_monitor(monitor_id)
-                if success:
-                    killed_count += 1
-                    print(f"   ✓ Killed orphaned monitor {monitor_id}")
-                else:
-                    print(f"   ⚠ Failed to kill orphaned monitor {monitor_id}")
-            except Exception as e:
-                print(f"   ❌ Error killing orphaned monitor {monitor_id}: {e}")
-
-        if killed_count > 0:
-            print(f"✓ Cleanup complete: killed {killed_count} orphaned monitor(s)")
-
-        return killed_count
+    # REMOVED: cleanup_orphaned_monitors()
+    # This function was unsafe - it killed ALL monitors including those from other
+    # dashboard instances because self.monitors is empty on startup.
+    # See: https://github.com/ax-platform/ax-agent-studio/pull/25#discussion_r1872934567
+    # TODO: Implement safe orphaned monitor cleanup with persistent state tracking
 
     def delete_monitor(self, monitor_id: str) -> bool:
         """Remove a monitor from the list (must be stopped first)"""
