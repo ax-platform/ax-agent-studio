@@ -249,12 +249,23 @@ async def fetch_queue_status(store, agent_name: str) -> tuple[list, int]:
         agent_name: Agent name
 
     Returns:
-        Tuple of (pending_messages, backlog_count)
+        Tuple of (pending_messages as dicts, backlog_count)
     """
     pending_messages = store.get_pending_messages(agent_name, limit=10)
     backlog_count = store.get_backlog_count(agent_name)
 
-    return pending_messages, backlog_count
+    # Convert StoredMessage objects to dicts for format_message_board_context
+    pending_dicts = [
+        {
+            "id": msg.id,
+            "sender": msg.sender,
+            "content": msg.content,
+            "timestamp": msg.timestamp,
+        }
+        for msg in pending_messages
+    ]
+
+    return pending_dicts, backlog_count
 
 
 # ============================================================================
