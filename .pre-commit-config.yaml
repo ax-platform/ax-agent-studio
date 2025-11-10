@@ -73,8 +73,8 @@ repos:
         verbose: true
 
       - id: test-e2e-echo-api
-        name: E2E Test - Echo deployment via Dashboard API
-        entry: uv run python tests/e2e/test_all_agent_types.py
+        name: E2E Test - Echo deployment via Dashboard API (skips if env not ready)
+        entry: uv run python tests/e2e/pre_commit_wrapper.py
         language: system
         pass_filenames: false
         files: '^(src/ax_agent_studio/dashboard/backend/.*\.py|tests/e2e/helpers/.*\.py)$'
