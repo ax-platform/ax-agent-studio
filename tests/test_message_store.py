@@ -117,8 +117,8 @@ class TestMessageStoreMultiAgent:
         assert store.get_backlog_count("agent2") == 2
         assert store.get_backlog_count("agent3") == 0
 
-    def test_fifo_ordering_per_agent(self, store):
-        """Test that messages are retrieved in FIFO order per agent."""
+    def test_filo_ordering_per_agent(self, store):
+        """Test that messages are retrieved in FILO order per agent."""
         # Insert messages with slight delays to ensure different timestamps
         store.store_message("msg1", "agent1", "user", "first")
         time.sleep(0.01)
@@ -130,9 +130,10 @@ class TestMessageStoreMultiAgent:
         messages = store.get_pending_messages("agent1", limit=10)
 
         assert len(messages) == 3
-        assert messages[0].content == "first"
+        # Default ordering is newest → oldest (FILO)
+        assert messages[0].content == "third"
         assert messages[1].content == "second"
-        assert messages[2].content == "third"
+        assert messages[2].content == "first"
 
     def test_stats_per_agent(self, store):
         """Test that statistics are calculated correctly per agent."""

@@ -1,18 +1,18 @@
 """
-Modular FIFO Queue Manager for MCP Monitors
+Modular FILO Queue Manager for MCP Monitors
 
 This module provides a reusable queue abstraction that any monitor can plug into.
 It handles the triple-task pattern (poller + processor + heartbeat) and uses SQLite for persistence.
 
 Architecture:
 - Poller Task: Continuously receives messages via MCP, stores in SQLite
-- Processor Task: Pulls messages from FIFO queue, processes, sends responses
+- Processor Task: Pulls the newest messages first (FILO) while sharing the full backlog context
 - Heartbeat Task: Keeps MCP connection alive with periodic pings (every 4 minutes)
 - All tasks run concurrently via asyncio.gather()
 
 Benefits:
 - Zero message loss (SQLite buffer)
-- FIFO guaranteed (ORDER BY timestamp ASC)
+- FILO focus (ORDER BY timestamp DESC) so the agent can respond to the latest state while seeing the queue snapshot
 - Crash resilient (persistent storage)
 - Connection resilient (heartbeat prevents 5-minute timeout)
 - Modular (any monitor can use it)
@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 class QueueManager:
     """
-    Modular FIFO queue manager for MCP monitors.
+    Modular FILO queue manager for MCP monitors.
 
     Usage:
         async def my_handler(content: str) -> str:
@@ -66,7 +66,7 @@ class QueueManager:
             session: MCP ClientSession for tool calls
             message_handler: Async function that processes message content and returns response
             store: Optional MessageStore instance (creates default if None)
-            mark_read: Whether to mark messages as read (default: False for FIFO)
+            mark_read: Whether to mark messages as read (default: False for queued processing)
             poll_interval: Seconds to wait between queue checks if empty (default: 1.0)
             startup_sweep: Whether to fetch unread messages on startup (default: True)
             startup_sweep_limit: Max unread messages to fetch on startup, 0=unlimited (default: 10)
@@ -312,7 +312,7 @@ class QueueManager:
 
     async def process_queue(self):
         """
-        Processor Task: Pull messages from queue and process FIFO.
+        Processor Task: Pull newest messages from queue (FILO) while providing backlog context.
 
         This task runs forever, checking the queue for pending messages.
         When a message is found, it's processed with the handler, response
@@ -345,8 +345,23 @@ class QueueManager:
                         await asyncio.sleep(2)  # Check every 2 seconds
                         continue
 
-                # Get ALL pending messages (batch processing)
-                all_pending = self.store.get_pending_messages(self.agent_name, limit=100)
+                # Check backlog to determine processing order
+                backlog = self.store.get_backlog_count(self.agent_name)
+
+                # Hybrid FILO/FIFO: If backlog exceeds batch limit, drain oldest first
+                # to prevent starvation. Otherwise, process newest first (FILO).
+                if backlog > 100:
+                    # High load: Switch to FIFO to drain backlog
+                    processing_order = "asc"
+                    logger.info(f"High backlog ({backlog} messages) - switching to FIFO to drain")
+                else:
+                    # Normal load: FILO processing (newest first)
+                    processing_order = "desc"
+
+                # Get pending messages with appropriate ordering
+                all_pending = self.store.get_pending_messages(
+                    self.agent_name, limit=100, order=processing_order
+                )
 
                 if not all_pending:
                     # Queue empty - brief pause
@@ -354,7 +369,19 @@ class QueueManager:
                     continue
 
                 batch_size = len(all_pending)
-                backlog = self.store.get_backlog_count(self.agent_name)
+
+                # Precompute queue snapshot for handler + board context
+                # Keep in processing order (first = currently processing)
+                # so formatter can correctly mark [PROCESSING NOW]
+                queue_snapshot = [
+                    {
+                        "id": msg.id,
+                        "sender": msg.sender,
+                        "content": msg.content,
+                        "timestamp": msg.timestamp,
+                    }
+                    for msg in all_pending
+                ]
 
                 # Determine processing mode
                 if batch_size > 1:
@@ -373,11 +400,18 @@ class QueueManager:
                 try:
                     # Prepare message context
                     if batch_size > 1:
-                        # BATCH MODE: Current message (newest) + history (older ones)
-                        current_msg = all_pending[-1]  # Newest message
-                        history_msgs = all_pending[:-1]  # Older messages for context
+                        # BATCH MODE: Current message + history
+                        # In FILO mode (desc): current = newest, history = older
+                        # In FIFO mode (asc): current = oldest, history = newer
+                        current_msg = all_pending[0]  # First message in fetch order
+                        history_msgs = all_pending[1:]  # Remaining messages
 
-                        # Convert to dicts
+                        # Always provide history in chronological order (oldest → newest)
+                        if processing_order == "desc":
+                            # FILO: Reverse to get chronological order
+                            history_msgs = list(reversed(history_msgs))
+                        # FIFO: Already in chronological order, no reversal needed
+
                         history_dicts = [
                             {
                                 "id": m.id,
@@ -400,8 +434,9 @@ class QueueManager:
                                 "history_messages": history_dicts,  # Older messages for context
                                 "queue_status": {
                                     "backlog_count": backlog,
-                                    "pending_messages": history_dicts,
+                                    "pending_messages": queue_snapshot,
                                 },
+                                "queue_messages": queue_snapshot,
                             }
                         )
                     else:
@@ -416,8 +451,9 @@ class QueueManager:
                                 "batch_mode": False,
                                 "queue_status": {
                                     "backlog_count": backlog,
-                                    "pending_messages": [],
+                                    "pending_messages": queue_snapshot,
                                 },
+                                "queue_messages": queue_snapshot,
                             }
                         )
 
@@ -471,8 +507,8 @@ class QueueManager:
                             send_content = re.sub(r"@\w+", "", response)
                             logger.info(" Stripped @mentions from #done response")
 
-                        # Determine which message to reply to (newest in batch)
-                        reply_to_msg = all_pending[-1] if batch_size > 1 else all_pending[0]
+                        # Determine which message to reply to (newest in queue / current focus)
+                        reply_to_msg = all_pending[0]
 
                         # Send response as a REPLY to the newest message (creates thread)
                         await self.session.call_tool(

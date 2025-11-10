@@ -162,7 +162,7 @@ def format_message_board_context(
     and pending messages, helping them understand the full conversation state.
 
     Args:
-        pending_messages: List of pending StoredMessage objects
+        pending_messages: List of pending message dicts
         backlog_count: Total count of unread messages
         agent_name: Name of the agent
 
@@ -177,7 +177,9 @@ def format_message_board_context(
     # Calculate oldest message age
     oldest_age = ""
     if pending_messages:
-        oldest_timestamp = pending_messages[0].get("timestamp", datetime.now().timestamp())
+        oldest_timestamp = min(
+            msg.get("timestamp", datetime.now().timestamp()) for msg in pending_messages
+        )
         age_seconds = datetime.now().timestamp() - oldest_timestamp
         if age_seconds < 60:
             oldest_age = f"{int(age_seconds)}s ago"
@@ -238,9 +240,7 @@ def format_message_board_context(
     return "\n".join(lines)
 
 
-async def fetch_queue_status(
-    store, agent_name: str
-) -> tuple[list, int]:
+async def fetch_queue_status(store, agent_name: str) -> tuple[list, int]:
     """
     Fetch current queue status for an agent.
 
@@ -249,12 +249,23 @@ async def fetch_queue_status(
         agent_name: Agent name
 
     Returns:
-        Tuple of (pending_messages, backlog_count)
+        Tuple of (pending_messages as dicts, backlog_count)
     """
     pending_messages = store.get_pending_messages(agent_name, limit=10)
     backlog_count = store.get_backlog_count(agent_name)
 
-    return pending_messages, backlog_count
+    # Convert StoredMessage objects to dicts for format_message_board_context
+    pending_dicts = [
+        {
+            "id": msg.id,
+            "sender": msg.sender,
+            "content": msg.content,
+            "timestamp": msg.timestamp,
+        }
+        for msg in pending_messages
+    ]
+
+    return pending_dicts, backlog_count
 
 
 # ============================================================================
@@ -269,7 +280,7 @@ MESSAGE BOARD AWARENESS:
 - You're on a shared message board with multiple participants
 - Before processing each message, you'll see your queue status showing pending messages
 - This helps you understand the full conversation context and avoid confusion
-- Process the oldest message first (FIFO), but be aware of what else is in your queue
+- Focus on the newest message first (FILO) while reviewing the rest of your queue
 
 SELF-PAUSE COMMAND:
 - If you have many pending messages and feel confused, include #pause in your response
@@ -469,9 +480,9 @@ def format_batch_context(
         lines.append("─" * 70)
 
         for msg in history_messages:
-            time_ago = format_time_ago(msg['timestamp'])
-            sender = msg['sender']
-            content = msg['content']
+            time_ago = format_time_ago(msg["timestamp"])
+            sender = msg["sender"]
+            content = msg["content"]
 
             # Truncate long messages in history
             if len(content) > 80:

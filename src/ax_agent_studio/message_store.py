@@ -31,7 +31,7 @@ class MessageStore:
 
     def __init__(self, db_path: str = "data/message_backlog.db"):
         self.db_path = Path(db_path) if db_path != ":memory:" else db_path
-        self._is_memory = (db_path == ":memory:")
+        self._is_memory = db_path == ":memory:"
         self._memory_conn = None  # Keep persistent connection for in-memory DBs
 
         # Only create directory for file-based databases
@@ -81,6 +81,7 @@ class MessageStore:
                 conn.commit()
         except Exception as e:
             import logging
+
             logging.error(f"Failed to initialize database: {e}")
             raise
 
@@ -120,14 +121,27 @@ class MessageStore:
         except sqlite3.Error:
             return False
 
-    def get_pending_messages(self, agent: str, limit: int = 10) -> list[StoredMessage]:
-        """Get unprocessed messages for an agent, ordered by timestamp."""
+    def get_pending_messages(
+        self, agent: str, limit: int = 10, order: str = "desc"
+    ) -> list[StoredMessage]:
+        """Get unprocessed messages for an agent, ordered by timestamp.
+
+        Args:
+            agent: Agent name to fetch pending messages for.
+            limit: Maximum number of messages to return.
+            order: "desc" (default) for FILO processing or "asc" for FIFO-style ordering.
+        """
+        order_normalized = (order or "desc").lower()
+        if order_normalized not in {"asc", "desc"}:
+            order_normalized = "desc"
+        order_clause = "DESC" if order_normalized == "desc" else "ASC"
+
         with self._conn() as conn:
             rows = conn.execute(
-                """
+                f"""
                 SELECT * FROM messages
                 WHERE agent = ? AND processed = 0
-                ORDER BY timestamp ASC
+                ORDER BY timestamp {order_clause}
                 LIMIT ?
                 """,
                 (agent, limit),
@@ -421,8 +435,11 @@ class MessageStore:
                     cleared = self.clear_pending_messages(agent)
                     if cleared > 0:
                         import logging
+
                         logger = logging.getLogger(__name__)
-                        logger.info(f"  Cleared {cleared} message(s) accumulated during #done pause")
+                        logger.info(
+                            f"  Cleared {cleared} message(s) accumulated during #done pause"
+                        )
 
                 self.resume_agent(agent)
                 return True
