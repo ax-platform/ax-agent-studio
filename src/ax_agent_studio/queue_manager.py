@@ -371,14 +371,8 @@ class QueueManager:
                 batch_size = len(all_pending)
 
                 # Precompute queue snapshot for handler + board context
-                # Always in chronological order (oldest → newest) for consistency
-                if processing_order == "desc":
-                    # FILO: Reverse to get chronological order
-                    snapshot_msgs = list(reversed(all_pending))
-                else:
-                    # FIFO: Already chronological
-                    snapshot_msgs = all_pending
-
+                # Keep in processing order (first = currently processing)
+                # so formatter can correctly mark [PROCESSING NOW]
                 queue_snapshot = [
                     {
                         "id": msg.id,
@@ -386,7 +380,7 @@ class QueueManager:
                         "content": msg.content,
                         "timestamp": msg.timestamp,
                     }
-                    for msg in snapshot_msgs
+                    for msg in all_pending
                 ]
 
                 # Determine processing mode
