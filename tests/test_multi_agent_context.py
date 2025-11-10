@@ -27,15 +27,38 @@ DESIRED BEHAVIOR (🔮 Future enhancement):
 
 This test documents the current architecture and can be updated
 when full message board awareness is implemented.
+
+NOTE: This test requires the dashboard to be running (uv run dashboard).
+It will be skipped if the dashboard is not accessible.
 """
 
 import sys
 import time
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from tests.e2e.helpers.dashboard_api import DashboardAPI
+
+
+def is_dashboard_available():
+    """Check if dashboard is accessible"""
+    try:
+        import httpx
+
+        response = httpx.get("http://127.0.0.1:8000/api/health", timeout=2.0)
+        return response.status_code == 200
+    except Exception:
+        return False
+
+
+# Skip if dashboard not available
+pytestmark = pytest.mark.skipif(
+    not is_dashboard_available(),
+    reason="Dashboard not running (start with: uv run dashboard)",
+)
 
 
 def test_multi_agent_context_awareness():
@@ -88,7 +111,7 @@ def test_multi_agent_context_awareness():
                     print(f"   ✓ {agent_name} ready")
                 else:
                     print(f"   ❌ {agent_name} not ready")
-                    return False
+                    pytest.fail("Test assertion failed")
 
             # 4. Simulate multi-agent conversation
             print("\n4. Simulating multi-agent conversation (5 messages)...")
@@ -195,7 +218,7 @@ const agents = {
                 print("   ❌ Failed to send messages")
                 if result.stderr:
                     print(f"     Error: {result.stderr[:200]}")
-                return False
+                pytest.fail("Test assertion failed")
 
             # 5. Wait for processing
             print("\n5. Waiting for Observer to process queue...")
@@ -240,30 +263,30 @@ const agents = {
                     print("   - This would enable passive monitoring and proactive assistance")
                     print("   - Update this test when that feature is implemented")
                     print("=" * 80)
-                    return True
+
                 elif found_orion_message and (found_lunar_ray or found_lunar_craft):
                     print("\n✅ ENHANCED BEHAVIOR DETECTED!")
                     print("   - Observer received @mention message")
                     print("   - Observer ALSO received non-@mention messages")
                     print("   - This indicates full message board awareness is implemented!")
                     print("=" * 80)
-                    return True
+
                 else:
                     print("\n❌ TEST FAILED")
                     print("   - Observer did not receive expected @mention message")
                     print("=" * 80)
-                    return False
+                    pytest.fail("Test assertion failed")
 
             else:
                 print(f"   ❌ Log file not found: {log_file}")
-                return False
+                pytest.fail("Test assertion failed")
 
         except Exception as e:
             print(f"\n❌ ERROR: {e}")
             import traceback
 
             traceback.print_exc()
-            return False
+            pytest.fail("Test assertion failed")
         finally:
             print("\n7. Cleanup...")
             api.cleanup_all()
@@ -271,5 +294,8 @@ const agents = {
 
 
 if __name__ == "__main__":
-    success = test_multi_agent_context_awareness()
-    sys.exit(0 if success else 1)
+    try:
+        test_multi_agent_context_awareness()
+        sys.exit(0)
+    except (AssertionError, Exception):
+        sys.exit(1)

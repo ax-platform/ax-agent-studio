@@ -10,15 +10,38 @@ Test Flow:
 2. Send 5 messages rapidly from sender agent
 3. Verify receiver gets all 5 in one batch
 4. Check response includes full context
+
+NOTE: This test requires the dashboard to be running (uv run dashboard).
+It will be skipped if the dashboard is not accessible.
 """
 
 import sys
 import time
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from tests.e2e.helpers.dashboard_api import DashboardAPI
+
+
+def is_dashboard_available():
+    """Check if dashboard is accessible"""
+    try:
+        import httpx
+
+        response = httpx.get("http://127.0.0.1:8000/api/health", timeout=2.0)
+        return response.status_code == 200
+    except Exception:
+        return False
+
+
+# Skip if dashboard not available
+pytestmark = pytest.mark.skipif(
+    not is_dashboard_available(),
+    reason="Dashboard not running (start with: uv run dashboard)",
+)
 
 
 def test_filo_batching():
@@ -50,7 +73,7 @@ def test_filo_batching():
                 print("   ✓ Monitor ready")
             else:
                 print("   ❌ Monitor not ready")
-                return False
+                pytest.fail("Test assertion failed")
 
             # 4. Send 5 messages rapidly
             print("\n4. Sending 5-message burst...")
@@ -148,7 +171,7 @@ import {{ MCPClientManager }} from '@mcpjam/sdk';
                             print("   ✓ All 5 messages processed (possibly multiple batches)")
                         else:
                             print("   ❌ Not all messages processed")
-                            return False
+                            pytest.fail("Test assertion failed")
                 else:
                     print("   ⚠ No explicit batch markers found")
                     # Check if all 5 messages appear in logs
@@ -159,7 +182,7 @@ import {{ MCPClientManager }} from '@mcpjam/sdk';
                         print("   ✓ Most messages found in logs")
                     else:
                         print("   ❌ Not enough messages found")
-                        return False
+                        pytest.fail("Test assertion failed")
 
                 # Check for FILO processing (newest first)
                 if "Message 5" in log_content:
@@ -175,23 +198,25 @@ import {{ MCPClientManager }} from '@mcpjam/sdk';
 
             else:
                 print(f"   ❌ Log file not found: {log_file}")
-                return False
+                pytest.fail("Test assertion failed")
 
             print("\n" + "=" * 80)
             print("✅ TEST PASSED: FILO batching working correctly")
             print("=" * 80)
-            return True
 
         except Exception as e:
             print(f"\n❌ ERROR: {e}")
             import traceback
 
             traceback.print_exc()
-            return False
+            pytest.fail("Test assertion failed")
         finally:
             api.cleanup_all()
 
 
 if __name__ == "__main__":
-    success = test_filo_batching()
-    sys.exit(0 if success else 1)
+    try:
+        test_filo_batching()
+        sys.exit(0)
+    except (AssertionError, Exception):
+        sys.exit(1)
