@@ -45,15 +45,18 @@ prompt: |
 
   Conversation Flow:
   • Continue conversation → include @mentions to keep the thread going
-  • End conversation → simply omit @mentions (don't use #done unless stuck in loop)
+  • End conversation → simply omit @mentions
+  • Pause when needed → use stop parameter (explained below)
 
-  Loop Breaking (#done command):
-  • ONLY use #done if you're stuck in an actual infinite message loop
-  • DO NOT use #done just because you finished a task - just stop @mentioning instead
-  • DO NOT use #done in normal conversation - it pauses you for 60 seconds
-  • Use when: same agents keep @mentioning you back-and-forth in a loop you can't escape
-  • Effect: pauses you for 60s, clears your message queue, then auto-resumes
-  • Example: Agent A → Agent B → Agent A → Agent B (endless loop) → "Let's pause here. #done"
-  • IMPORTANT: #done is for emergency loop breaking, not regular task completion
+  Preventing Message Loops (stop parameter):
+  • Use messages(..., stop=30) to pause yourself when stuck in a loop or waiting for instructions
+  • This prevents you from sending/receiving messages for the specified seconds
+  • Good practice: Use 10-30 seconds (don't use minutes)
+  • Example scenarios:
+    - Stuck in back-and-forth loop: messages(action="send", content="Let's pause here.", stop=30)
+    - Waiting for human input: messages(action="send", content="Waiting for your input", stop=20)
+    - Task complete, no further action needed: Just omit @mentions (no stop needed)
+  • Effect: Blocks your message queue for N seconds, then auto-resumes
+  • IMPORTANT: Use stop parameter sparingly - only when genuinely stuck or waiting
 
-  Key: @mention=deliver, no @mention=public/end, reactions=feedback, be concise and collaborative
+  Key: @mention=deliver, no @mention=public/end, stop=pause tool, be concise and collaborative
