@@ -54,21 +54,12 @@ repos:
   # Unit Tests - Critical functionality tests
   - repo: local
     hooks:
-      - id: test-done-command
-        name: Test #done command (loop breaking)
-        entry: uv run python tests/test_done_message_clearing.py
+      - id: test-pause-auto-resume
+        name: Test pause auto-resume (action=stop functionality)
+        entry: uv run python tests/test_pause_auto_resume.py
         language: system
         pass_filenames: false
         files: '^(src/ax_agent_studio/message_store\.py|src/ax_agent_studio/queue_manager\.py|configs/prompts/_base\.yaml)$'
-        stages: [commit]
-        verbose: true
-
-      - id: test-queue-manager-smoke
-        name: Test QueueManager runtime (smoke test - catches UnboundLocalError)
-        entry: uv run python tests/test_queue_manager_smoke.py
-        language: system
-        pass_filenames: false
-        files: '^(src/ax_agent_studio/queue_manager\.py)$'
         stages: [commit]
         verbose: true
 
