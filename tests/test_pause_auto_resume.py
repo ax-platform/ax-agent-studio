@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-Simple unit test for #done command message clearing.
-No pytest required - just run with: uv run python tests/test_done_message_clearing.py
+Simple unit test for pause auto-resume and message clearing.
+Tests action=stop functionality with auto-clear when reason starts with "Done:".
+No pytest required - just run with: uv run python tests/test_pause_auto_resume.py
 """
 
 import tempfile
@@ -12,9 +13,9 @@ from ax_agent_studio.message_store import MessageStore
 
 
 def test_done_clears_messages_on_resume():
-    """Test that #done command clears pending messages on auto-resume."""
+    """Test that pause with 'Done:' reason clears pending messages on auto-resume."""
     print("\n" + "=" * 80)
-    print("TEST: #done clears messages on auto-resume")
+    print("TEST: Pause with 'Done:' reason clears messages on auto-resume")
     print("=" * 80)
 
     with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
@@ -32,8 +33,8 @@ def test_done_clears_messages_on_resume():
         assert len(pending) == 2, f"Expected 2 messages, got {len(pending)}"
         print(f"   ✓ {len(pending)} messages stored")
 
-        # Pause with #done (auto-resume in 1 second)
-        print("\n2. Pausing with #done (auto-resume in 1 second)...")
+        # Pause with reason starting with "Done:" (triggers auto-clear)
+        print("\n2. Pausing with 'Done:' reason (auto-resume in 1 second)...")
         resume_at = time.time() + 1
         store.pause_agent(agent, reason="Done: Auto-resuming", resume_at=resume_at)
         assert store.is_agent_paused(agent) is True
@@ -59,7 +60,9 @@ def test_done_clears_messages_on_resume():
 
         # Messages should be cleared now
         pending = store.get_pending_messages(agent)
-        assert len(pending) == 0, f"Expected 0 messages after #done resume, got {len(pending)}"
+        assert len(pending) == 0, (
+            f"Expected 0 messages after auto-resume with Done: reason, got {len(pending)}"
+        )
         print(f"   ✓ Messages cleared: {len(pending)} pending")
 
         # Agent should be active again
@@ -67,7 +70,7 @@ def test_done_clears_messages_on_resume():
         print("   ✓ Agent is active again")
 
         print("\n" + "=" * 80)
-        print("✅ TEST PASSED: #done clears messages on auto-resume")
+        print("✅ TEST PASSED: Pause with 'Done:' reason clears messages on auto-resume")
         print("=" * 80 + "\n")
 
     finally:
@@ -75,9 +78,9 @@ def test_done_clears_messages_on_resume():
 
 
 def test_regular_pause_keeps_messages():
-    """Test that regular #pause doesn't clear messages on resume."""
+    """Test that regular pause (without 'Done:' reason) preserves messages on resume."""
     print("\n" + "=" * 80)
-    print("TEST: Regular #pause keeps messages")
+    print("TEST: Regular pause preserves messages")
     print("=" * 80)
 
     with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
@@ -91,10 +94,10 @@ def test_regular_pause_keeps_messages():
         print("\n1. Storing initial messages...")
         store.store_message("msg1", agent, "user", "Message 1")
         store.store_message("msg2", agent, "user", "Message 2")
-        print(f"   ✓ 2 messages stored")
+        print("   ✓ 2 messages stored")
 
-        # Pause with regular #pause (not #done)
-        print("\n2. Pausing with regular #pause (auto-resume in 1 second)...")
+        # Pause with regular reason (not starting with "Done:")
+        print("\n2. Pausing with regular reason (auto-resume in 1 second)...")
         resume_at = time.time() + 1
         store.pause_agent(agent, reason="Self-paused: taking a break", resume_at=resume_at)
         print("   ✓ Agent paused")
@@ -117,7 +120,7 @@ def test_regular_pause_keeps_messages():
         print(f"   ✓ Messages preserved: {len(pending)} pending")
 
         print("\n" + "=" * 80)
-        print("✅ TEST PASSED: Regular #pause preserves messages")
+        print("✅ TEST PASSED: Regular pause preserves messages")
         print("=" * 80 + "\n")
 
     finally:
@@ -137,5 +140,6 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"\n💥 ERROR: {e}\n")
         import traceback
+
         traceback.print_exc()
         exit(1)

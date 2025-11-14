@@ -272,9 +272,9 @@ class QueueManager:
                 logger.debug(f"[Poller] Waiting for messages... (iteration {iteration})")
 
                 # Check if agent is paused BEFORE fetching messages
-                # This avoids wasting API rate limits and keeps agent truly idle during #done pause
+                # This avoids wasting API rate limits and keeps agent truly idle during pause
                 if self.store.is_agent_paused(self.agent_name):
-                    # Check if auto-resume timer expired (e.g., #done 60s pause)
+                    # Check if auto-resume timer expired (set via action=stop)
                     self.store.check_auto_resume(self.agent_name)
                     # Sleep briefly and check again
                     await asyncio.sleep(1)
@@ -461,51 +461,12 @@ class QueueManager:
                     if not isinstance(response, str):
                         response = str(response)
 
-                    # Detect self-pause commands (#pause, #stop, #done)
-                    pause_detected = False
-                    is_done_command = False  # Initialize here so it's always defined
-                    if response:
-                        response_lower = response.lower()
-                        if (
-                            "#pause" in response_lower
-                            or "#stop" in response_lower
-                            or "#done" in response_lower
-                        ):
-                            pause_detected = True
-                            pause_reason = "Self-paused: Agent requested pause"
-                            resume_at = None  # Default: manual resume required
-
-                            # Extract reason if provided after command
-                            if "#done" in response_lower:
-                                # #done = pause for 60 seconds (auto-resume)
-                                resume_at = time.time() + 60
-                                pause_reason = "Done: Auto-resuming in 60 seconds"
-                                is_done_command = True
-                            elif "#pause" in response_lower:
-                                pause_idx = response_lower.find("#pause")
-                                reason_text = response[pause_idx:].split("\n")[0]
-                                if len(reason_text) > 6:  # More than just "#pause"
-                                    pause_reason = f"Self-paused: {reason_text[7:].strip()}"
-                            elif "#stop" in response_lower:
-                                stop_idx = response_lower.find("#stop")
-                                reason_text = response[stop_idx:].split("\n")[0]
-                                if len(reason_text) > 5:  # More than just "#stop"
-                                    pause_reason = f"Self-paused: {reason_text[6:].strip()}"
-
-                            self.store.pause_agent(
-                                self.agent_name, reason=pause_reason, resume_at=resume_at
-                            )
-                            logger.warning(f"⏸  {pause_reason}")
+                    # NOTE: Pause/stop functionality now handled server-side via action=stop
+                    # No client-side text parsing needed
 
                     # Only send if response is not empty (handler may return "" to skip)
                     if response and response.strip():
-                        # Strip @mentions ONLY from #done responses to prevent triggering other agents
-                        # Keep @mentions for #pause/#stop so recipients get notified
                         send_content = response
-                        if is_done_command:
-                            # Remove all @mentions from the response
-                            send_content = re.sub(r"@\w+", "", response)
-                            logger.info(" Stripped @mentions from #done response")
 
                         # Determine which message to reply to (newest in queue / current focus)
                         reply_to_msg = all_pending[0]
@@ -519,24 +480,14 @@ class QueueManager:
                                 "parent_message_id": reply_to_msg.id,  # Reply to the newest message
                             },
                         )
-                        if pause_detected:
-                            if batch_size > 1:
-                                logger.info(
-                                    f" Completed BATCH of {batch_size} messages (threaded reply + PAUSED)"
-                                )
-                            else:
-                                logger.info(
-                                    f" Completed message {reply_to_msg.id[:8]} (threaded reply + PAUSED)"
-                                )
+                        if batch_size > 1:
+                            logger.info(
+                                f" Completed BATCH of {batch_size} messages (threaded reply)"
+                            )
                         else:
-                            if batch_size > 1:
-                                logger.info(
-                                    f" Completed BATCH of {batch_size} messages (threaded reply)"
-                                )
-                            else:
-                                logger.info(
-                                    f" Completed message {reply_to_msg.id[:8]} (threaded reply)"
-                                )
+                            logger.info(
+                                f" Completed message {reply_to_msg.id[:8]} (threaded reply)"
+                            )
                     else:
                         # Handler returned empty response (e.g., blocked self-mention)
                         if batch_size > 1:
