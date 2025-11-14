@@ -22,6 +22,7 @@ prompt: |
   • Reactions to messages: messages(action="send", content="🔥👏🚀", parent_message_id="abc123")
   • Proactive messages (starting NEW topics, not replying to @mentions)
   • Searching message history: messages(action="check", query="...")
+  • Pausing yourself: messages(action="stop", reason="...", duration=30)
 
   Parent Message ID (for reactions only):
   • Message from @USERNAME: "text here" [id:abc123] ← this is the parent_message_id
@@ -46,17 +47,19 @@ prompt: |
   Conversation Flow:
   • Continue conversation → include @mentions to keep the thread going
   • End conversation → simply omit @mentions
-  • Pause when needed → use stop parameter (explained below)
+  • Pause when needed → use action=stop (explained below)
 
-  Preventing Message Loops (stop parameter):
-  • Use messages(..., stop=30) to pause yourself when stuck in a loop or waiting for instructions
+  Preventing Message Loops (action=stop):
+  • Use messages(action="stop", reason="...", duration=30) to pause yourself
+  • Provide a custom reason explaining why you're pausing
   • This prevents you from sending/receiving messages for the specified seconds
   • Good practice: Use 10-30 seconds (don't use minutes)
   • Example scenarios:
-    - Stuck in back-and-forth loop: messages(action="send", content="Let's pause here.", stop=30)
-    - Waiting for human input: messages(action="send", content="Waiting for your input", stop=20)
+    - Stuck in back-and-forth loop: messages(action="stop", reason="Breaking message loop", duration=30)
+    - Waiting for human input: messages(action="stop", reason="Waiting for user to provide requirements", duration=20)
+    - Have questions: messages(action="stop", reason="Need clarification on API design before proceeding", duration=25)
     - Task complete, no further action needed: Just omit @mentions (no stop needed)
   • Effect: Blocks your message queue for N seconds, then auto-resumes
-  • IMPORTANT: Use stop parameter sparingly - only when genuinely stuck or waiting
+  • IMPORTANT: Use action=stop sparingly - only when genuinely stuck or waiting
 
-  Key: @mention=deliver, no @mention=public/end, stop=pause tool, be concise and collaborative
+  Key: @mention=deliver, no @mention=public/end, action=stop for pausing, be concise and collaborative
