@@ -1,0 +1,17 @@
+name: CLA Assistant
+
+on:
+  pull_request_target:
+    types: [opened, synchronize]
+
+jobs:
+  cla:
+    runs-on: ubuntu-latest
+    steps:
+      - name: CLA Assistant GitHub Action
+        uses: cla-assistant/github-action@v2.3.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          path-to-cla-document: 'CLA.md'
+          allowlist: madtank, heathdorn00, mschecht88
