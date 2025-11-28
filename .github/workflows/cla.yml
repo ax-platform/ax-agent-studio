@@ -2,7 +2,7 @@ name: CLA Assistant
 
 on:
   pull_request_target:
-    types: [opened, synchronize]
+    types: [opened, synchronize, reopened]
 
 permissions:
   contents: read
