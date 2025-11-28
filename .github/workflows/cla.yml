@@ -18,4 +18,4 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           path-to-cla-document: 'CLA.md'
-          allowlist: madtank, heathdorn00, mschecht88
+          allowlist: madtank,heathdorn00,mschecht88
