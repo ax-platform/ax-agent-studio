@@ -6,6 +6,7 @@ Thank you for your interest in contributing to aX Agent Studio! This project thr
 
 - [Code of Conduct](#code-of-conduct)
 - [Getting Started](#getting-started)
+- [Contributor License Agreement (CLA)](#contributor-license-agreement-cla)
 - [Development Setup](#development-setup)
 - [How to Contribute](#how-to-contribute)
 - [Contribution Guidelines](#contribution-guidelines)
@@ -117,6 +118,18 @@ PYTHONPATH=src uv run uvicorn ax_agent_studio.dashboard.backend.main:app --host 
 ```
 
 Open http://127.0.0.1:8000 to verify it works.
+
+---
+
+## Contributor License Agreement (CLA)
+
+Before we can accept your first pull request, you must sign our Contributor License Agreement (CLA).
+
+This is handled automatically by the “CLA Assistant” bot on GitHub.  
+When you open your first PR, you will receive a link to sign the CLA.  
+You only need to sign once.
+
+Without a signed CLA, the PR cannot be merged.
 
 ### Run Tests (if available)
 
