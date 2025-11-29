@@ -120,6 +120,52 @@
                         <p class="empty-state">Loading deployment groups...</p>
                     </div>
                 </section>
+
+                <section class="card admin-card">
+                    <h2>🛠️ Admin</h2>
+                    <div class="form-group">
+                        <label for="admin-token-input">Admin Token</label>
+                        <div class="admin-token-row">
+                            <input type="password" id="admin-token-input" placeholder="Enter DASHBOARD_ADMIN_TOKEN" />
+                            <button id="save-admin-token-btn" type="button" class="btn btn-secondary btn-sm">Unlock</button>
+                        </div>
+                        <small class="form-help">Required to view or edit the changelog (admin only)</small>
+                    </div>
+                </section>
+
+                <section class="card admin-card" id="changelog-card" style="display: none;">
+                    <h2>📑 Feature Changelog</h2>
+                    <form id="changelog-form" class="changelog-form">
+                        <div class="form-group">
+                            <label for="changelog-title">Title</label>
+                            <input type="text" id="changelog-title" placeholder="Feature headline" required />
+                        </div>
+                        <div class="form-group">
+                            <label for="changelog-description">Description</label>
+                            <textarea id="changelog-description" placeholder="What changed" rows="2" required></textarea>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="changelog-pr-number">PR Number (optional)</label>
+                                <input type="number" id="changelog-pr-number" placeholder="123" />
+                            </div>
+                            <div class="form-group">
+                                <label for="changelog-author">Author (optional)</label>
+                                <input type="text" id="changelog-author" placeholder="Your name" />
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Add Entry</button>
+                    </form>
+
+                    <div class="changelog-actions">
+                        <button type="button" id="changelog-history-toggle" class="btn btn-secondary btn-sm">View full history</button>
+                        <small class="form-help">Showing the most recent updates (admin-only visibility)</small>
+                    </div>
+
+                    <div id="changelog-list" class="changelog-list">
+                        <p class="empty-state">Enter an admin token to view changelog entries.</p>
+                    </div>
+                </section>
             </div>
 
             <!-- Right Panel: Logs -->

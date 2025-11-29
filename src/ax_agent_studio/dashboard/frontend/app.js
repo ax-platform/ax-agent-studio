@@ -18,6 +18,10 @@ let selectedEnvironment = 'local'; // Default to local
 let selectedProvider = 'ollama'; // Default provider
 let logFilter = 'all'; // Default to show all logs
 let verboseMode = false; // Default to condensed logs
+let adminToken = localStorage.getItem('dashboardAdminToken') || '';
+let changelogEntries = [];
+let changelogTotal = 0;
+let changelogShowingFullHistory = false;
 
 const escapeAttr = (value) => String(value)
     .replace(/&/g, '&amp;')
@@ -39,6 +43,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await updateKillSwitchButton(); // Check initial kill switch state
     initializeWebSocket();
     setupEventListeners();
+    initializeAdminControls();
 
     // Show/hide provider/model groups AND load correct models for default monitor type
     const monitorType = document.getElementById('monitor-type-select').value;
@@ -326,6 +331,191 @@ function updateTestSenderOptions() {
             localStorage.removeItem('testSenderAgent');
         }
     };
+}
+
+// Admin controls & changelog
+function initializeAdminControls() {
+    const tokenInput = document.getElementById('admin-token-input');
+    const saveButton = document.getElementById('save-admin-token-btn');
+    const changelogCard = document.getElementById('changelog-card');
+    const changelogForm = document.getElementById('changelog-form');
+    const historyToggle = document.getElementById('changelog-history-toggle');
+
+    if (!tokenInput || !saveButton || !changelogCard) {
+        return;
+    }
+
+    const updateVisibility = () => {
+        changelogCard.style.display = adminToken ? 'block' : 'none';
+        if (!adminToken) {
+            changelogEntries = [];
+            changelogTotal = 0;
+            changelogShowingFullHistory = false;
+            renderChangelog();
+        }
+    };
+
+    tokenInput.value = adminToken;
+    updateVisibility();
+
+    saveButton.addEventListener('click', async () => {
+        adminToken = tokenInput.value.trim();
+        if (adminToken) {
+            localStorage.setItem('dashboardAdminToken', adminToken);
+            showNotification('Admin token saved locally ✓', 'success');
+            await loadChangelog();
+        } else {
+            localStorage.removeItem('dashboardAdminToken');
+            showNotification('Admin token cleared', 'info');
+        }
+
+        updateVisibility();
+    });
+
+    if (changelogForm) {
+        changelogForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await submitChangelogEntry();
+        });
+    }
+
+    if (historyToggle) {
+        historyToggle.addEventListener('click', async () => {
+            changelogShowingFullHistory = !changelogShowingFullHistory;
+            const limit = changelogShowingFullHistory ? 100 : 10;
+            await loadChangelog(limit);
+        });
+    }
+
+    if (adminToken) {
+        loadChangelog();
+    }
+}
+
+async function loadChangelog(limit = 10) {
+    const list = document.getElementById('changelog-list');
+
+    if (!adminToken) {
+        renderChangelog();
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE}/api/changelog?limit=${limit}`, {
+            headers: {
+                'X-Admin-Token': adminToken
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        changelogEntries = data.entries || [];
+        changelogTotal = data.total || changelogEntries.length;
+        renderChangelog();
+    } catch (error) {
+        console.error('Failed to load changelog:', error);
+        if (list) {
+            list.innerHTML = '<p class="empty-state">Unable to load changelog (check admin token).</p>';
+        }
+    }
+}
+
+async function submitChangelogEntry() {
+    const titleInput = document.getElementById('changelog-title');
+    const descriptionInput = document.getElementById('changelog-description');
+    const prNumberInput = document.getElementById('changelog-pr-number');
+    const authorInput = document.getElementById('changelog-author');
+
+    if (!adminToken) {
+        showNotification('Admin token required to add changelog entries', 'error');
+        return;
+    }
+
+    const title = titleInput.value.trim();
+    const description = descriptionInput.value.trim();
+    const prNumber = prNumberInput.value ? parseInt(prNumberInput.value, 10) : null;
+    const author = authorInput.value.trim() || null;
+
+    if (!title || !description) {
+        showNotification('Title and description are required', 'error');
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE}/api/changelog`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Admin-Token': adminToken
+            },
+            body: JSON.stringify({
+                title,
+                description,
+                pr_number: prNumber,
+                author
+            })
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || 'Unknown error');
+        }
+
+        const data = await response.json();
+        showNotification(`Changelog entry #${data.entry.id} added ✓`, 'success');
+        titleInput.value = '';
+        descriptionInput.value = '';
+        prNumberInput.value = '';
+        authorInput.value = '';
+        await loadChangelog(changelogShowingFullHistory ? 100 : 10);
+    } catch (error) {
+        console.error('Failed to add changelog entry:', error);
+        showNotification('Failed to add changelog entry', 'error');
+    }
+}
+
+function renderChangelog() {
+    const list = document.getElementById('changelog-list');
+    const historyToggle = document.getElementById('changelog-history-toggle');
+
+    if (!list) return;
+
+    if (!adminToken) {
+        list.innerHTML = '<p class="empty-state">Enter an admin token to view changelog entries.</p>';
+        if (historyToggle) historyToggle.disabled = true;
+        return;
+    }
+
+    if (!changelogEntries.length) {
+        list.innerHTML = '<p class="empty-state">No changelog entries yet.</p>';
+        if (historyToggle) historyToggle.disabled = true;
+        return;
+    }
+
+    list.innerHTML = changelogEntries.map(entry => {
+        const prLabel = entry.pr_number ? `PR #${escapeAttr(entry.pr_number)}` : 'No PR linked';
+        const authorLabel = entry.author ? ` • ${escapeAttr(entry.author)}` : '';
+        const created = new Date(entry.created_at).toLocaleString();
+        return `
+            <div class="changelog-entry">
+                <div class="changelog-entry__meta">
+                    <span class="changelog-entry__id">#${escapeAttr(entry.id)}</span>
+                    <span class="changelog-entry__timestamp">${escapeAttr(created)}</span>
+                </div>
+                <div class="changelog-entry__title">${escapeAttr(entry.title)}</div>
+                <div class="changelog-entry__description">${escapeAttr(entry.description)}</div>
+                <div class="changelog-entry__footer">${prLabel}${authorLabel}</div>
+            </div>
+        `;
+    }).join('');
+
+    if (historyToggle) {
+        historyToggle.disabled = changelogTotal <= 10;
+        historyToggle.textContent = changelogShowingFullHistory ? 'Show latest 10' : 'View full history';
+    }
 }
 
 // Removed demo functionality - focus on Agent Factory core features

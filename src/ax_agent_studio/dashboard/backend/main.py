@@ -12,7 +12,9 @@ from pathlib import Path
 from typing import Literal
 
 import psutil
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from dataclasses import asdict
+
+from fastapi import FastAPI, Header, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -25,6 +27,7 @@ from ax_agent_studio.dashboard.backend.framework_loader import (
     get_ui_defaults,
     load_frameworks,
 )
+from ax_agent_studio.dashboard.backend.changelog_manager import ChangelogManager
 from ax_agent_studio.dashboard.backend.log_streamer import LogStreamer
 from ax_agent_studio.dashboard.backend.process_manager import ProcessManager
 from ax_agent_studio.dashboard.backend.providers_loader import (
@@ -39,6 +42,23 @@ PROJECT_ROOT = Path(__file__).parent.parent.parent.parent.parent
 process_manager = ProcessManager(PROJECT_ROOT)
 config_loader = ConfigLoader(PROJECT_ROOT)
 log_streamer = LogStreamer(PROJECT_ROOT / "logs")
+changelog_manager = ChangelogManager(PROJECT_ROOT)
+
+# Admin token required for changelog operations
+ADMIN_TOKEN = os.getenv("DASHBOARD_ADMIN_TOKEN")
+
+
+def require_admin_token(admin_token: str | None) -> None:
+    """Validate an admin token for protected routes."""
+
+    if not ADMIN_TOKEN:
+        raise HTTPException(
+            status_code=503,
+            detail="DASHBOARD_ADMIN_TOKEN is not configured on the server",
+        )
+
+    if admin_token != ADMIN_TOKEN:
+        raise HTTPException(status_code=401, detail="Admin token is invalid")
 
 
 @asynccontextmanager
@@ -207,6 +227,13 @@ class DeploymentActionRequest(BaseModel):
 class ResetAgentsRequest(BaseModel):
     agents: list[str] | None = None
     environment: str | None = None
+
+
+class ChangelogEntryRequest(BaseModel):
+    title: str
+    description: str
+    pr_number: int | None = None
+    author: str | None = None
 
 
 # API Routes
@@ -826,6 +853,50 @@ async def send_message(request: SendMessageRequest):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/changelog")
+async def get_changelog(
+    limit: int = 10,
+    offset: int = 0,
+    admin_token: str | None = Header(default=None, alias="X-Admin-Token"),
+):
+    """Return paginated changelog entries (admin only)."""
+
+    require_admin_token(admin_token)
+
+    safe_limit = max(1, min(limit, 100))
+    safe_offset = max(0, offset)
+
+    entries, total = changelog_manager.list_entries(limit=safe_limit, offset=safe_offset)
+    return {
+        "entries": [asdict(entry) for entry in entries],
+        "total": total,
+        "limit": safe_limit,
+        "offset": safe_offset,
+    }
+
+
+@app.post("/api/changelog")
+async def add_changelog_entry(
+    request: ChangelogEntryRequest,
+    admin_token: str | None = Header(default=None, alias="X-Admin-Token"),
+):
+    """Create a new changelog entry (admin only)."""
+
+    require_admin_token(admin_token)
+
+    if not request.title.strip() or not request.description.strip():
+        raise HTTPException(status_code=400, detail="Title and description are required")
+
+    entry = changelog_manager.add_entry(
+        title=request.title.strip(),
+        description=request.description.strip(),
+        pr_number=request.pr_number,
+        author=request.author,
+    )
+
+    return {"entry": asdict(entry)}
 
 
 @app.websocket("/ws/logs/{monitor_id}")
