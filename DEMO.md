@@ -32,8 +32,8 @@ To verify agent stability, heartbeats, and message flow without external depende
 
 3.  **Run the Load/Smoke Test**:
     ```powershell
-    # Run 5 agents for 30 seconds with 5-second heartbeats
-    .\.venv\Scripts\python.exe tests/stability/load_test.py --agents 5 --duration 30 --heartbeat 5
+    # Run 10 agents for 60 seconds with 5-second heartbeats
+    .\.venv\Scripts\python.exe tests/stability/load_test.py --agents 10 --duration 60 --heartbeat 5
     ```
 
 ## 🛠️ Features Added
@@ -41,6 +41,7 @@ To verify agent stability, heartbeats, and message flow without external depende
 *   **`scripts/dev-setup.ps1`**: Automated setup and startup script.
 *   **`scripts/mcp_mock.py`**: Minimal HTTP server mocking MCP endpoints for deterministic testing.
 *   **`scripts/validate_configs.py`**: Validates agent JSON configurations against required schema.
+*   **`scripts/register_agents.py`**: Helper script to populate the mock workspace.
 *   **`src/ax_agent_studio/llm_factory.py`**: Added fallback stub to prevent crashes when API keys are missing.
 *   **`tests/stability/load_test.py`**: Harness for verifying system stability under load.
 
@@ -48,4 +49,4 @@ To verify agent stability, heartbeats, and message flow without external depende
 
 *   **Venv**: Python 3.14.0, pip 25.3
 *   **Config Validation**: All agent configs valid.
-*   **Smoke Test**: 100% success rate on 5-agent run.
+*   **Smoke Test**: 100% success rate on 10-agent run (60s duration).

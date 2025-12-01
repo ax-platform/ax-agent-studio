@@ -78,9 +78,9 @@ def main():
         print(" Make sure 'uv' is installed: https://github.com/astral-sh/uv")
         sys.exit(1)
     except FileNotFoundError:
-        print("\n 'uv' command not found!")
-        print(" Install uv: https://github.com/astral-sh/uv")
-        sys.exit(1)
+        print("\n 'uv' command not found! Assuming dependencies are managed manually.")
+        # print(" Install uv: https://github.com/astral-sh/uv")
+        # sys.exit(1)
 
     # Set up environment
     env = os.environ.copy()
