@@ -1,5 +1,4 @@
 import requests
-import json
 
 MOCK_URL = "http://127.0.0.1:9000"
 AGENTS = [
@@ -20,7 +19,7 @@ def register_agents():
                 "agent_id": agent['name'],
                 "type": "registration"
             }
-            response = requests.post(f"{MOCK_URL}/workspaces/demo/messages", json=payload)
+            response = requests.post(f"{MOCK_URL}/workspaces/demo/messages", json=payload, timeout=5)
             print(f"Registered {agent['name']}: {response.status_code} {response.text}")
         except Exception as e:
             print(f"Failed to register {agent['name']}: {e}")

@@ -2,7 +2,7 @@ import http.server
 import socketserver
 import json
 import time
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse
 
 PORT = 9000
 
@@ -15,7 +15,7 @@ class MCPMockHandler(http.server.SimpleHTTPRequestHandler):
             self.end_headers()
             response = {
                 "messages": [
-                    {"seq": 1, "ts": time.time(), "payload": {"agent": "mock_agent", "text": "Hello form mock!"}}
+                    {"seq": 1, "ts": time.time(), "payload": {"agent": "mock_agent", "text": "Hello from mock!"}}
                 ]
             }
             self.wfile.write(json.dumps(response).encode('utf-8'))
@@ -26,6 +26,12 @@ class MCPMockHandler(http.server.SimpleHTTPRequestHandler):
     def do_POST(self):
         content_length = int(self.headers['Content-Length'])
         post_data = self.rfile.read(content_length)
+        
+        # Log the received POST payload for debugging purposes
+        try:
+            print("Received POST payload:", post_data.decode('utf-8'))
+        except Exception as e:
+            print("Failed to decode POST payload:", e)
         
         if self.path.endswith("/messages"):
             self.send_response(200)

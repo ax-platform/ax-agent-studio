@@ -15,9 +15,10 @@ def send_heartbeat(agent_id, seq):
             "seq": seq,
             "ts": time.time()
         }
-        response = requests.post(f"{MOCK_URL}/workspaces/demo/messages", json=payload)
+        response = requests.post(f"{MOCK_URL}/workspaces/demo/messages", json=payload, timeout=5)
         return response.status_code == 200
-    except Exception:
+    except Exception as e:
+        print(f"Heartbeat failed: {e}", file=sys.stderr)
         return False
 
 def run_agent(agent_id, duration, heartbeat_interval):
@@ -61,7 +62,7 @@ def main():
         
         # Verify messages were received
         try:
-            r = requests.get(f"{MOCK_URL}/workspaces/demo/messages?since_seq=0")
+            r = requests.get(f"{MOCK_URL}/workspaces/demo/messages?since_seq=0", timeout=5)
             data = r.json()
             print("Sample GET after test:")
             # Print first 2 messages as sample
@@ -70,7 +71,7 @@ def main():
         except Exception as e:
             print(f"Failed to verify messages: {e}")
     else:
-        print("Errors reported: No heartbeats sent.")
+        print("Errors reported: No heartbeats sent (or test duration too short).")
         sys.exit(1)
 
 if __name__ == "__main__":
