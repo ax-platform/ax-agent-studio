@@ -15,9 +15,10 @@ jobs:
       - name: CLA Assistant GitHub Action
         uses: cla-assistant/github-action@v2.6.1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.CLA_ASSISTANT_TOKEN }}
         with:
-          path-to-cla-document: 'CLA.md'
+          path-to-document: 'CLA.md'
+          path-to-signatures: '.signatures'
           remote-organization-name: 'ax-platform'
           remote-repository-name: 'ax-agent-studio'
           branch: 'main'
