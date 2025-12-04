@@ -781,7 +781,7 @@ def load_base_prompt() -> str:
         return ""
 
     try:
-        with open(base_prompt_path) as f:
+        with open(base_prompt_path, encoding="utf-8") as f:
             prompt_data = yaml.safe_load(f)
             return prompt_data.get("prompt", "")
     except Exception as e:

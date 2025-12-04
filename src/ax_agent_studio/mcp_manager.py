@@ -86,6 +86,29 @@ class MCPServerManager:
         args = server_config.get("args", [])
         env = server_config.get("env")
 
+        # Auto-detect python command and use current interpreter
+        if command == "python":
+            import sys
+            command = sys.executable
+
+        # Auto-fix Node.js path on Windows if npx is missing
+        if command == "npx" or command == "npx.cmd":
+            import shutil
+            import os
+            
+            # Check if npx is in PATH
+            if not shutil.which("npx") and not shutil.which("npx.cmd"):
+                node_path = Path(r"C:\Program Files\nodejs")
+                if node_path.exists():
+                    logger.info(f"Adding {node_path} to PATH for {server_name}")
+                    # Create copy of env or use os.environ
+                    env = env.copy() if env else os.environ.copy()
+                    env["PATH"] = str(node_path) + os.pathsep + env.get("PATH", "")
+                    
+                    # If command is npx, try to resolve full path to npx.cmd
+                    if (node_path / "npx.cmd").exists():
+                        command = str(node_path / "npx.cmd")
+
         return StdioServerParameters(command=command, args=args, env=env)
 
     async def connect_all(self):

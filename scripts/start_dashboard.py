@@ -71,16 +71,17 @@ def main():
 
     # Always run uv sync (it's fast if everything is already installed)
     try:
-        subprocess.run(["uv", "sync"], cwd=project_root, check=True)
-        print(" Dependencies ready!\n")
+        # subprocess.run(["uv", "sync"], cwd=project_root, check=True)
+        print(" Dependencies ready! (Skipping uv sync)\n")
     except subprocess.CalledProcessError as e:
-        print(f"\n Failed to install dependencies: {e}")
-        print(" Make sure 'uv' is installed: https://github.com/astral-sh/uv")
-        sys.exit(1)
+        print(f"\n Warning: Failed to sync dependencies: {e}")
+        print(" Assuming dependencies are already installed in the active venv.")
+        # print(" Make sure 'uv' is installed: https://github.com/astral-sh/uv")
+        # sys.exit(1)
     except FileNotFoundError:
-        print("\n 'uv' command not found!")
-        print(" Install uv: https://github.com/astral-sh/uv")
-        sys.exit(1)
+        print("\n 'uv' command not found! Assuming dependencies are managed manually.")
+        # print(" Install uv: https://github.com/astral-sh/uv")
+        # sys.exit(1)
 
     # Set up environment
     env = os.environ.copy()

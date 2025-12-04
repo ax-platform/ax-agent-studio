@@ -288,6 +288,7 @@ class QueueManager:
                 # Parse and validate message
                 parsed = self._parse_message(result)
                 if not parsed:
+                    await asyncio.sleep(1)  # Prevent tight loop on empty/status messages
                     continue
 
                 msg_id, sender, content = parsed
