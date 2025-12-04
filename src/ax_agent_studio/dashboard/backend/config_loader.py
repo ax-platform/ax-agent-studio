@@ -64,7 +64,7 @@ class ConfigLoader:
                 continue
 
             try:
-                with open(config_file) as f:
+                with open(config_file, encoding="utf-8") as f:
                     data = json.load(f)
 
                     # Skip if it has _comment or _instructions (template file)
@@ -166,7 +166,7 @@ class ConfigLoader:
     def load_config(self, config_path: str) -> dict | None:
         """Load a specific configuration file"""
         try:
-            with open(config_path) as f:
+            with open(config_path, encoding="utf-8") as f:
                 return json.load(f)
         except Exception as e:
             print(f"Error loading config {config_path}: {e}")

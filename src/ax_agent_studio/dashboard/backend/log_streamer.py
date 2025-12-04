@@ -122,7 +122,7 @@ class LogStreamer:
                         last_pos = 0
                         # Only log once per truncation cycle
                         if not truncation_logged:
-                            print(f"Detected truncation of {log_file}, resetting position")
+                            # print(f"Detected truncation of {log_file}, resetting position")
                             truncation_logged = True
                     else:
                         # Reset flag when file size is normal
@@ -132,9 +132,13 @@ class LogStreamer:
 
                     if line:
                         # New content available
-                        await websocket.send_json(
-                            {"type": "log", "monitor_id": monitor_id, "content": line}
-                        )
+                        try:
+                            await websocket.send_json(
+                                {"type": "log", "monitor_id": monitor_id, "content": line}
+                            )
+                        except RuntimeError:
+                            # Connection closed during send
+                            return
                         last_pos = await f.tell()
                     else:
                         # No new content, wait a bit
@@ -149,11 +153,13 @@ class LogStreamer:
         except WebSocketDisconnect:
             # Client disconnected (browser closed, network issue) - exit quietly
             return
+        except RuntimeError:
+            # Connection closed - exit quietly
+            return
         except Exception as e:
             # Only print non-file-related errors
             error_msg = str(e) or repr(e)
             if "No such file or directory" not in error_msg:
                 print(f"Error tailing {log_file}: {type(e).__name__}: {error_msg}")
-                import traceback
-
-                traceback.print_exc()
+                # import traceback
+                # traceback.print_exc()

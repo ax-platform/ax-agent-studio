@@ -63,7 +63,7 @@ class DeploymentLoader:
             return
 
         try:
-            with open(self.config_path) as f:
+            with open(self.config_path, encoding="utf-8") as f:
                 raw_config = yaml.safe_load(f) or {}
         except Exception as e:
             print(f"Error loading deployment groups: {e}")
@@ -85,6 +85,15 @@ class DeploymentLoader:
                     self._groups[group_id] = group
             except Exception as e:
                 print(f"  Skipping deployment group '{group_id}': {e}")
+
+        # Debug logging to file
+        try:
+            with open("logs/deployment_debug.log", "w", encoding="utf-8") as log:
+                log.write(f"Loaded {len(self._groups)} groups: {list(self._groups.keys())}\n")
+                for gid, grp in self._groups.items():
+                    log.write(f"  - {gid}: {len(grp.agents)} agents\n")
+        except Exception as e:
+            print(f"Failed to write debug log: {e}")
 
     def _parse_group(
         self,

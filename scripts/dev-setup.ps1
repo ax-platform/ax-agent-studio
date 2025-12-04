@@ -13,6 +13,13 @@ if (-not (Test-Path ".\.venv")) {
 
 # 2. Install dependencies
 Write-Host "Installing dependencies..." -ForegroundColor Yellow
+
+# Ensure pip is installed
+if (-not (Test-Path ".\.venv\Scripts\pip.exe")) {
+    Write-Host "Pip not found, installing..." -ForegroundColor Yellow
+    .\.venv\Scripts\python.exe -m ensurepip --default-pip
+    .\.venv\Scripts\python.exe -m pip install --upgrade pip setuptools wheel
+}
 # Install project in editable mode if pyproject.toml exists, otherwise install requirements
 if (Test-Path "pyproject.toml") {
     .\.venv\Scripts\python.exe -m pip install -e .
@@ -20,6 +27,10 @@ if (Test-Path "pyproject.toml") {
 elseif (Test-Path "requirements.txt") {
     .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 }
+
+# Explicitly install dashboard dependencies to ensure they exist
+Write-Host "Ensuring dashboard dependencies..." -ForegroundColor Yellow
+.\.venv\Scripts\python.exe -m pip install uvicorn fastapi
 
 # 3. Set Environment Variables
 $env:PYTHONUTF8 = "1"
