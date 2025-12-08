@@ -1,0 +1,42 @@
+# Phase 1: Environment Diagnostics (Foundation Reset)
+
+## 📌 Summary
+This PR introduces reproducible environment diagnostics across platforms (Python, PowerShell, Bash, Docker) with CI integration.  
+It follows a strict reset to `upstream/main` and reconstructs atomic commits to restore trust after prior corruption.
+
+---
+
+## 🔹 Scope Proof
+- **README.md** → Append‑only: added diagnostics usage section.  
+- **.gitignore** → Restored upstream rules, appended `artifacts/`.  
+- **Governance untouched** → CLA, LICENSE, CONTRIBUTING remain unchanged.  
+
+**Diff check:**
+```bash
+git diff upstream/main README.md .gitignore
+```
+Confirms append‑only edits.
+
+## 🔹 Changes by Commit
+1. **chore: repo hygiene (.gitignore)**  
+   *Restored upstream rules, added artifacts ignores.*
+2. **feat: add cross‑platform Python diagnostics (diagnose_env.py)**
+3. **feat: add Windows PowerShell wrapper (diagnose_env.ps1)**
+4. **feat: add optional Dockerfile + POSIX entrypoint (diagnose_env.sh)**
+5. **docs: add diagnostics usage to README**
+6. **ci: add diagnostics smoke test workflow (diagnostics.yml)**
+
+## 🔹 Evidence Bundle
+**Artifacts generated:**
+- `artifacts/diagnostics.json`
+- `artifacts/diagnostics.txt`
+
+**CI workflow:** Validates JSON with jq, uploads artifacts for review.  
+**Transparency:** Reviewers can reproduce diagnostics locally or via CI.
+
+## 🔹 Known Limitations (Phase 2 Roadmap)
+- **Python:** Improve configurability of output paths, expand error logging.
+- **PowerShell:** Parameterize Python path, add argument passthrough.
+- **Bash:** Enforce UTF‑8 locale, refine python3 detection.
+- **Dockerfile:** Add HEALTHCHECK, expand OS matrix in CI.
+- **CI:** Add pip caching, broaden OS coverage (Windows/macOS).

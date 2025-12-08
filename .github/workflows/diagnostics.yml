@@ -1,0 +1,49 @@
+name: Diagnostics Smoke Test
+
+on:
+  push:
+    branches: [ "feature/**" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  smoke-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y jq
+
+    - name: Run Diagnostics
+      run: |
+        chmod +x scripts/diagnose_env.sh
+        ./scripts/diagnose_env.sh
+
+    - name: Validate JSON Artifact
+      run: |
+        if [ ! -f artifacts/diagnostics.json ]; then
+          echo "Error: artifacts/diagnostics.json not found"
+          exit 1
+        fi
+        
+        # Validate JSON syntax and key existence using jq
+        echo "Validating JSON schema..."
+        jq -e '.platform.system and .python.version and .packages' artifacts/diagnostics.json > /dev/null
+        
+        echo "Validation Successful."
+
+    - name: Upload Artifacts
+      if: success()
+      uses: actions/upload-artifact@v4
+      with:
+        name: diagnostics-report
+        path: artifacts/
