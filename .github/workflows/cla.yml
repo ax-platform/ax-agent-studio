@@ -25,4 +25,4 @@ jobs:
           path-to-signatures: 'signatures/cla.json'
           path-to-document: 'https://github.com/ax-platform/ax-agent-studio/blob/main/CLA.md'
           branch: 'main'
-          allowlist: madtank,heathdorn00,mschecht88,dependabot*,github-actions*
+          allowlist: madtank,heathdorn00,mschecht88,iHelperPro,iHelper30,dependabot*,github-actions*
