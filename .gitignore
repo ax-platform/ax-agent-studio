@@ -110,3 +110,6 @@ package-lock.json
 # Local documentation (internal)
 docs/
 CLAUDE.md
+
+# Project Artifacts
+artifacts/

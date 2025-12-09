@@ -451,4 +451,31 @@ The agent factory pattern enables endless possibilities:
 
 **Built with  by the aX Platform community**
 
-*Join us in building the future of agent orchestration!*
+
+## Diagnostics
+
+We provide reproducible environment diagnostics to ensure consistency across contributors.
+
+### Local Execution
+
+**Windows (PowerShell):**
+```powershell
+.\scripts\diagnose_env.ps1
+```
+
+**Linux/macOS:**
+```bash
+./scripts/diagnose_env.sh
+```
+
+### Docker Execution (Optional)
+
+You can run diagnostics in a clean container to verify parity:
+
+```bash
+docker build -t ax-diag .
+docker run --rm -v ${PWD}/artifacts:/app/artifacts ax-diag
+```
+
+Artifacts will be generated in the `artifacts/` directory.
+
