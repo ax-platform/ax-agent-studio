@@ -215,7 +215,13 @@ class QueueManager:
 
                 # Generate message ID from line hash (for deduplication)
                 # Use the full line to ensure uniqueness even if same sender/content
-                msg_id = hashlib.md5(line.encode()).hexdigest()
+                # msg_id = hashlib.md5(line.encode()).hexdigest()
+                
+                # codex caught bug - if time is different then each repeat message is considered unique. 
+                
+                stable_line = re.sub(r'^.*?\]\s*', '', line)
+
+                msg_id = hashlib.md5(stable_line.encode()).hexdigest()
 
                 logger.info(f" VALID MESSAGE: {msg_id[:8]} from {sender} to @{self.agent_name}")
                 logger.debug(f"   Content: {content[:50]}...")
