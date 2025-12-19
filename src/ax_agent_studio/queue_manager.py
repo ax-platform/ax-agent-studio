@@ -100,9 +100,14 @@ class QueueManager:
         - result.events: Actual message data (for some MCP implementations)
         - result.content with formatted text: Message data in text format (for others)
 
+        UPDATED 2025-12-18: Now handles paxai.app text format:
+        "👋 [time ago] **Sender Name**: @agent_name content"
+
         Returns:
             Tuple of (message_id, sender, content) or None if no valid message
         """
+        import hashlib
+
         try:
             # Try result.events first (old format from some MCP servers)
             if hasattr(result, "events") and result.events:
@@ -135,43 +140,101 @@ class QueueManager:
                 logger.debug(f" Skipping status message: {messages_data}")
                 return None
 
-            # Extract message ID from [id:xxxxxxxx] tags
-            message_id_match = re.search(r"\[id:([a-f0-9-]+)\]", messages_data)
-            if not message_id_match:
-                logger.warning("  No message ID found in response")
-                return None
+            # ===================================================================
+            # OLD CODE (commented out 2025-12-18): Expected format [id:xxx] and "• Sender:"
+            # This format is no longer returned by paxai.app API
+            # ===================================================================
+            # # Extract message ID from [id:xxxxxxxx] tags
+            # message_id_match = re.search(r"\[id:([a-f0-9-]+)\]", messages_data)
+            # if not message_id_match:
+            #     logger.warning("  No message ID found in response")
+            #     return None
+            #
+            # message_id = message_id_match.group(1)
+            #
+            # # Verify there's an actual mention (not just "no mentions found")
+            # mention_match = re.search(r"• ([^:]+): (@\S+)\s+(.+)", messages_data)
+            # if not mention_match:
+            #     logger.debug("⏭  No actual mentions in response")
+            #     return None
+            #
+            # # Verify THIS agent is mentioned
+            # if f"@{self.agent_name}" not in messages_data:
+            #     logger.debug(f"⏭  Message doesn't mention @{self.agent_name}")
+            #     return None
+            #
+            # # Extract sender and content
+            # sender = mention_match.group(1)
+            #
+            # # Skip self-mentions (agent mentioning themselves)
+            # if sender == self.agent_name:
+            #     logger.warning(
+            #         f"⏭  SKIPPING SELF-MENTION: {sender} mentioned themselves (agent={self.agent_name})"
+            #     )
+            #     return None
+            #
+            # # Full content includes the mention pattern
+            # content = messages_data
+            #
+            # logger.info(f" VALID MESSAGE: from {sender} to {self.agent_name}")
+            # return (message_id, sender, content)
+            # ===================================================================
 
-            message_id = message_id_match.group(1)
+            # NEW CODE (added 2025-12-18): Parse paxai.app text format
+            # Format: "👋 [time ago] **Sender Name**: @agent_name content"
+            # Parse line-by-line and extract mentions using regex
+            lines = messages_data.split('\n')
+            for line in lines:
+                # Look for lines with @mentions to this agent
+                if f"@{self.agent_name}" not in line:
+                    continue
 
-            # Verify there's an actual mention (not just "no mentions found")
-            mention_match = re.search(r"• ([^:]+): (@\S+)\s+(.+)", messages_data)
-            if not mention_match:
-                logger.debug("⏭  No actual mentions in response")
-                return None
+                # Pattern: **Sender Name**: @agent_name content
+                # Also handles emoji prefixes like "👋 [time ago]"
+                mention_pattern = r'\*\*([^*]+)\*\*:\s*@(\w+)\s+(.+)'
+                match = re.search(mention_pattern, line)
 
-            # Verify THIS agent is mentioned
-            if f"@{self.agent_name}" not in messages_data:
-                logger.debug(f"⏭  Message doesn't mention @{self.agent_name}")
-                return None
+                if not match:
+                    # Try alternative pattern without sender name
+                    continue
 
-            # Extract sender and content
-            sender = mention_match.group(1)
+                sender = match.group(1).strip()
+                mentioned_agent = match.group(2).strip()
+                content = match.group(3).strip()
 
-            # Skip self-mentions (agent mentioning themselves)
-            if sender == self.agent_name:
-                logger.warning(
-                    f"⏭  SKIPPING SELF-MENTION: {sender} mentioned themselves (agent={self.agent_name})"
-                )
-                return None
+                # Verify this is a mention to our agent
+                if mentioned_agent != self.agent_name:
+                    continue
 
-            # Full content includes the mention pattern
-            content = messages_data
+                # Skip self-mentions (agent mentioning themselves)
+                if sender == self.agent_name:
+                    logger.warning(
+                        f"⏭  SKIPPING SELF-MENTION: {sender} mentioned themselves (agent={self.agent_name})"
+                    )
+                    continue
 
-            logger.info(f" VALID MESSAGE: from {sender} to {self.agent_name}")
-            return (message_id, sender, content)
+                # Generate message ID from line hash (for deduplication)
+                # Use the full line to ensure uniqueness even if same sender/content
+                # msg_id = hashlib.md5(line.encode()).hexdigest()
+                
+                # codex caught bug - if time is different then each repeat message is considered unique. 
+                
+                stable_line = re.sub(r'^.*?\]\s*', '', line)
+
+                msg_id = hashlib.md5(stable_line.encode()).hexdigest()
+
+                logger.info(f" VALID MESSAGE: {msg_id[:8]} from {sender} to @{self.agent_name}")
+                logger.debug(f"   Content: {content[:50]}...")
+
+                return (msg_id, sender, content)
+
+            # No valid mentions found
+            logger.debug(f"⏭  No mentions to @{self.agent_name} found in response")
+            return None
 
         except Exception as e:
             logger.error(f" Error parsing message: {e}")
+            logger.error(f"   Full traceback: ", exc_info=True)
             return None
 
     async def _startup_sweep(self):
@@ -280,10 +343,14 @@ class QueueManager:
                     await asyncio.sleep(1)
                     continue
 
-                # Block until message arrives (wait=true)
+                # Use 'list' action with polling (wait=True not supported by API)
+                # API returns text format: "👋 [time ago] **Sender**: @mention content"
                 result = await self.session.call_tool(
-                    "messages", {"action": "check", "wait": True, "mark_read": self.mark_read}
+                    "messages", {"action": "list", "limit": 10}
                 )
+
+                # polling delay
+                await asyncio.sleep(2)
 
                 # Parse and validate message
                 parsed = self._parse_message(result)
