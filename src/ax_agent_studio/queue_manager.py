@@ -140,9 +140,50 @@ class QueueManager:
                 logger.debug(f" Skipping status message: {messages_data}")
                 return None
 
-            # Parse paxai.app text format: "👋 [time ago] **Sender Name**: @agent_name content"
+            # ===================================================================
+            # OLD CODE (commented out 2025-12-18): Expected format [id:xxx] and "• Sender:"
+            # This format is no longer returned by paxai.app API
+            # ===================================================================
+            # # Extract message ID from [id:xxxxxxxx] tags
+            # message_id_match = re.search(r"\[id:([a-f0-9-]+)\]", messages_data)
+            # if not message_id_match:
+            #     logger.warning("  No message ID found in response")
+            #     return None
+            #
+            # message_id = message_id_match.group(1)
+            #
+            # # Verify there's an actual mention (not just "no mentions found")
+            # mention_match = re.search(r"• ([^:]+): (@\S+)\s+(.+)", messages_data)
+            # if not mention_match:
+            #     logger.debug("⏭  No actual mentions in response")
+            #     return None
+            #
+            # # Verify THIS agent is mentioned
+            # if f"@{self.agent_name}" not in messages_data:
+            #     logger.debug(f"⏭  Message doesn't mention @{self.agent_name}")
+            #     return None
+            #
+            # # Extract sender and content
+            # sender = mention_match.group(1)
+            #
+            # # Skip self-mentions (agent mentioning themselves)
+            # if sender == self.agent_name:
+            #     logger.warning(
+            #         f"⏭  SKIPPING SELF-MENTION: {sender} mentioned themselves (agent={self.agent_name})"
+            #     )
+            #     return None
+            #
+            # # Full content includes the mention pattern
+            # content = messages_data
+            #
+            # logger.info(f" VALID MESSAGE: from {sender} to {self.agent_name}")
+            # return (message_id, sender, content)
+            # ===================================================================
+
+            # NEW CODE (added 2025-12-18): Parse paxai.app text format
+            # Format: "👋 [time ago] **Sender Name**: @agent_name content"
             # Parse line-by-line and extract mentions using regex
-            lines = messages_data.split("\n")
+            lines = messages_data.split('\n')
             for line in lines:
                 # Look for lines with @mentions to this agent
                 if f"@{self.agent_name}" not in line:
@@ -150,7 +191,7 @@ class QueueManager:
 
                 # Pattern: **Sender Name**: @agent_name content
                 # Also handles emoji prefixes like "👋 [time ago]"
-                mention_pattern = r"\*\*([^*]+)\*\*:\s*@(\w+)\s+(.+)"
+                mention_pattern = r'\*\*([^*]+)\*\*:\s*@(\w+)\s+(.+)'
                 match = re.search(mention_pattern, line)
 
                 if not match:
@@ -172,9 +213,14 @@ class QueueManager:
                     )
                     continue
 
-                # Generate stable message ID by stripping time prefix before hashing
-                # Prevents duplicate queue entries when polling repeatedly returns same message
-                stable_line = re.sub(r"^.*?\]\s*", "", line)
+                # Generate message ID from line hash (for deduplication)
+                # Use the full line to ensure uniqueness even if same sender/content
+                # msg_id = hashlib.md5(line.encode()).hexdigest()
+                
+                # codex caught bug - if time is different then each repeat message is considered unique. 
+                
+                stable_line = re.sub(r'^.*?\]\s*', '', line)
+
                 msg_id = hashlib.md5(stable_line.encode()).hexdigest()
 
                 logger.info(f" VALID MESSAGE: {msg_id[:8]} from {sender} to @{self.agent_name}")
@@ -188,7 +234,7 @@ class QueueManager:
 
         except Exception as e:
             logger.error(f" Error parsing message: {e}")
-            logger.error("   Full traceback: ", exc_info=True)
+            logger.error(f"   Full traceback: ", exc_info=True)
             return None
 
     async def _startup_sweep(self):
@@ -299,7 +345,9 @@ class QueueManager:
 
                 # Use 'list' action with polling (wait=True not supported by API)
                 # API returns text format: "👋 [time ago] **Sender**: @mention content"
-                result = await self.session.call_tool("messages", {"action": "list", "limit": 10})
+                result = await self.session.call_tool(
+                    "messages", {"action": "list", "limit": 10}
+                )
 
                 # polling delay
                 await asyncio.sleep(2)
