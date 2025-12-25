@@ -4,6 +4,7 @@ FastAPI server for managing MCP monitor processes
 """
 
 import asyncio
+import json
 import os
 import signal
 from contextlib import asynccontextmanager
@@ -18,6 +19,8 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+from ax_agent_studio.auth.oauth_manager import OAuthManager
+from ax_agent_studio.auth.token_validator import TokenValidator
 from ax_agent_studio.dashboard.backend.config_loader import ConfigLoader
 from ax_agent_studio.dashboard.backend.framework_loader import (
     get_framework_info,
@@ -535,6 +538,136 @@ async def reset_agent(agent_name: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+def extract_mcp_config(config_path: str) -> dict:
+    """Extract agent URL and OAuth server from agent config file.
+
+    Args:
+        config_path: Path to the agent configuration file
+
+    Returns:
+        Dictionary with agent_url and oauth_server
+
+    Raises:
+        ValueError: If no MCP agent config is found
+    """
+    with open(config_path) as f:
+        config = json.load(f)
+
+    # Find mcp-remote server config
+    for server_name, server_config in config.get("mcpServers", {}).items():
+        args = server_config.get("args", [])
+
+        # Find agent URL (contains /mcp/agents/)
+        agent_url = next((arg for arg in args if "/mcp/agents/" in arg), None)
+
+        # Find OAuth server (follows --oauth-server)
+        oauth_server = None
+        if "--oauth-server" in args:
+            idx = args.index("--oauth-server")
+            oauth_server = args[idx + 1] if idx + 1 < len(args) else None
+
+        if agent_url:
+            return {"agent_url": agent_url, "oauth_server": oauth_server}
+
+    raise ValueError("No MCP agent config found in configuration file")
+
+
+@app.get("/api/auth/status/{agent_name}")
+async def get_auth_status(agent_name: str):
+    """Check authentication status for an agent.
+
+    Args:
+        agent_name: The agent name
+
+    Returns:
+        Dictionary with authentication status
+    """
+    try:
+        # Find agent config
+        configs = config_loader.list_configs()
+        agent_config = next((c for c in configs if c["agent_name"] == agent_name), None)
+
+        if not agent_config:
+            raise HTTPException(status_code=404, detail=f"Agent '{agent_name}' not found")
+
+        # Extract MCP configuration
+        mcp_config = extract_mcp_config(agent_config["path"])
+
+        # Check token status
+        validator = TokenValidator()
+        auth_status = validator.check_auth_status(mcp_config["agent_url"])
+
+        return {
+            "agent_name": agent_name,
+            "agent_url": mcp_config["agent_url"],
+            "oauth_url": mcp_config["oauth_server"],
+            "authenticated": auth_status["authenticated"],
+            "status": auth_status["status"],
+            "needs_auth": auth_status["needs_auth"],
+            "token_path": auth_status["token_path"],
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class AuthenticateRequest(BaseModel):
+    """Request model for authentication endpoint."""
+
+    agent_name: str
+
+
+@app.post("/api/auth/authenticate")
+async def authenticate_agent(request: AuthenticateRequest):
+    """Trigger OAuth flow for an agent.
+
+    Args:
+        request: Authentication request with agent_name
+
+    Returns:
+        Dictionary with authentication result
+    """
+    try:
+        # Find agent config
+        configs = config_loader.list_configs()
+        agent_config = next((c for c in configs if c["agent_name"] == request.agent_name), None)
+
+        if not agent_config:
+            raise HTTPException(status_code=404, detail=f"Agent '{request.agent_name}' not found")
+
+        # Extract MCP configuration
+        mcp_config = extract_mcp_config(agent_config["path"])
+
+        if not mcp_config["oauth_server"]:
+            raise HTTPException(
+                status_code=400, detail="No OAuth server configured for this agent"
+            )
+
+        # Use OAuthManager for proper async OAuth flow
+        from ax_agent_studio.auth import OAuthManager
+
+        oauth_manager = OAuthManager()
+        result = await oauth_manager.trigger_oauth_flow(
+            agent_url=mcp_config["agent_url"],
+            oauth_server=mcp_config["oauth_server"],
+            timeout=300,  # 5 minutes
+        )
+
+        # Return the result from OAuthManager
+        return {
+            "success": result["success"],
+            "status": result["status"],
+            "message": result["message"],
+            "agent_url": mcp_config["agent_url"],
+            "error": result.get("error"),
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/api/monitors")
 async def list_monitors():
     """List all monitors (running and stopped)"""
@@ -628,6 +761,14 @@ async def start_monitor(request: StartMonitorRequest):
         }
     except HTTPException:
         raise  # Re-raise HTTPException as-is (e.g., 409 for duplicate agent)
+    except ValueError as e:
+        # Check if it's an authentication error
+        if "authentication required" in str(e).lower():
+            raise HTTPException(
+                status_code=401,
+                detail={"error": "authentication_required", "message": str(e)},
+            )
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

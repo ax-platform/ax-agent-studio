@@ -342,6 +342,27 @@ class ProcessManager:
                 raise FileNotFoundError(f"Config file not found: {config_path}")
             config_path = str(full_config_path)
 
+        # NEW: Pre-flight authentication check
+        from ax_agent_studio.auth.token_validator import TokenValidator
+
+        # Load agent config
+        with open(config_path) as f:
+            config_data = json.load(f)
+
+        # Extract agent URL and check authentication
+        agent_url = self._extract_agent_url(config_data)
+
+        # Validate tokens exist
+        validator = TokenValidator()
+        auth_status = validator.check_auth_status(agent_url)
+
+        if not auth_status["authenticated"]:
+            raise ValueError(
+                f"Authentication required for {agent_name}. "
+                f"Status: {auth_status['status']}. "
+                f"Please authenticate via the dashboard UI."
+            )
+
         # Sanitize agent_name to prevent shell injection and path traversal
         safe_agent_name = sanitize_agent_name(agent_name)
 
@@ -1285,3 +1306,22 @@ class ProcessManager:
         except Exception as e:
             print(f"Error sending message from {from_agent} ({from_agent_environment}): {e}")
             raise
+
+    def _extract_agent_url(self, config_data: dict) -> str:
+        """Extract agent URL from mcpServers config.
+
+        Args:
+            config_data: Loaded agent configuration dictionary
+
+        Returns:
+            The agent URL string
+
+        Raises:
+            ValueError: If no agent URL is found
+        """
+        for server_config in config_data.get("mcpServers", {}).values():
+            args = server_config.get("args", [])
+            for arg in args:
+                if isinstance(arg, str) and "/mcp/agents/" in arg:
+                    return arg
+        raise ValueError("No agent URL found in configuration")

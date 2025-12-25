@@ -470,6 +470,27 @@ async function startMonitor() {
         return;
     }
 
+    // NEW: Pre-flight auth check
+    try {
+        console.log('[Auth Check] Checking authentication for:', config.agent_name);
+        const authResponse = await fetch(
+            `${API_BASE}/api/auth/status/${config.agent_name}`
+        );
+        const authStatus = await authResponse.json();
+        console.log('[Auth Check] Status:', authStatus);
+
+        if (authStatus.needs_auth) {
+            console.log('[Auth Check] Authentication required - showing modal');
+            // Show authentication modal instead of starting monitor
+            showAuthenticationModal(config.agent_name);
+            return;
+        }
+        console.log('[Auth Check] Authentication OK - proceeding to start monitor');
+    } catch (error) {
+        console.error('[Auth Check] Failed:', error);
+        // Continue anyway - backend will handle auth error
+    }
+
     // Get the actual prompt content from the selected prompt file
     let systemPromptContent = null;
     let systemPromptName = null;
@@ -499,6 +520,21 @@ async function startMonitor() {
             })
         });
 
+        // Check for authentication error (401)
+        if (response.status === 401) {
+            const errorData = await response.json();
+            showAuthenticationModal(config.agent_name);
+            return;
+        }
+
+        // Check for other errors
+        if (!response.ok) {
+            const errorData = await response.json();
+            console.error('Deploy failed - HTTP error:', response.status, errorData);
+            showNotification(`Failed to deploy agent: ${errorData.detail || response.statusText}`, 'error');
+            return;
+        }
+
         const data = await response.json();
         if (data.success) {
             showNotification(`Agent deployed: ${config.agent_name}`, 'success');
@@ -517,11 +553,12 @@ async function startMonitor() {
             // Scroll to Running Agents section
             monitorsList.scrollIntoView({ behavior: 'smooth', block: 'start' });
         } else {
-            showNotification('Failed to deploy agent', 'error');
+            console.error('Failed to deploy agent - response:', data);
+            showNotification(`Failed to deploy agent: ${data.detail || 'Unknown error'}`, 'error');
         }
     } catch (error) {
         console.error('Error deploying agent:', error);
-        showNotification('Failed to deploy agent', 'error');
+        showNotification(`Failed to deploy agent: ${error.message}`, 'error');
     }
 }
 
@@ -1542,4 +1579,94 @@ function showNotification(message, type = 'info') {
     console.log(`[${type.toUpperCase()}] ${message}`);
 
     // TODO: Add toast notifications
+}
+
+// Authentication Modal Functions
+let currentAuthAgent = null;
+
+function showAuthenticationModal(agentName) {
+    currentAuthAgent = agentName;
+    document.getElementById('auth-message').textContent =
+        `Agent "${agentName}" requires OAuth authentication to connect to the aX Platform.`;
+    document.getElementById('auth-modal').style.display = 'block';
+    // Reset progress state
+    document.getElementById('auth-progress').style.display = 'none';
+    document.getElementById('btn-authenticate').disabled = false;
+}
+
+function closeAuthModal() {
+    document.getElementById('auth-modal').style.display = 'none';
+    currentAuthAgent = null;
+}
+
+async function authenticateAgent() {
+    if (!currentAuthAgent) return;
+
+    console.log('[Auth] Starting authentication for:', currentAuthAgent);
+
+    // Show progress with helpful message
+    const progressEl = document.getElementById('auth-progress');
+    progressEl.style.display = 'block';
+    progressEl.innerHTML = `
+        <p style="font-size: 1.2em; margin: 15px 0;">🔄 <strong>Starting OAuth flow...</strong></p>
+        <p style="color: #fbbf24; font-weight: bold;">⚠️ A browser window will open shortly</p>
+        <p>Please complete authentication in the browser when it opens.</p>
+        <p style="margin-top: 15px; font-size: 0.9em; color: #94a3b8;">This may take up to 5 minutes. Do not close this window.</p>
+    `;
+    document.getElementById('btn-authenticate').disabled = true;
+
+    try {
+        console.log('[Auth] Sending authentication request...');
+        const response = await fetch(`${API_BASE}/api/auth/authenticate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ agent_name: currentAuthAgent })
+        });
+
+        console.log('[Auth] Response status:', response.status);
+        const result = await response.json();
+        console.log('[Auth] Response data:', result);
+
+        if (result.success && result.status === 'completed') {
+            console.log('[Auth] Authentication successful!');
+            showNotification('✅ Authentication successful! Starting monitor...', 'success');
+            closeAuthModal();
+
+            // Auto-retry starting the monitor
+            console.log('[Auth] Auto-retrying monitor start...');
+            await startMonitor();
+        } else if (result.status === 'timeout') {
+            console.error('[Auth] Authentication timed out');
+            showNotification('⏱️ Authentication timed out. Please try again.', 'error');
+            progressEl.innerHTML = `
+                <p style="font-size: 1.2em; color: #ef4444;">⏱️ <strong>Authentication Timed Out</strong></p>
+                <p>The OAuth flow took longer than 5 minutes.</p>
+                <p>Please try again and complete the authorization more quickly.</p>
+            `;
+            document.getElementById('btn-authenticate').style.display = 'block';
+        } else if (result.status === 'failed') {
+            console.error('[Auth] Authentication failed:', result.error);
+            showNotification('❌ Authentication failed. Please try again.', 'error');
+            progressEl.innerHTML = `
+                <p style="font-size: 1.2em; color: #ef4444;">❌ <strong>Authentication Failed</strong></p>
+                <p>${result.message || 'Unknown error occurred'}</p>
+                ${result.error ? `<p style="font-size: 0.9em; color: #94a3b8; margin-top: 10px;">Error: ${result.error}</p>` : ''}
+            `;
+            document.getElementById('btn-authenticate').style.display = 'block';
+        } else {
+            console.log('[Auth] Unexpected status:', result.status, result.message);
+            showNotification(`Authentication ${result.status}: ${result.message || 'Unknown error'}`, 'error');
+        }
+    } catch (error) {
+        console.error('[Auth] Authentication failed with error:', error);
+        showNotification('❌ Authentication request failed. Please try again.', 'error');
+        progressEl.innerHTML = `
+            <p style="font-size: 1.2em; color: #ef4444;">❌ <strong>Request Failed</strong></p>
+            <p>Failed to start authentication for agent "${currentAuthAgent}".</p>
+            <p style="font-size: 0.9em; color: #94a3b8; margin-top: 10px;">Error: ${error.message}</p>
+        `;
+        document.getElementById('btn-authenticate').style.display = 'block';
+    } finally {
+        document.getElementById('btn-authenticate').disabled = false;
+    }
 }
