@@ -157,6 +157,27 @@
         </div>
     </div>
 
+    <!-- Authentication Modal -->
+    <div id="auth-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close" onclick="closeAuthModal()">&times;</span>
+            <h3>🔐 Authentication Required</h3>
+            <p id="auth-message"></p>
+            <div id="auth-progress" style="display: none;">
+                <p>🌐 Opening browser for OAuth authentication...</p>
+                <p>Please complete the authentication in your browser.</p>
+            </div>
+            <div class="modal-actions">
+                <button id="btn-authenticate" class="btn btn-primary" onclick="authenticateAgent()">
+                    Authenticate Now
+                </button>
+                <button class="btn btn-secondary" onclick="closeAuthModal()">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script src="/static/app.js"></script>
 </body>
 </html>

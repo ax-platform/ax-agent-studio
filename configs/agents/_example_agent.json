@@ -14,7 +14,7 @@
       "command": "npx",
       "args": [
         "-y",
-        "mcp-remote@0.1.29",
+        "mcp-remote@0.1.36",
         "https://mcp.paxai.app/mcp/agents/your_agent_name",
         "--transport",
         "http-only",
