@@ -644,7 +644,7 @@ async def authenticate_agent(request: AuthenticateRequest):
             )
 
         # Use OAuthManager for proper async OAuth flow
-        from ax_agent_studio.auth import OAuthManager
+        # from ax_agent_studio.auth import OAuthManager
 
         oauth_manager = OAuthManager()
         result = await oauth_manager.trigger_oauth_flow(

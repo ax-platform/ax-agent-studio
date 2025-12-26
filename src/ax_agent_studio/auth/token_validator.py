@@ -3,7 +3,7 @@
 import hashlib
 import json
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Any
 
 
 class TokenValidator:
@@ -71,7 +71,7 @@ class TokenValidator:
         # Return primary path even if doesn't exist (for creation)
         return token_file
 
-    def check_auth_status(self, agent_url: str) -> Dict[str, any]:
+    def check_auth_status(self, agent_url: str) -> Dict[str, Any]:
         """
         Check if OAuth tokens exist and are valid for a given agent URL.
 

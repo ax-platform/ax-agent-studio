@@ -4,7 +4,7 @@ import asyncio
 import subprocess
 import sys
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Any
 
 from .token_validator import TokenValidator
 
@@ -30,7 +30,7 @@ class OAuthManager:
         agent_url: str,
         oauth_server: str,
         timeout: int = 300,  # 5 minutes
-    ) -> Dict[str, any]:
+    ) -> Dict[str, Any]:
         """
         Trigger OAuth flow by running mcp-remote as a subprocess.
 
